@@ -1,7 +1,14 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 // strtok issues resolved with including this header
 #include <string.h>   
+
+#define GRID_LENGTH 1.
+#define NUM_NODES 101
+//#define SIZE_X 101
+//#define SIZE_Y 101
+//#define SIZE_Z 101
 
 // define all problem parameters in terms of macros
 #define MD_FILE "./input_data/MD_data/10_input_Pos_Q488_20130318.inp"
@@ -21,6 +28,55 @@ typedef struct
     double potential;
 } Node;
 
+typedef struct
+{
+    int    numNodes;
+    double spacing, invSpacing;
+} GridInfo;
+
+unsigned int countLinesInFile(FILE* fp);
+void parseMDFileToParticles(Particle particleData[], FILE* fp);
+void allocateGrid(Node**** grid, GridInfo* gInfo);
+void deAllocGrid(Node**** grid, GridInfo* gInfo);
+
+int main()
+{
+    // read in MD data
+    FILE *fp = fopen(MD_FILE, "r");
+    if(fp == NULL)
+    {
+        fprintf(stderr, "Error in opening file %s \n", MD_FILE);
+        return EXIT_FAILURE;
+    }
+
+    // count the number of lines in the input file
+    // so that we can preallocate later
+    unsigned int lineCount = countLinesInFile(fp);
+    printf("Number of lines read was %d.\n", lineCount);
+
+    // fill in GridInfo data
+    GridInfo gridInfo;
+    gridInfo.numNodes = NUM_NODES;
+    gridInfo.spacing = GRID_LENGTH / (NUM_NODES - 1);
+    gridInfo.invSpacing = 1./(gridInfo.spacing);        // just caching this to avoid divisions?
+
+    // now preallocate the particles data array
+    Particle* MD_data = malloc(lineCount * sizeof(Particle));
+
+    // loop through the file and tokenize entries
+    parseMDFileToParticles(MD_data, fp);
+    fclose(fp);
+
+    // allocate the grid
+    Node*** grid = NULL;
+    allocateGrid(&grid, &gridInfo);
+
+
+    deAllocGrid(&grid, &gridInfo);
+    free(MD_data);
+
+    return 0;
+}
 
 unsigned int countLinesInFile(FILE* fp)
 {
@@ -40,7 +96,7 @@ unsigned int countLinesInFile(FILE* fp)
     return lineCount;
 }
 
-int parseMDFileToParticles(Particle particleData[], FILE* fp)
+void parseMDFileToParticles(Particle particleData[], FILE* fp)
 {
     int count = 0;
     // buffer to read in line data
@@ -87,34 +143,34 @@ int parseMDFileToParticles(Particle particleData[], FILE* fp)
         // increment particleCounter
         particleCount++;
     }
-
-    return 0;
 }
 
-int main()
+void allocateGrid(Node**** grid, GridInfo* gInfo)
 {
-    // read in MD data
-    FILE *fp = fopen(MD_FILE, "r");
-    if(fp == NULL)
+    const int numNodes = gInfo->numNodes;
+    int i, j;
+
+    (*grid) = malloc(numNodes * sizeof(Node**));
+    for(i = 0; i < numNodes; i++)
     {
-        fprintf(stderr, "Error in opening file %s \n", MD_FILE);
-        return EXIT_FAILURE;
+        (*grid)[i] = malloc(numNodes * sizeof(Node*));
+        for(j = 0; j < numNodes; j++)
+            (*grid)[i][j] = malloc(numNodes * sizeof(Node));
     }
+}
 
-    // count the number of lines in the input file
-    // so that we can preallocate later
-    unsigned int lineCount = countLinesInFile(fp);
-    printf("Number of lines read was %d.\n", lineCount);
+void deAllocGrid(Node**** grid, GridInfo* gInfo)
+{
+    const int numNodes = gInfo->numNodes;
+    int i, j;
 
-    // now preallocate the particles data array
-    Particle* MD_data = malloc(lineCount * sizeof(Particle));
+    for(i = 0; i < numNodes; i++)
+    {
+        for(j = 0; j < numNodes; j++)
+            free((*grid)[i][j]);
 
-    // loop through the file and tokenize entries
-    parseMDFileToParticles(MD_data, fp);
-
-    fclose(fp);
-    free(MD_data);
-
-    return 0;
+        free((*grid)[i]);
+    }
+    free((*grid));
 }
 
