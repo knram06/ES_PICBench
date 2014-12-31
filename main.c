@@ -98,6 +98,63 @@ void setupBoundaryConditions(Node*** grid, GridInfo* gInfo)
     //std::cout << grid[1][1][0].potential << " " << grid[2][3][4].potential << std::endl;
 }
 
+/*!
+ * Solve takes in a tolerance
+ * 
+ * Solves the Laplace Equation using Finite Difference and 
+ * using SOR (Successive Over Relaxation) for the resulting
+ * Linear system.
+ *
+ * \todo Improve this to print iteration count and headers
+ * Headers in a periodic manner can be printed.
+ *
+ */
+void solve(Node*** grid, GridInfo* gInfo, double tolerance, double sorOmega)
+{
+    const int numNodes = gInfo->numNodes;
+
+    double norm = 100.; double temp = 0., val = 0.;
+    int i, j, k;
+    int count = 0;
+
+    const double inv6 = 1./6;
+
+    // solve using criteria
+    // solution in the "inner" cube
+    while (norm >= tolerance)
+    {
+        count++;
+        norm = 0.;
+
+        // iterate across all points
+        for (i = 1; i < numNodes - 1; i++)
+        {
+            for(j = 1; j < numNodes - 1; j++)
+            {
+                for(k = 1; k < numNodes - 1; k++)
+                {
+                    temp = grid[i][j][k].potential;
+
+                    // obtain the value got by averaging
+                    val = inv6 * (grid[i+1][j][k].potential + grid[i-1][j][k].potential + grid[i][j-1][k].potential + grid[i][j+1][k].potential + grid[i][j][k-1].potential + grid[i][j][k+1].potential);
+
+                    // obtain the value with SOR
+                    grid[i][j][k].potential = val*sorOmega + (1-sorOmega)*temp;
+                    //std::cout << grid[i][j][k].potential << " " << i << " " << j << " " << k << std::endl;
+
+                    // store the difference in values at same grid points in temp itself
+                    // for norm calculation
+                    temp = grid[i][j][k].potential - temp;
+                    norm += temp * temp;
+                }
+            }
+        }
+        norm = sqrt(norm);
+        printf("norm: %e\n", norm);
+    }
+    //imposeNeumannBCs();
+}
+
 int main()
 {
     // read in MD data
@@ -136,6 +193,7 @@ int main()
     // enforce boundary conditions
     // impose Neumann BCs
     // solve and at each step, impose Neumann BCs?
+    solve(grid, &gridInfo, 1e-12, 1.9);
 
 
     deAllocGrid(&grid, &gridInfo);
