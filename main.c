@@ -152,14 +152,25 @@ void parseMDFileToParticles(Particle particleData[], FILE* fp)
 void allocateGrid(Node**** grid, GridInfo* gInfo)
 {
     const int numNodes = gInfo->numNodes;
-    int i, j;
+    int i, j, k;
 
     (*grid) = malloc(numNodes * sizeof(Node**));
     for(i = 0; i < numNodes; i++)
     {
         (*grid)[i] = malloc(numNodes * sizeof(Node*));
         for(j = 0; j < numNodes; j++)
+        {
             (*grid)[i][j] = malloc(numNodes * sizeof(Node));
+            for(k = 0; k < numNodes; k++)
+            {
+                // initialize the struct values
+                Node* val = &(*grid)[i][j][k];
+                val->pos[0] = 0.;
+                val->pos[1] = 0.;
+                val->pos[2] = 0.;
+                val->potential = 0.;
+            }
+        }
     }
 }
 
