@@ -71,6 +71,10 @@ int main()
     Node*** grid = NULL;
     allocateGrid(&grid, &gridInfo);
 
+    // enforce boundary conditions
+    // impose Neumann BCs
+    // solve and at each step, impose Neumann BCs?
+
 
     deAllocGrid(&grid, &gridInfo);
     free(MD_data);
