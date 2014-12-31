@@ -13,6 +13,8 @@
 // define all problem parameters in terms of macros
 #define MD_FILE "./input_data/MD_data/10_input_Pos_Q488_20130318.inp"
 
+#define TEST_FUNCTION (x*x - 2*y*y + z*z)
+//#define TEST_FUNCTION 0.
 
 // declare the Particle data type here
 typedef struct
@@ -22,9 +24,10 @@ typedef struct
     double mass, charge;
 } Particle;
 
+// TODO: just use a double array instead?
 typedef struct
 {
-    double pos[3];
+    //double pos[3];
     double potential;
 } Node;
 
@@ -38,6 +41,62 @@ unsigned int countLinesInFile(FILE* fp);
 void parseMDFileToParticles(Particle particleData[], FILE* fp);
 void allocateGrid(Node**** grid, GridInfo* gInfo);
 void deAllocGrid(Node**** grid, GridInfo* gInfo);
+
+// setup the boundary conditions
+void setupBoundaryConditions(Node*** grid, GridInfo* gInfo)
+{
+    const int numNodes = gInfo->numNodes;
+    const double spacing = gInfo->spacing;
+    int i, j, k;
+
+    // set boundary conditions
+    /*********************************************************/
+    // loop across all X-Z faces on the near and farther side
+    // j = 0 and j = SIZE_Y - 1 facesa
+    double x = 0., y = 0., z = 0.;
+
+    for(i = 0; i < numNodes; i++)
+    {
+        x = spacing * i;
+        for(k = 0; k < numNodes; k++)
+        {
+            z = spacing * k;
+            // checking with x2 - 2y2 + z2
+            //grid[i][0][k] = x*x + z*z;          // y is zero here
+            y = 0.;
+            //grid[i][0][k] = TEST_FUNCTION;
+            grid[i][0][k].potential=TEST_FUNCTION;
+            y = GRID_LENGTH;
+            //grid[i][SIZE_Y-1][k] = TEST_FUNCTION;
+            grid[i][numNodes - 1][k].potential=TEST_FUNCTION;
+        }
+
+        // on X-Y faces
+        for(j = 0; j < numNodes; j++)
+        {
+            y = spacing*j;
+            z = 0.;
+            grid[i][j][0].potential=TEST_FUNCTION;
+            z = GRID_LENGTH;
+            grid[i][j][numNodes - 1].potential=TEST_FUNCTION;
+        }
+    }
+
+    // on Y-Z faces
+    for(j = 0; j < numNodes; j++)
+    {
+        y = spacing*j;
+        for(k = 0; k < numNodes; k++)
+        {
+            z = spacing * k;
+            x = 0.;
+            grid[0][j][k].potential=TEST_FUNCTION;
+            x = GRID_LENGTH;
+            grid[numNodes - 1][j][k].potential=TEST_FUNCTION;
+        }
+    }
+    //std::cout << grid[1][1][0].potential << " " << grid[2][3][4].potential << std::endl;
+}
 
 int main()
 {
@@ -70,6 +129,9 @@ int main()
     // allocate the grid
     Node*** grid = NULL;
     allocateGrid(&grid, &gridInfo);
+
+    // setup boundary conditions
+    setupBoundaryConditions(grid, &gridInfo);
 
     // enforce boundary conditions
     // impose Neumann BCs
@@ -165,9 +227,9 @@ void allocateGrid(Node**** grid, GridInfo* gInfo)
             {
                 // initialize the struct values
                 Node* val = &(*grid)[i][j][k];
-                val->pos[0] = 0.;
-                val->pos[1] = 0.;
-                val->pos[2] = 0.;
+                //val->pos[0] = 0.;
+                //val->pos[1] = 0.;
+                //val->pos[2] = 0.;
                 val->potential = 0.;
             }
         }
