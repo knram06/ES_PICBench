@@ -54,6 +54,35 @@ void deAllocGrid(Node**** grid, GridInfo* gInfo);
 void setupBoundaryConditions(Node*** grid, GridInfo* gInfo);
 void solve(Node*** grid, GridInfo* gInfo, double tolerance, double sorOmega);
 
+// function for writing out values
+void writePotentialValues(const char* fileName, Node*** grid, GridInfo* gInfo)
+{
+    FILE* fileValues = fopen(fileName, "w");
+    int i, j, k;
+
+    const int numNodes = gInfo->numNodes;
+    const double spacing = gInfo->spacing;
+
+    fprintf(fileValues, "%20.8s %20.8s %20.8s %20.9s\n",
+                         "x",    "y",    "z", "potential");
+    for(i = 0; i < numNodes; i++)
+    {
+        double x = spacing * i;
+        for(j = 0; j < numNodes; j++)
+        {
+            double y = spacing * j;
+            for(k = 0; k < numNodes; k++)
+            {
+                double z = spacing * k;
+                fprintf(fileValues, "%20.8e %20.8e %20.8e %20.8e\n",
+                                         x,         y,       z,  grid[i][j][k].potential);
+            }
+        }
+    }
+
+    fclose(fileValues);
+}
+
 void enforceNeumannBC(Node*** grid, GridInfo* gInfo)
 {
     const int numNodes           = gInfo->numNodes;
@@ -170,8 +199,12 @@ int main()
     // enforce boundary conditions
     // impose Neumann BCs
     // solve and at each step, impose Neumann BCs?
-    solve(grid, &gridInfo, 1e-5, 1.9);
+    solve(grid, &gridInfo, 1e-2, 1.9);
     enforceNeumannBC(grid, &gridInfo);
+
+
+    // write out data for post processing
+    writePotentialValues("out.csv", grid, &gridInfo);
 
 
     deAllocGrid(&grid, &gridInfo);
