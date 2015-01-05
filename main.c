@@ -41,119 +41,8 @@ unsigned int countLinesInFile(FILE* fp);
 void parseMDFileToParticles(Particle particleData[], FILE* fp);
 void allocateGrid(Node**** grid, GridInfo* gInfo);
 void deAllocGrid(Node**** grid, GridInfo* gInfo);
-
-// setup the boundary conditions
-void setupBoundaryConditions(Node*** grid, GridInfo* gInfo)
-{
-    const int numNodes = gInfo->numNodes;
-    const double spacing = gInfo->spacing;
-    int i, j, k;
-
-    // set boundary conditions
-    /*********************************************************/
-    // loop across all X-Z faces on the near and farther side
-    // j = 0 and j = SIZE_Y - 1 facesa
-    double x = 0., y = 0., z = 0.;
-
-    for(i = 0; i < numNodes; i++)
-    {
-        x = spacing * i;
-        for(k = 0; k < numNodes; k++)
-        {
-            z = spacing * k;
-            // checking with x2 - 2y2 + z2
-            //grid[i][0][k] = x*x + z*z;          // y is zero here
-            y = 0.;
-            //grid[i][0][k] = TEST_FUNCTION;
-            grid[i][0][k].potential=TEST_FUNCTION;
-            y = GRID_LENGTH;
-            //grid[i][SIZE_Y-1][k] = TEST_FUNCTION;
-            grid[i][numNodes - 1][k].potential=TEST_FUNCTION;
-        }
-
-        // on X-Y faces
-        for(j = 0; j < numNodes; j++)
-        {
-            y = spacing*j;
-            z = 0.;
-            grid[i][j][0].potential=TEST_FUNCTION;
-            z = GRID_LENGTH;
-            grid[i][j][numNodes - 1].potential=TEST_FUNCTION;
-        }
-    }
-
-    // on Y-Z faces
-    for(j = 0; j < numNodes; j++)
-    {
-        y = spacing*j;
-        for(k = 0; k < numNodes; k++)
-        {
-            z = spacing * k;
-            x = 0.;
-            grid[0][j][k].potential=TEST_FUNCTION;
-            x = GRID_LENGTH;
-            grid[numNodes - 1][j][k].potential=TEST_FUNCTION;
-        }
-    }
-    //std::cout << grid[1][1][0].potential << " " << grid[2][3][4].potential << std::endl;
-}
-
-/*!
- * Solve takes in a tolerance
- * 
- * Solves the Laplace Equation using Finite Difference and 
- * using SOR (Successive Over Relaxation) for the resulting
- * Linear system.
- *
- * \todo Improve this to print iteration count and headers
- * Headers in a periodic manner can be printed.
- *
- */
-void solve(Node*** grid, GridInfo* gInfo, double tolerance, double sorOmega)
-{
-    const int numNodes = gInfo->numNodes;
-
-    double norm = 100.; double temp = 0., val = 0.;
-    int i, j, k;
-    int count = 0;
-
-    const double inv6 = 1./6;
-
-    // solve using criteria
-    // solution in the "inner" cube
-    while (norm >= tolerance)
-    {
-        count++;
-        norm = 0.;
-
-        // iterate across all points
-        for (i = 1; i < numNodes - 1; i++)
-        {
-            for(j = 1; j < numNodes - 1; j++)
-            {
-                for(k = 1; k < numNodes - 1; k++)
-                {
-                    temp = grid[i][j][k].potential;
-
-                    // obtain the value got by averaging
-                    val = inv6 * (grid[i+1][j][k].potential + grid[i-1][j][k].potential + grid[i][j-1][k].potential + grid[i][j+1][k].potential + grid[i][j][k-1].potential + grid[i][j][k+1].potential);
-
-                    // obtain the value with SOR
-                    grid[i][j][k].potential = val*sorOmega + (1-sorOmega)*temp;
-                    //std::cout << grid[i][j][k].potential << " " << i << " " << j << " " << k << std::endl;
-
-                    // store the difference in values at same grid points in temp itself
-                    // for norm calculation
-                    temp = grid[i][j][k].potential - temp;
-                    norm += temp * temp;
-                }
-            }
-        }
-        norm = sqrt(norm);
-        printf("norm: %e\n", norm);
-    }
-    //imposeNeumannBCs();
-}
+void setupBoundaryConditions(Node*** grid, GridInfo* gInfo);
+void solve(Node*** grid, GridInfo* gInfo, double tolerance, double sorOmega);
 
 int main()
 {
@@ -307,5 +196,118 @@ void deAllocGrid(Node**** grid, GridInfo* gInfo)
         free((*grid)[i]);
     }
     free((*grid));
+}
+
+// setup the boundary conditions
+void setupBoundaryConditions(Node*** grid, GridInfo* gInfo)
+{
+    const int numNodes = gInfo->numNodes;
+    const double spacing = gInfo->spacing;
+    int i, j, k;
+
+    // set boundary conditions
+    /*********************************************************/
+    // loop across all X-Z faces on the near and farther side
+    // j = 0 and j = SIZE_Y - 1 facesa
+    double x = 0., y = 0., z = 0.;
+
+    for(i = 0; i < numNodes; i++)
+    {
+        x = spacing * i;
+        for(k = 0; k < numNodes; k++)
+        {
+            z = spacing * k;
+            // checking with x2 - 2y2 + z2
+            //grid[i][0][k] = x*x + z*z;          // y is zero here
+            y = 0.;
+            //grid[i][0][k] = TEST_FUNCTION;
+            grid[i][0][k].potential=TEST_FUNCTION;
+            y = GRID_LENGTH;
+            //grid[i][SIZE_Y-1][k] = TEST_FUNCTION;
+            grid[i][numNodes - 1][k].potential=TEST_FUNCTION;
+        }
+
+        // on X-Y faces
+        for(j = 0; j < numNodes; j++)
+        {
+            y = spacing*j;
+            z = 0.;
+            grid[i][j][0].potential=TEST_FUNCTION;
+            z = GRID_LENGTH;
+            grid[i][j][numNodes - 1].potential=TEST_FUNCTION;
+        }
+    }
+
+    // on Y-Z faces
+    for(j = 0; j < numNodes; j++)
+    {
+        y = spacing*j;
+        for(k = 0; k < numNodes; k++)
+        {
+            z = spacing * k;
+            x = 0.;
+            grid[0][j][k].potential=TEST_FUNCTION;
+            x = GRID_LENGTH;
+            grid[numNodes - 1][j][k].potential=TEST_FUNCTION;
+        }
+    }
+    //std::cout << grid[1][1][0].potential << " " << grid[2][3][4].potential << std::endl;
+}
+
+/*!
+ * Solve takes in a tolerance
+ * 
+ * Solves the Laplace Equation using Finite Difference and 
+ * using SOR (Successive Over Relaxation) for the resulting
+ * Linear system.
+ *
+ * \todo Improve this to print iteration count and headers
+ * Headers in a periodic manner can be printed.
+ *
+ */
+void solve(Node*** grid, GridInfo* gInfo, double tolerance, double sorOmega)
+{
+    const int numNodes = gInfo->numNodes;
+
+    double norm = 100.; double temp = 0., val = 0.;
+    int i, j, k;
+    int count = 0;
+
+    const double inv6 = 1./6;
+
+    // solve using criteria
+    // solution in the "inner" cube
+    while (norm >= tolerance)
+    {
+        count++;
+        norm = 0.;
+
+        // iterate across all points
+        for (i = 1; i < numNodes - 1; i++)
+        {
+            for(j = 1; j < numNodes - 1; j++)
+            {
+                for(k = 1; k < numNodes - 1; k++)
+                {
+                    temp = grid[i][j][k].potential;
+
+                    // obtain the value got by averaging
+                    val = inv6 * (grid[i+1][j][k].potential + grid[i-1][j][k].potential + grid[i][j-1][k].potential + grid[i][j+1][k].potential + grid[i][j][k-1].potential + grid[i][j][k+1].potential);
+
+                    // obtain the value with SOR
+                    grid[i][j][k].potential = val*sorOmega + (1-sorOmega)*temp;
+                    //std::cout << grid[i][j][k].potential << " " << i << " " << j << " " << k << std::endl;
+
+                    // store the difference in values at same grid points in temp itself
+                    // for norm calculation
+                    temp = grid[i][j][k].potential - temp;
+                    norm += temp * temp;
+                }
+            }
+        }
+        norm = sqrt(norm);
+        printf("norm: %e\n", norm);
+    }
+    //imposeNeumannBCs();
 }
 
