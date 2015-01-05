@@ -10,6 +10,15 @@
 //#define SIZE_Y 101
 //#define SIZE_Z 101
 
+
+/* geometry dimension */
+// capillary centered on YZ face
+// origin at Corner of domain
+// --> Particle data MUST be corrected for new origin
+#define CAPILLARY_RADIUS 0.04
+#define EXTRACTOR_INNER_RADIUS 0.2
+#define EXTRACTOR_OUTER_RADIUS (1.2 * EXTRACTOR_INNER_RADIUS)
+
 // define all problem parameters in terms of macros
 #define MD_FILE "./input_data/MD_data/10_input_Pos_Q488_20130318.inp"
 
@@ -43,6 +52,32 @@ void allocateGrid(Node**** grid, GridInfo* gInfo);
 void deAllocGrid(Node**** grid, GridInfo* gInfo);
 void setupBoundaryConditions(Node*** grid, GridInfo* gInfo);
 void solve(Node*** grid, GridInfo* gInfo, double tolerance, double sorOmega);
+
+void enforceNeumannBC(Node*** grid, GridInfo* gInfo)
+{
+    const int numNodes               = gInfo->numNodes;
+    const double spacing             = gInfo->spacing;
+
+    const double capillaryRadius     = CAPILLARY_RADIUS;
+
+    // extractor dimensions
+    const double extractorInner      = EXTRACTOR_INNER_RADIUS;
+    const double extractorOuter      = EXTRACTOR_OUTER_RADIUS;
+
+    int i, j, k;
+    // Y-Z face with capillary
+    // i.e. X = 0 position with center at corner
+    for(j = 0; j < numNodes; j++)
+    {
+        double y = spacing * j;
+
+        for(k = 0; k < numNodes; k++)
+        {
+            double z = spacing * k;
+        }
+    }
+
+}
 
 int main()
 {
