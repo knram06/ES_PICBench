@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 #include <stdbool.h>
 // strtok issues resolved with including this header
 #include <string.h>   
@@ -55,25 +56,77 @@ void solve(Node*** grid, GridInfo* gInfo, double tolerance, double sorOmega);
 
 void enforceNeumannBC(Node*** grid, GridInfo* gInfo)
 {
-    const int numNodes               = gInfo->numNodes;
-    const double spacing             = gInfo->spacing;
+    const int numNodes           = gInfo->numNodes;
+    const double spacing         = gInfo->spacing;
 
-    const double capillaryRadius     = CAPILLARY_RADIUS;
+    const double center[2]       = {GRID_LENGTH / 2., GRID_LENGTH / 2.};
+    const double capillaryRadius = CAPILLARY_RADIUS;
 
     // extractor dimensions
-    const double extractorInner      = EXTRACTOR_INNER_RADIUS;
-    const double extractorOuter      = EXTRACTOR_OUTER_RADIUS;
+    const double extractorInner  = EXTRACTOR_INNER_RADIUS;
+    const double extractorOuter  = EXTRACTOR_OUTER_RADIUS;
+
+    // store the extents in terms of indices for better comparisons
+    const int extentIndices[2]   = { (int)( fabs(center[0] - capillaryRadius) * gInfo->invSpacing ), (int)( fabs( center[1] + capillaryRadius) * gInfo->invSpacing ) };
 
     int i, j, k;
+
+    /**** Y-Z faces ****/
     // Y-Z face with capillary
     // i.e. X = 0 position with center at corner
     for(j = 0; j < numNodes; j++)
     {
-        double y = spacing * j;
+        //double y = spacing * j;
+        double ty = (spacing*j - center[0]);
 
         for(k = 0; k < numNodes; k++)
         {
-            double z = spacing * k;
+            //double z = spacing * k;
+            double tz = (spacing*k - center[1]);
+            double sumSqs = ty*ty + tz*tz;
+
+            // CAPILLARY side
+            // we need points OUTSIDE the capillary for Neumann BC
+            if( sumSqs >= capillaryRadius*capillaryRadius )
+            {
+                // enforce the second order Neumann BC result
+                grid[0][j][k].potential = (1./3) * (4 * grid[1][j][k].potential - grid[2][j][k].potential);
+            }
+
+            // EXTRACTOR side
+            if( (sumSqs <= extractorInner*extractorInner) || (sumSqs >= extractorOuter*extractorOuter ) )
+            {
+                // enforce the second order Neumann BC result
+                grid[numNodes-1][j][k].potential = (1./3) * (4 * grid[numNodes-2][j][k].potential - grid[numNodes-3][j][k].potential);
+            }
+
+        }
+    }
+
+    /**** X-Z faces ****/
+    for(i = 0; i < numNodes; i++)
+    {
+        for(k = 0; k < numNodes; k++)
+        {
+            // Y = 0
+            grid[i][0][k].potential = (1./3) * (4 * grid[i][1][k].potential - grid[i][2][k].potential);
+
+            // Y = GRID_LENGTH
+            grid[i][numNodes - 1][k].potential = (1./3) * (4 * grid[i][numNodes - 2][k].potential - grid[i][numNodes - 3][k].potential);
+
+        }
+    }
+
+    /**** X - Y faces ****/
+    for(i = 0; i < numNodes; i++)
+    {
+        for(j = 0; j < numNodes; j++)
+        {
+            // Z = 0
+            grid[i][j][0].potential = (1./3) * (4 * grid[i][j][1].potential - grid[i][j][2].potential);
+
+            // Z = GRID_LENGTH
+            grid[i][j][numNodes-1].potential = (1./3) * (4 * grid[i][j][numNodes-2].potential - grid[i][j][numNodes-3].potential);
         }
     }
 
@@ -117,7 +170,8 @@ int main()
     // enforce boundary conditions
     // impose Neumann BCs
     // solve and at each step, impose Neumann BCs?
-    solve(grid, &gridInfo, 1e-12, 1.9);
+    solve(grid, &gridInfo, 1e-5, 1.9);
+    enforceNeumannBC(grid, &gridInfo);
 
 
     deAllocGrid(&grid, &gridInfo);
