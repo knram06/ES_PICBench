@@ -43,6 +43,11 @@ typedef struct
 
 typedef struct
 {
+    Node* bndryNodes[3];
+} BoundaryNode;
+
+typedef struct
+{
     int    numNodes;
     double spacing, invSpacing;
 } GridInfo;
@@ -107,7 +112,7 @@ void writePotentialValues(const char* fileName, Node*** grid, GridInfo* gInfo)
     fclose(fileValues);
 }
 
-void enforceNeumannBC(Node*** grid, GridInfo* gInfo)
+void accumulateNeumannBCNodes(Node*** grid, GridInfo* gInfo, BoundaryNode* bNodes)
 {
     const int numNodes           = gInfo->numNodes;
     const double spacing         = gInfo->spacing;
@@ -123,6 +128,7 @@ void enforceNeumannBC(Node*** grid, GridInfo* gInfo)
     const int extentIndices[2]   = { (int)( fabs(center[0] - capillaryRadius) * gInfo->invSpacing ), (int)( fabs( center[1] + capillaryRadius) * gInfo->invSpacing ) };
 
     int i, j, k;
+    int nodeCount = 0;
 
     /**** Y-Z faces ****/
     // Y-Z face with capillary
@@ -142,6 +148,9 @@ void enforceNeumannBC(Node*** grid, GridInfo* gInfo)
             // we need points OUTSIDE the capillary for Neumann BC
             if( sumSqs >= capillaryRadius*capillaryRadius )
             {
+                bNodes[nodeCount].bndryNodes[0] = &grid[0][j][k];
+                bNodes[nodeCount].bndryNodes[1] = &grid[1][j][k];
+                bNodes[nodeCount].bndryNodes[2] = &grid[2][j][k];
                 // enforce the second order Neumann BC result
                 grid[0][j][k].potential = (1./3) * (4 * grid[1][j][k].potential - grid[2][j][k].potential);
             }
@@ -220,6 +229,12 @@ int main()
     // setup boundary conditions
     setupBoundaryConditions(grid, &gridInfo);
 
+    // preallocate NeumannBC nodes in terms of max possible
+    // i.e. num of sides of cube * num nodes per side
+    BoundaryNode* bNodes = malloc( 6 * (NUM_NODES-1)*(NUM_NODES-1) * sizeof(BoundaryNode) );
+
+    accumulateNeumannBCNodes(grid, &gridInfo, bNodes);
+
     // enforce boundary conditions
     // impose Neumann BCs
     // solve and at each step, impose Neumann BCs?
@@ -230,7 +245,7 @@ int main()
     // write out data for post processing
     writePotentialValues("out.vtk", grid, &gridInfo);
 
-
+    free(bNodes);
     deAllocGrid(&grid, &gridInfo);
     free(MD_data);
 
