@@ -24,7 +24,7 @@
 #define MD_FILE "./input_data/MD_data/10_input_Pos_Q488_20130318.inp"
 
 #define TEST_FUNCTION (x*x - 2*y*y + z*z)
-//#define TEST_FUNCTION 0.
+//#define TEST_FUNCTION 1.
 
 // declare the Particle data type here
 typedef struct
@@ -63,23 +63,47 @@ void writePotentialValues(const char* fileName, Node*** grid, GridInfo* gInfo)
     const int numNodes = gInfo->numNodes;
     const double spacing = gInfo->spacing;
 
-    fprintf(fileValues, "%20.8s %20.8s %20.8s %20.9s\n",
-                         "x",    "y",    "z", "potential");
+    const int totalNodes = numNodes*numNodes*numNodes;
+
+    // write the VTK header
+    fprintf(fileValues, "# vtk DataFile Version 2.0\n"
+                        "Potential data\n"
+                        "ASCII\n"
+                        "DATASET STRUCTURED_GRID\n"
+                        "DIMENSIONS %d %d %d\n"
+                        "POINTS %d float\n", numNodes, numNodes, numNodes, totalNodes
+                        );
+
+    double* potentialValues = malloc(totalNodes * sizeof(double));
     for(i = 0; i < numNodes; i++)
     {
         double x = spacing * i;
+        int numX = i;
         for(j = 0; j < numNodes; j++)
         {
             double y = spacing * j;
+            int numY = numNodes*j;
             for(k = 0; k < numNodes; k++)
             {
                 double z = spacing * k;
-                fprintf(fileValues, "%20.8e %20.8e %20.8e %20.8e\n",
-                                         x,         y,       z,  grid[i][j][k].potential);
+                int numZ = numNodes*numNodes*k;
+
+                potentialValues[numX + numY + numZ] = grid[i][j][k].potential;
+                fprintf(fileValues, "%10.8e %10.8e %10.8e\n", x, y, z);
             }
         }
     }
 
+    // now write out the potential values
+    fprintf(fileValues, "\n"
+                        "POINT_DATA %d\n"
+                        "SCALARS potential float 1\n"
+                        "LOOKUP_TABLE default\n", totalNodes
+            );
+    for(i = 0; i < totalNodes; i++)
+        fprintf(fileValues, "%10.8e\n", potentialValues[i]);
+
+    free(potentialValues);
     fclose(fileValues);
 }
 
@@ -199,12 +223,12 @@ int main()
     // enforce boundary conditions
     // impose Neumann BCs
     // solve and at each step, impose Neumann BCs?
-    solve(grid, &gridInfo, 1e-2, 1.9);
-    enforceNeumannBC(grid, &gridInfo);
+    solve(grid, &gridInfo, 1e-12, 1.9);
+    //enforceNeumannBC(grid, &gridInfo);
 
 
     // write out data for post processing
-    writePotentialValues("out.csv", grid, &gridInfo);
+    writePotentialValues("out.vtk", grid, &gridInfo);
 
 
     deAllocGrid(&grid, &gridInfo);
