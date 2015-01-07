@@ -112,7 +112,7 @@ void writePotentialValues(const char* fileName, Node*** grid, GridInfo* gInfo)
     fclose(fileValues);
 }
 
-void accumulateNeumannBCNodes(Node*** grid, GridInfo* gInfo, BoundaryNode* bNodes)
+int accumulateNeumannBCNodes(Node*** grid, GridInfo* gInfo, BoundaryNode* bNodes)
 {
     const int numNodes           = gInfo->numNodes;
     const double spacing         = gInfo->spacing;
@@ -151,15 +151,23 @@ void accumulateNeumannBCNodes(Node*** grid, GridInfo* gInfo, BoundaryNode* bNode
                 bNodes[nodeCount].bndryNodes[0] = &grid[0][j][k];
                 bNodes[nodeCount].bndryNodes[1] = &grid[1][j][k];
                 bNodes[nodeCount].bndryNodes[2] = &grid[2][j][k];
+
+                nodeCount++;
                 // enforce the second order Neumann BC result
-                grid[0][j][k].potential = (1./3) * (4 * grid[1][j][k].potential - grid[2][j][k].potential);
+                //grid[0][j][k].potential = (1./3) * (4 * grid[1][j][k].potential - grid[2][j][k].potential);
             }
 
             // EXTRACTOR side
             if( (sumSqs <= extractorInner*extractorInner) || (sumSqs >= extractorOuter*extractorOuter ) )
             {
+                bNodes[nodeCount].bndryNodes[0] = &grid[numNodes-1][j][k];
+                bNodes[nodeCount].bndryNodes[1] = &grid[numNodes-2][j][k];
+                bNodes[nodeCount].bndryNodes[2] = &grid[numNodes-3][j][k];
+
+                nodeCount++;
+
                 // enforce the second order Neumann BC result
-                grid[numNodes-1][j][k].potential = (1./3) * (4 * grid[numNodes-2][j][k].potential - grid[numNodes-3][j][k].potential);
+                //grid[numNodes-1][j][k].potential = (1./3) * (4 * grid[numNodes-2][j][k].potential - grid[numNodes-3][j][k].potential);
             }
 
         }
@@ -171,27 +179,46 @@ void accumulateNeumannBCNodes(Node*** grid, GridInfo* gInfo, BoundaryNode* bNode
         for(k = 0; k < numNodes; k++)
         {
             // Y = 0
-            grid[i][0][k].potential = (1./3) * (4 * grid[i][1][k].potential - grid[i][2][k].potential);
+            bNodes[nodeCount].bndryNodes[0] = &grid[i][0][k];
+            bNodes[nodeCount].bndryNodes[1] = &grid[i][1][k];
+            bNodes[nodeCount].bndryNodes[2] = &grid[i][2][k];
+
+            nodeCount++;
+            //grid[i][0][k].potential = (1./3) * (4 * grid[i][1][k].potential - grid[i][2][k].potential);
 
             // Y = GRID_LENGTH
-            grid[i][numNodes - 1][k].potential = (1./3) * (4 * grid[i][numNodes - 2][k].potential - grid[i][numNodes - 3][k].potential);
+            bNodes[nodeCount].bndryNodes[0] = &grid[i][numNodes-1][k];
+            bNodes[nodeCount].bndryNodes[1] = &grid[i][numNodes-2][k];
+            bNodes[nodeCount].bndryNodes[2] = &grid[i][numNodes-3][k];
+
+            nodeCount++;
+            //grid[i][numNodes - 1][k].potential = (1./3) * (4 * grid[i][numNodes - 2][k].potential - grid[i][numNodes - 3][k].potential);
 
         }
     }
 
-    /**** X - Y faces ****/
+    /**** X-Y faces ****/
     for(i = 0; i < numNodes; i++)
     {
         for(j = 0; j < numNodes; j++)
         {
             // Z = 0
-            grid[i][j][0].potential = (1./3) * (4 * grid[i][j][1].potential - grid[i][j][2].potential);
+            bNodes[nodeCount].bndryNodes[0] = &grid[i][j][0];
+            bNodes[nodeCount].bndryNodes[1] = &grid[i][j][1];
+            bNodes[nodeCount].bndryNodes[2] = &grid[i][j][2];
+            nodeCount++;
+            //grid[i][j][0].potential = (1./3) * (4 * grid[i][j][1].potential - grid[i][j][2].potential);
 
             // Z = GRID_LENGTH
-            grid[i][j][numNodes-1].potential = (1./3) * (4 * grid[i][j][numNodes-2].potential - grid[i][j][numNodes-3].potential);
+            bNodes[nodeCount].bndryNodes[0] = &grid[i][j][numNodes-1];
+            bNodes[nodeCount].bndryNodes[1] = &grid[i][j][numNodes-2];
+            bNodes[nodeCount].bndryNodes[2] = &grid[i][j][numNodes-3];
+            nodeCount++;
+            //grid[i][j][numNodes-1].potential = (1./3) * (4 * grid[i][j][numNodes-2].potential - grid[i][j][numNodes-3].potential);
         }
     }
 
+    return nodeCount;
 }
 
 int main()
@@ -229,11 +256,12 @@ int main()
     // setup boundary conditions
     setupBoundaryConditions(grid, &gridInfo);
 
-    // preallocate NeumannBC nodes in terms of max possible
+    // preallocate NeumannBC nodes in terms of MAX possible
     // i.e. num of sides of cube * num nodes per side
-    BoundaryNode* bNodes = malloc( 6 * (NUM_NODES-1)*(NUM_NODES-1) * sizeof(BoundaryNode) );
+    BoundaryNode* bNodes = malloc( 6 * (NUM_NODES)*(NUM_NODES) * sizeof(BoundaryNode) );
 
-    accumulateNeumannBCNodes(grid, &gridInfo, bNodes);
+    int nodeCount = accumulateNeumannBCNodes(grid, &gridInfo, bNodes);
+    bNodes = realloc(bNodes, nodeCount * sizeof(BoundaryNode));
 
     // enforce boundary conditions
     // impose Neumann BCs
