@@ -55,9 +55,10 @@ typedef struct
 unsigned int countLinesInFile(FILE* fp);
 void parseMDFileToParticles(Particle particleData[], FILE* fp);
 void allocateGrid(Node**** grid, GridInfo* gInfo);
-void deAllocGrid(Node**** grid, GridInfo* gInfo);
+void deallocGrid(Node**** grid, GridInfo* gInfo);
 void setupBoundaryConditions(Node*** grid, GridInfo* gInfo);
-void solve(Node*** grid, GridInfo* gInfo, double tolerance, double sorOmega);
+void solve(Node*** grid, GridInfo* gInfo, const double tolerance, const double sorOmega);
+double single_step_solve(Node*** grid, const int numNodes, const double sorOmega);
 
 // function for writing out values
 void writePotentialValues(const char* fileName, Node*** grid, GridInfo* gInfo)
@@ -269,20 +270,34 @@ int main()
     // i.e. num of sides of cube * num nodes per side
     BoundaryNode* bNodes = malloc( 6 * (NUM_NODES)*(NUM_NODES) * sizeof(BoundaryNode) );
 
+    // calculate the actual BoundaryNodes count and resize the array to that instead
+    // to avoid wastage
     int nodeCount = accumulateNeumannBCNodes(grid, &gridInfo, bNodes);
     bNodes = realloc(bNodes, nodeCount * sizeof(BoundaryNode));
 
     // enforce boundary conditions
     // impose Neumann BCs
     // solve and at each step, impose Neumann BCs?
-    solve(grid, &gridInfo, 1e-12, 1.9);
-    enforceNeumannBC(bNodes, nodeCount);
+    double tolerance = 1e-12, sorOmega = 1.9;
+    double norm = 100.;
+
+    while(norm >= tolerance)
+    {
+        norm = sqrt(single_step_solve(grid, gridInfo.numNodes, sorOmega));
+
+        // TODO: norm should be updated with this calculation no?
+        // as it changes the values in the grid?
+        enforceNeumannBC(bNodes, nodeCount);
+
+        printf("norm: %e\n", norm);
+    }
+
 
     // write out data for post processing
     writePotentialValues("out.vtk", grid, &gridInfo);
 
     free(bNodes);
-    deAllocGrid(&grid, &gridInfo);
+    deallocGrid(&grid, &gridInfo);
     free(MD_data);
 
     return 0;
@@ -380,7 +395,7 @@ void allocateGrid(Node**** grid, GridInfo* gInfo)
     }
 }
 
-void deAllocGrid(Node**** grid, GridInfo* gInfo)
+void deallocGrid(Node**** grid, GridInfo* gInfo)
 {
     const int numNodes = gInfo->numNodes;
     int i, j;
@@ -462,49 +477,53 @@ void setupBoundaryConditions(Node*** grid, GridInfo* gInfo)
  * Headers in a periodic manner can be printed.
  *
  */
-void solve(Node*** grid, GridInfo* gInfo, double tolerance, double sorOmega)
+void solve(Node*** grid, GridInfo* gInfo, const double tolerance, const double sorOmega)
 {
     const int numNodes = gInfo->numNodes;
 
-    double norm = 100.; double temp = 0., val = 0.;
-    int i, j, k;
+    double norm = 100.;
     int count = 0;
-
-    const double inv6 = 1./6;
 
     // solve using criteria
     // solution in the "inner" cube
     while (norm >= tolerance)
     {
         count++;
-        norm = 0.;
+        norm = sqrt(single_step_solve(grid, numNodes, sorOmega));
 
-        // iterate across all points
-        for (i = 1; i < numNodes - 1; i++)
-        {
-            for(j = 1; j < numNodes - 1; j++)
-            {
-                for(k = 1; k < numNodes - 1; k++)
-                {
-                    temp = grid[i][j][k].potential;
-
-                    // obtain the value got by averaging
-                    val = inv6 * (grid[i+1][j][k].potential + grid[i-1][j][k].potential + grid[i][j-1][k].potential + grid[i][j+1][k].potential + grid[i][j][k-1].potential + grid[i][j][k+1].potential);
-
-                    // obtain the value with SOR
-                    grid[i][j][k].potential = val*sorOmega + (1-sorOmega)*temp;
-                    //std::cout << grid[i][j][k].potential << " " << i << " " << j << " " << k << std::endl;
-
-                    // store the difference in values at same grid points in temp itself
-                    // for norm calculation
-                    temp = grid[i][j][k].potential - temp;
-                    norm += temp * temp;
-                }
-            }
-        }
-        norm = sqrt(norm);
         printf("norm: %e\n", norm);
     }
-    //imposeNeumannBCs();
+}
+
+double single_step_solve(Node*** grid, const int numNodes, const double sorOmega)
+{
+    int i, j, k;
+    double temp, norm = 0.;
+
+    // iterate across all points
+    for (i = 1; i < numNodes - 1; i++)
+    {
+        for(j = 1; j < numNodes - 1; j++)
+        {
+            for(k = 1; k < numNodes - 1; k++)
+            {
+                temp = grid[i][j][k].potential;
+
+                // obtain the value got by averaging
+                double val = (1./6) * (grid[i+1][j][k].potential + grid[i-1][j][k].potential + grid[i][j-1][k].potential + grid[i][j+1][k].potential + grid[i][j][k-1].potential + grid[i][j][k+1].potential);
+ 
+                // obtain the value with SOR
+                grid[i][j][k].potential = val*sorOmega + (1-sorOmega)*temp;
+                //std::cout << grid[i][j][k].potential << " " << i << " " << j << " " << k << std::endl;
+ 
+                // store the difference in values at same grid points in temp itself
+                // for norm calculation
+                temp = grid[i][j][k].potential - temp;
+                norm += temp * temp;
+            }
+        }
+    }
+
+    return norm;
 }
 
