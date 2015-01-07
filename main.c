@@ -221,6 +221,15 @@ int accumulateNeumannBCNodes(Node*** grid, GridInfo* gInfo, BoundaryNode* bNodes
     return nodeCount;
 }
 
+void enforceNeumannBC(BoundaryNode* bNodes, const int nodeCount)
+{
+    int i;
+
+    for(i = 0; i < nodeCount; i++)
+        (bNodes[i].bndryNodes[0])->potential = (1./3) * (4 * (bNodes[i].bndryNodes[1])->potential - (bNodes[i].bndryNodes[2])->potential);
+
+}
+
 int main()
 {
     // read in MD data
@@ -267,8 +276,7 @@ int main()
     // impose Neumann BCs
     // solve and at each step, impose Neumann BCs?
     solve(grid, &gridInfo, 1e-12, 1.9);
-    //enforceNeumannBC(grid, &gridInfo);
-
+    enforceNeumannBC(bNodes, nodeCount);
 
     // write out data for post processing
     writePotentialValues("out.vtk", grid, &gridInfo);
