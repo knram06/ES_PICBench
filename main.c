@@ -5,7 +5,7 @@
 // strtok issues resolved with including this header
 #include <string.h>   
 
-#define GRID_LENGTH 1.
+#define GRID_LENGTH (3e-4)
 #define NUM_NODES 101
 //#define SIZE_X 101
 //#define SIZE_Y 101
@@ -16,15 +16,17 @@
 // capillary centered on YZ face
 // origin at Corner of domain
 // --> Particle data MUST be corrected for new origin
-#define CAPILLARY_RADIUS 0.04
-#define EXTRACTOR_INNER_RADIUS 0.2
-#define EXTRACTOR_OUTER_RADIUS (1.2 * EXTRACTOR_INNER_RADIUS)
+#define CAPILLARY_RADIUS (1.3e-5)
+#define EXTRACTOR_INNER_RADIUS (1e-4)
+#define EXTRACTOR_OUTER_RADIUS (1.4e-4)
+#define CAPILLARY_VOLTAGE 0.
+#define EXTRACTOR_VOLTAGE (-1350.)
 
 // define all problem parameters in terms of macros
 #define MD_FILE "./input_data/MD_data/10_input_Pos_Q488_20130318.inp"
 
-#define TEST_FUNCTION (x*x - 2*y*y + z*z)
-//#define TEST_FUNCTION 1.
+//#define TEST_FUNCTION (x*x - 2*y*y + z*z)
+#define TEST_FUNCTION 0.
 
 // declare the Particle data type here
 typedef struct
@@ -81,21 +83,20 @@ void writePotentialValues(const char* fileName, Node*** grid, GridInfo* gInfo)
                         );
 
     double* potentialValues = malloc(totalNodes * sizeof(double));
+    int count = 0;
     for(i = 0; i < numNodes; i++)
     {
         double x = spacing * i;
-        int numX = i;
         for(j = 0; j < numNodes; j++)
         {
             double y = spacing * j;
-            int numY = numNodes*j;
             for(k = 0; k < numNodes; k++)
             {
                 double z = spacing * k;
-                int numZ = numNodes*numNodes*k;
 
-                potentialValues[numX + numY + numZ] = grid[i][j][k].potential;
                 fprintf(fileValues, "%10.8e %10.8e %10.8e\n", x, y, z);
+                potentialValues[count] = grid[i][j][k].potential;
+                count++;
             }
         }
     }
@@ -106,8 +107,8 @@ void writePotentialValues(const char* fileName, Node*** grid, GridInfo* gInfo)
                         "SCALARS potential float 1\n"
                         "LOOKUP_TABLE default\n", totalNodes
             );
-    for(i = 0; i < totalNodes; i++)
-        fprintf(fileValues, "%10.8e\n", potentialValues[i]);
+    for(count = 0; count < totalNodes; count++)
+        fprintf(fileValues, "%10.8e\n", potentialValues[count]);
 
     free(potentialValues);
     fclose(fileValues);
@@ -124,9 +125,6 @@ int accumulateNeumannBCNodes(Node*** grid, GridInfo* gInfo, BoundaryNode* bNodes
     // extractor dimensions
     const double extractorInner  = EXTRACTOR_INNER_RADIUS;
     const double extractorOuter  = EXTRACTOR_OUTER_RADIUS;
-
-    // store the extents in terms of indices for better comparisons
-    const int extentIndices[2]   = { (int)( fabs(center[0] - capillaryRadius) * gInfo->invSpacing ), (int)( fabs( center[1] + capillaryRadius) * gInfo->invSpacing ) };
 
     int i, j, k;
     int nodeCount = 0;
@@ -278,7 +276,7 @@ int main()
     // enforce boundary conditions
     // impose Neumann BCs
     // solve and at each step, impose Neumann BCs?
-    double tolerance = 1e-12, sorOmega = 1.9;
+    double tolerance = 1e-9, sorOmega = 1.9;
     double norm = 100.;
 
     while(norm >= tolerance)
@@ -413,8 +411,23 @@ void deallocGrid(Node**** grid, GridInfo* gInfo)
 // setup the boundary conditions
 void setupBoundaryConditions(Node*** grid, GridInfo* gInfo)
 {
-    const int numNodes = gInfo->numNodes;
-    const double spacing = gInfo->spacing;
+    const int numNodes           = gInfo->numNodes;
+    const double spacing         = gInfo->spacing;
+
+    const double center[2]       = {GRID_LENGTH / 2., GRID_LENGTH / 2.};
+    const double capillaryRadius = CAPILLARY_RADIUS;
+
+    // extractor dimensions
+    const double extractorInner  = EXTRACTOR_INNER_RADIUS;
+    const double extractorOuter  = EXTRACTOR_OUTER_RADIUS;
+
+    // store the extents in terms of indices for better comparisons
+    //const int extentIndices[2]   = { (int)( fabs(center[0] - capillaryRadius) * gInfo->invSpacing ), (int)( fabs( center[1] + capillaryRadius) * gInfo->invSpacing ) };
+
+    // store the voltage parameters
+    //const double capillaryVoltage = CAPILLARY_VOLTAGE;
+    //const double extractorVoltage = EXTRACTOR_VOLTAGE;
+
     int i, j, k;
 
     // set boundary conditions
@@ -453,14 +466,26 @@ void setupBoundaryConditions(Node*** grid, GridInfo* gInfo)
     // on Y-Z faces
     for(j = 0; j < numNodes; j++)
     {
-        y = spacing*j;
+        double ty = (spacing*j - center[0]);
+
         for(k = 0; k < numNodes; k++)
         {
-            z = spacing * k;
-            x = 0.;
-            grid[0][j][k].potential=TEST_FUNCTION;
-            x = GRID_LENGTH;
-            grid[numNodes - 1][j][k].potential=TEST_FUNCTION;
+            double tz = (spacing*k - center[1]);
+            double sumSqs = ty*ty + tz*tz;
+
+            // CAPILLARY side
+            // we need points INSIDE the capillary for Neumann BC
+            if( sumSqs < capillaryRadius*capillaryRadius )
+            {
+                grid[0][j][k].potential = CAPILLARY_VOLTAGE;
+            }
+
+            // EXTRACTOR side
+            if( (sumSqs > extractorInner*extractorInner) && (sumSqs < extractorOuter*extractorOuter ) )
+            {
+                grid[numNodes - 1][j][k].potential = EXTRACTOR_VOLTAGE;
+            }
+
         }
     }
     //std::cout << grid[1][1][0].potential << " " << grid[2][3][4].potential << std::endl;
