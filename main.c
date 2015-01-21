@@ -7,9 +7,6 @@
 
 #define GRID_LENGTH (3e-4)
 #define NUM_NODES 101
-//#define SIZE_X 101
-//#define SIZE_Y 101
-//#define SIZE_Z 101
 
 
 /* geometry dimension */
@@ -152,8 +149,6 @@ int accumulateNeumannBCNodes(Node*** grid, GridInfo* gInfo, BoundaryNode* bNodes
                 bNodes[nodeCount].bndryNodes[2] = &grid[2][j][k];
 
                 nodeCount++;
-                // enforce the second order Neumann BC result
-                //grid[0][j][k].potential = (1./3) * (4 * grid[1][j][k].potential - grid[2][j][k].potential);
             }
 
             // EXTRACTOR side
@@ -165,8 +160,6 @@ int accumulateNeumannBCNodes(Node*** grid, GridInfo* gInfo, BoundaryNode* bNodes
 
                 nodeCount++;
 
-                // enforce the second order Neumann BC result
-                //grid[numNodes-1][j][k].potential = (1./3) * (4 * grid[numNodes-2][j][k].potential - grid[numNodes-3][j][k].potential);
             }
 
         }
@@ -183,7 +176,6 @@ int accumulateNeumannBCNodes(Node*** grid, GridInfo* gInfo, BoundaryNode* bNodes
             bNodes[nodeCount].bndryNodes[2] = &grid[i][2][k];
 
             nodeCount++;
-            //grid[i][0][k].potential = (1./3) * (4 * grid[i][1][k].potential - grid[i][2][k].potential);
 
             // Y = GRID_LENGTH
             bNodes[nodeCount].bndryNodes[0] = &grid[i][numNodes-1][k];
@@ -191,8 +183,6 @@ int accumulateNeumannBCNodes(Node*** grid, GridInfo* gInfo, BoundaryNode* bNodes
             bNodes[nodeCount].bndryNodes[2] = &grid[i][numNodes-3][k];
 
             nodeCount++;
-            //grid[i][numNodes - 1][k].potential = (1./3) * (4 * grid[i][numNodes - 2][k].potential - grid[i][numNodes - 3][k].potential);
-
         }
     }
 
@@ -206,14 +196,12 @@ int accumulateNeumannBCNodes(Node*** grid, GridInfo* gInfo, BoundaryNode* bNodes
             bNodes[nodeCount].bndryNodes[1] = &grid[i][j][1];
             bNodes[nodeCount].bndryNodes[2] = &grid[i][j][2];
             nodeCount++;
-            //grid[i][j][0].potential = (1./3) * (4 * grid[i][j][1].potential - grid[i][j][2].potential);
 
             // Z = GRID_LENGTH
             bNodes[nodeCount].bndryNodes[0] = &grid[i][j][numNodes-1];
             bNodes[nodeCount].bndryNodes[1] = &grid[i][j][numNodes-2];
             bNodes[nodeCount].bndryNodes[2] = &grid[i][j][numNodes-3];
             nodeCount++;
-            //grid[i][j][numNodes-1].potential = (1./3) * (4 * grid[i][j][numNodes-2].potential - grid[i][j][numNodes-3].potential);
         }
     }
 
