@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <assert.h>
-//#include <stdbool.h>
+#include <stdbool.h>
 // strtok issues resolved with including this header
 #include <string.h>   
 
@@ -77,11 +77,99 @@ void writePotentialValues(const char* fileName, Node*** grid, GridInfo* gInfo);
 
 
 // calculate the ElectricField once Node values are known
-void calcElectricField(double*** EField, Node*** grid, GridInfo* gInfo)
+void calcElectricField(EField*** ElectricField, Node*** grid, GridInfo* gInfo)
 {
-    const int numNodes = gInfo->numNodes;
+    const int   numNodes = gInfo->numNodes;
+    const double invSpacing = gInfo->invSpacing;
     int i, j, k;
 
+    // electric field is the NEGATIVE gradient of the potential field
+    // so caching the multFactor we use just before filling the value
+    const double multFactor = (-invSpacing / 2);
+
+    // boundaries need to be handled separately
+    for(i = 0; i < numNodes; i++)
+    {
+        bool isI_0 = (i == 0);
+        bool isI_LEN = (i == (numNodes - 1));
+        bool isI_0_OR_LEN = isI_0 || isI_LEN;
+
+        for(j = 0; j < numNodes; j++)
+        {
+            bool isJ_0 = (j == 0);
+            bool isJ_LEN = (j == (numNodes - 1));
+            bool isJ_0_OR_LEN = isJ_0 || isJ_LEN;
+
+            for(k = 0; k < numNodes; k++)
+            {
+                bool isK_0 = (k == 0);
+                bool isK_LEN = (k == (numNodes - 1));
+                bool isK_0_OR_LEN = isK_0 || isK_LEN;
+
+                /**************************************/
+                /****** X = 0 || X = GRID_LENGTH ******/
+                double val = 0.;
+                if(isI_0_OR_LEN)
+                {
+                    if(isI_0)
+                        val = ( -grid[i+2][j][k].potential
+                             + 4*grid[i+1][j][k].potential
+                             - 3*grid[i  ][j][k].potential );
+
+                    else if (isI_LEN)
+                        val = -( -grid[i-2][j][k].potential 
+                              + 4*grid[i-1][j][k].potential
+                              - 3*grid[i  ][j][k].potential );
+                }
+                else
+                    val = (grid[i+1][j][k].potential - grid[i-1][j][k].potential);
+
+                // by now ElectricField[i][j][k] needs to be filled
+                ElectricField[i][j][k].components[0] = multFactor * val;
+
+
+                /**************************************/
+                /****** Y = 0 || Y = GRID_LENGTH ******/
+                if(isJ_0_OR_LEN)
+                {
+                    if (isJ_0)
+                        val = ( -grid[i][j+2][k].potential
+                             + 4*grid[i][j+1][k].potential
+                             - 3*grid[i][j  ][k].potential );
+                    else if (isJ_LEN)
+                        val = -(-grid[i][j-2][k].potential 
+                             + 4*grid[i][j-1][k].potential
+                             - 3*grid[i][j  ][k].potential );
+                }
+                else
+                    val = (grid[i][j+1][k].potential - grid[i][j-1][k].potential);
+
+                // by now ElectricField[i][j][k] needs to be filled
+                ElectricField[i][j][k].components[1] = multFactor * val;
+
+
+                /**************************************/
+                /****** Z = 0 || Z = GRID_LENGTH ******/
+                if(isK_0_OR_LEN)
+                {
+                    if (isK_0)
+                        val = ( -grid[i][j][k+2].potential
+                             + 4*grid[i][j][k+1].potential
+                             - 3*grid[i][j][k  ].potential );
+                    else if (isK_LEN)
+                        val = -( -grid[i][j][k-2].potential 
+                              + 4*grid[i][j][k-1].potential
+                              - 3*grid[i][j][k  ].potential );
+                }
+                else
+                    val = (grid[i][j][k+1].potential - grid[i][j][k-1].potential);
+
+                // by now ElectricField[i][j][k] needs to be filled
+                ElectricField[i][j][k].components[2] = multFactor * val;
+
+            }
+        }
+    }
 
 }
 
@@ -193,6 +281,7 @@ int main()
         printf("norm: %e\n", norm);
     }
 
+    calcElectricField(ElectricField, grid, &gridInfo);
 
     // write out data for post processing
     writePotentialValues("out.vtk", grid, &gridInfo);
@@ -225,7 +314,6 @@ unsigned int countLinesInFile(FILE* fp)
 
 void parseMDFileToParticles(Particle particleData[], FILE* fp)
 {
-    int count = 0;
     // buffer to read in line data
     char line[256];
     
