@@ -51,171 +51,23 @@ typedef struct
     double spacing, invSpacing;
 } GridInfo;
 
+// utility function
 unsigned int countLinesInFile(FILE* fp);
+
+// pre-process
 void parseMDFileToParticles(Particle particleData[], FILE* fp);
 void allocateGrid(Node**** grid, GridInfo* gInfo);
 void deallocGrid(Node**** grid, GridInfo* gInfo);
 void setupBoundaryConditions(Node*** grid, GridInfo* gInfo);
+int accumulateNeumannBCNodes(Node*** grid, GridInfo* gInfo, BoundaryNode* bNodes);
+
+// numerics related
 void solve(Node*** grid, GridInfo* gInfo, const double tolerance, const double sorOmega);
 double single_step_solve(Node*** grid, const int numNodes, const double sorOmega);
+void enforceNeumannBC(BoundaryNode* bNodes, const int nodeCount);
 
-// function for writing out values
-void writePotentialValues(const char* fileName, Node*** grid, GridInfo* gInfo)
-{
-    FILE* fileValues = fopen(fileName, "w");
-    int i, j, k;
-
-    const int numNodes = gInfo->numNodes;
-    const double spacing = gInfo->spacing;
-
-    const int totalNodes = numNodes*numNodes*numNodes;
-
-    // write the VTK header
-    fprintf(fileValues, "# vtk DataFile Version 2.0\n"
-                        "Potential data\n"
-                        "ASCII\n"
-                        "DATASET STRUCTURED_GRID\n"
-                        "DIMENSIONS %d %d %d\n"
-                        "POINTS %d float\n", numNodes, numNodes, numNodes, totalNodes
-                        );
-
-    double* potentialValues = malloc(totalNodes * sizeof(double));
-    int count = 0;
-    for(i = 0; i < numNodes; i++)
-    {
-        double x = spacing * i;
-        for(j = 0; j < numNodes; j++)
-        {
-            double y = spacing * j;
-            for(k = 0; k < numNodes; k++)
-            {
-                double z = spacing * k;
-
-                fprintf(fileValues, "%10.8e %10.8e %10.8e\n", x, y, z);
-                potentialValues[count] = grid[i][j][k].potential;
-                count++;
-            }
-        }
-    }
-
-    // now write out the potential values
-    fprintf(fileValues, "\n"
-                        "POINT_DATA %d\n"
-                        "SCALARS potential float 1\n"
-                        "LOOKUP_TABLE default\n", totalNodes
-            );
-    for(count = 0; count < totalNodes; count++)
-        fprintf(fileValues, "%10.8e\n", potentialValues[count]);
-
-    free(potentialValues);
-    fclose(fileValues);
-}
-
-int accumulateNeumannBCNodes(Node*** grid, GridInfo* gInfo, BoundaryNode* bNodes)
-{
-    const int numNodes           = gInfo->numNodes;
-    const double spacing         = gInfo->spacing;
-
-    const double center[2]       = {GRID_LENGTH / 2., GRID_LENGTH / 2.};
-    const double capillaryRadius = CAPILLARY_RADIUS;
-
-    // extractor dimensions
-    const double extractorInner  = EXTRACTOR_INNER_RADIUS;
-    const double extractorOuter  = EXTRACTOR_OUTER_RADIUS;
-
-    int i, j, k;
-    int nodeCount = 0;
-
-    /**** Y-Z faces ****/
-    // Y-Z face with capillary
-    // i.e. X = 0 position with center at corner
-    for(j = 0; j < numNodes; j++)
-    {
-        //double y = spacing * j;
-        double ty = (spacing*j - center[0]);
-
-        for(k = 0; k < numNodes; k++)
-        {
-            //double z = spacing * k;
-            double tz = (spacing*k - center[1]);
-            double sumSqs = ty*ty + tz*tz;
-
-            // CAPILLARY side
-            // we need points OUTSIDE the capillary for Neumann BC
-            if( sumSqs >= capillaryRadius*capillaryRadius )
-            {
-                bNodes[nodeCount].bndryNodes[0] = &grid[0][j][k];
-                bNodes[nodeCount].bndryNodes[1] = &grid[1][j][k];
-                bNodes[nodeCount].bndryNodes[2] = &grid[2][j][k];
-
-                nodeCount++;
-            }
-
-            // EXTRACTOR side
-            if( (sumSqs <= extractorInner*extractorInner) || (sumSqs >= extractorOuter*extractorOuter ) )
-            {
-                bNodes[nodeCount].bndryNodes[0] = &grid[numNodes-1][j][k];
-                bNodes[nodeCount].bndryNodes[1] = &grid[numNodes-2][j][k];
-                bNodes[nodeCount].bndryNodes[2] = &grid[numNodes-3][j][k];
-
-                nodeCount++;
-
-            }
-
-        }
-    }
-
-    /**** X-Z faces ****/
-    for(i = 0; i < numNodes; i++)
-    {
-        for(k = 0; k < numNodes; k++)
-        {
-            // Y = 0
-            bNodes[nodeCount].bndryNodes[0] = &grid[i][0][k];
-            bNodes[nodeCount].bndryNodes[1] = &grid[i][1][k];
-            bNodes[nodeCount].bndryNodes[2] = &grid[i][2][k];
-
-            nodeCount++;
-
-            // Y = GRID_LENGTH
-            bNodes[nodeCount].bndryNodes[0] = &grid[i][numNodes-1][k];
-            bNodes[nodeCount].bndryNodes[1] = &grid[i][numNodes-2][k];
-            bNodes[nodeCount].bndryNodes[2] = &grid[i][numNodes-3][k];
-
-            nodeCount++;
-        }
-    }
-
-    /**** X-Y faces ****/
-    for(i = 0; i < numNodes; i++)
-    {
-        for(j = 0; j < numNodes; j++)
-        {
-            // Z = 0
-            bNodes[nodeCount].bndryNodes[0] = &grid[i][j][0];
-            bNodes[nodeCount].bndryNodes[1] = &grid[i][j][1];
-            bNodes[nodeCount].bndryNodes[2] = &grid[i][j][2];
-            nodeCount++;
-
-            // Z = GRID_LENGTH
-            bNodes[nodeCount].bndryNodes[0] = &grid[i][j][numNodes-1];
-            bNodes[nodeCount].bndryNodes[1] = &grid[i][j][numNodes-2];
-            bNodes[nodeCount].bndryNodes[2] = &grid[i][j][numNodes-3];
-            nodeCount++;
-        }
-    }
-
-    return nodeCount;
-}
-
-void enforceNeumannBC(BoundaryNode* bNodes, const int nodeCount)
-{
-    int i;
-
-    for(i = 0; i < nodeCount; i++)
-        (bNodes[i].bndryNodes[0])->potential = (1./3) * (4 * (bNodes[i].bndryNodes[1])->potential - (bNodes[i].bndryNodes[2])->potential);
-
-}
+// post process
+void writePotentialValues(const char* fileName, Node*** grid, GridInfo* gInfo);
 
 int main()
 {
@@ -242,6 +94,7 @@ int main()
     Particle* MD_data = malloc(lineCount * sizeof(Particle));
 
     // loop through the file and tokenize entries
+    rewind(fp);         // rewind file to the beginning
     parseMDFileToParticles(MD_data, fp);
     fclose(fp);
 
@@ -313,9 +166,6 @@ void parseMDFileToParticles(Particle particleData[], FILE* fp)
     // buffer to read in line data
     char line[256];
     
-    // rewind to the beginning
-    rewind(fp);
-
     // keep track of particleCount
     int particleCount = 0;
 
@@ -332,10 +182,11 @@ void parseMDFileToParticles(Particle particleData[], FILE* fp)
         while(fieldIndex < 8)
         {
             token = strtok(NULL, " ");
+
             if(fieldIndex == 1)
-                particleData[particleCount].y = atof(token);
+                particleData[particleCount].y = atof(token) + (GRID_LENGTH / 2.);
             else if(fieldIndex == 2)
-                particleData[particleCount].z = atof(token);
+                particleData[particleCount].z = atof(token) + (GRID_LENGTH / 2.);
             else if(fieldIndex == 3)
                 particleData[particleCount].Vx = atof(token);
             else if(fieldIndex == 4)
@@ -347,7 +198,7 @@ void parseMDFileToParticles(Particle particleData[], FILE* fp)
             else if(fieldIndex == 7)
                 particleData[particleCount].charge= atof(token);
 
-            // increment fieldCounter
+            // increment fieldIndex
             fieldIndex++;
         }
 
@@ -540,3 +391,160 @@ double single_step_solve(Node*** grid, const int numNodes, const double sorOmega
     return norm;
 }
 
+// function for writing out values
+void writePotentialValues(const char* fileName, Node*** grid, GridInfo* gInfo)
+{
+    FILE* fileValues = fopen(fileName, "w");
+    int i, j, k;
+
+    const int numNodes = gInfo->numNodes;
+    const double spacing = gInfo->spacing;
+
+    const int totalNodes = numNodes*numNodes*numNodes;
+
+    // write the VTK header
+    fprintf(fileValues, "# vtk DataFile Version 2.0\n"
+                        "Potential data\n"
+                        "ASCII\n"
+                        "DATASET STRUCTURED_GRID\n"
+                        "DIMENSIONS %d %d %d\n"
+                        "POINTS %d float\n", numNodes, numNodes, numNodes, totalNodes
+                        );
+
+    double* potentialValues = malloc(totalNodes * sizeof(double));
+    int count = 0;
+    for(i = 0; i < numNodes; i++)
+    {
+        double x = spacing * i;
+        for(j = 0; j < numNodes; j++)
+        {
+            double y = spacing * j;
+            for(k = 0; k < numNodes; k++)
+            {
+                double z = spacing * k;
+
+                fprintf(fileValues, "%10.8e %10.8e %10.8e\n", x, y, z);
+                potentialValues[count] = grid[i][j][k].potential;
+                count++;
+            }
+        }
+    }
+
+    // now write out the potential values
+    fprintf(fileValues, "\n"
+                        "POINT_DATA %d\n"
+                        "SCALARS potential float 1\n"
+                        "LOOKUP_TABLE default\n", totalNodes
+            );
+    for(count = 0; count < totalNodes; count++)
+        fprintf(fileValues, "%10.8e\n", potentialValues[count]);
+
+    free(potentialValues);
+    fclose(fileValues);
+}
+
+int accumulateNeumannBCNodes(Node*** grid, GridInfo* gInfo, BoundaryNode* bNodes)
+{
+    const int numNodes           = gInfo->numNodes;
+    const double spacing         = gInfo->spacing;
+
+    const double center[2]       = {GRID_LENGTH / 2., GRID_LENGTH / 2.};
+    const double capillaryRadius = CAPILLARY_RADIUS;
+
+    // extractor dimensions
+    const double extractorInner  = EXTRACTOR_INNER_RADIUS;
+    const double extractorOuter  = EXTRACTOR_OUTER_RADIUS;
+
+    int i, j, k;
+    int nodeCount = 0;
+
+    /**** Y-Z faces ****/
+    // Y-Z face with capillary
+    // i.e. X = 0 position with center at corner
+    for(j = 0; j < numNodes; j++)
+    {
+        //double y = spacing * j;
+        double ty = (spacing*j - center[0]);
+
+        for(k = 0; k < numNodes; k++)
+        {
+            //double z = spacing * k;
+            double tz = (spacing*k - center[1]);
+            double sumSqs = ty*ty + tz*tz;
+
+            // CAPILLARY side
+            // we need points OUTSIDE the capillary for Neumann BC
+            if( sumSqs >= capillaryRadius*capillaryRadius )
+            {
+                bNodes[nodeCount].bndryNodes[0] = &grid[0][j][k];
+                bNodes[nodeCount].bndryNodes[1] = &grid[1][j][k];
+                bNodes[nodeCount].bndryNodes[2] = &grid[2][j][k];
+
+                nodeCount++;
+            }
+
+            // EXTRACTOR side
+            if( (sumSqs <= extractorInner*extractorInner) || (sumSqs >= extractorOuter*extractorOuter ) )
+            {
+                bNodes[nodeCount].bndryNodes[0] = &grid[numNodes-1][j][k];
+                bNodes[nodeCount].bndryNodes[1] = &grid[numNodes-2][j][k];
+                bNodes[nodeCount].bndryNodes[2] = &grid[numNodes-3][j][k];
+
+                nodeCount++;
+
+            }
+
+        }
+    }
+
+    /**** X-Z faces ****/
+    for(i = 0; i < numNodes; i++)
+    {
+        for(k = 0; k < numNodes; k++)
+        {
+            // Y = 0
+            bNodes[nodeCount].bndryNodes[0] = &grid[i][0][k];
+            bNodes[nodeCount].bndryNodes[1] = &grid[i][1][k];
+            bNodes[nodeCount].bndryNodes[2] = &grid[i][2][k];
+
+            nodeCount++;
+
+            // Y = GRID_LENGTH
+            bNodes[nodeCount].bndryNodes[0] = &grid[i][numNodes-1][k];
+            bNodes[nodeCount].bndryNodes[1] = &grid[i][numNodes-2][k];
+            bNodes[nodeCount].bndryNodes[2] = &grid[i][numNodes-3][k];
+
+            nodeCount++;
+        }
+    }
+
+    /**** X-Y faces ****/
+    for(i = 0; i < numNodes; i++)
+    {
+        for(j = 0; j < numNodes; j++)
+        {
+            // Z = 0
+            bNodes[nodeCount].bndryNodes[0] = &grid[i][j][0];
+            bNodes[nodeCount].bndryNodes[1] = &grid[i][j][1];
+            bNodes[nodeCount].bndryNodes[2] = &grid[i][j][2];
+            nodeCount++;
+
+            // Z = GRID_LENGTH
+            bNodes[nodeCount].bndryNodes[0] = &grid[i][j][numNodes-1];
+            bNodes[nodeCount].bndryNodes[1] = &grid[i][j][numNodes-2];
+            bNodes[nodeCount].bndryNodes[2] = &grid[i][j][numNodes-3];
+            nodeCount++;
+        }
+    }
+
+    return nodeCount;
+}
+
+void enforceNeumannBC(BoundaryNode* bNodes, const int nodeCount)
+{
+    int i;
+
+    for(i = 0; i < nodeCount; i++)
+        (bNodes[i].bndryNodes[0])->potential = (1./3) * (4 * (bNodes[i].bndryNodes[1])->potential - (bNodes[i].bndryNodes[2])->potential);
+
+}
