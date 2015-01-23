@@ -48,6 +48,11 @@ typedef struct
 
 typedef struct
 {
+    double components[3];
+} EField;
+
+typedef struct
+{
     int    numNodes;
     double spacing, invSpacing;
 } GridInfo;
@@ -80,24 +85,26 @@ void calcElectricField(double*** EField, Node*** grid, GridInfo* gInfo)
 
 }
 
-void allocateGrid_double(double**** grid, GridInfo* gInfo)
+void allocateEField(EField**** grid, GridInfo* gInfo)
 {
     const int numNodes = gInfo->numNodes;
     int i, j, k;
 
-    (*grid) = malloc(numNodes * sizeof(double**));
+    (*grid) = malloc(numNodes * sizeof(EField**));
     assert((*grid) != NULL);
 
     for(i = 0; i < numNodes; i++)
     {
-        (*grid)[i] = malloc(numNodes * sizeof(double*));
+        (*grid)[i] = malloc(numNodes * sizeof(EField*));
         for(j = 0; j < numNodes; j++)
         {
-            (*grid)[i][j] = malloc(numNodes * sizeof(double));
+            (*grid)[i][j] = malloc(numNodes * sizeof(EField));
             for(k = 0; k < numNodes; k++)
             {
                 // initialize the struct values
-                (*grid)[i][j][k] = 0.;
+                (*grid)[i][j][k].components[0] = 0.;
+                (*grid)[i][j][k].components[1] = 0.;
+                (*grid)[i][j][k].components[2] = 0.;
                 //val->pos[0] = 0.;
                 //val->pos[1] = 0.;
                 //val->pos[2] = 0.;
@@ -106,7 +113,7 @@ void allocateGrid_double(double**** grid, GridInfo* gInfo)
     }
 }
 
-void deallocGrid_double(double**** grid, GridInfo* gInfo)
+void deallocEField(EField**** grid, GridInfo* gInfo)
 {
     const int numNodes = gInfo->numNodes;
     int i, j;
@@ -152,9 +159,10 @@ int main()
 
     // allocate the grid
     Node*** grid = NULL;
-    double*** EField = NULL;
     allocateGrid(&grid, &gridInfo);
-    allocateGrid_double(&EField, &gridInfo);
+
+    EField*** ElectricField = NULL;
+    allocateEField(&ElectricField, &gridInfo);
 
     // setup boundary conditions
     setupBoundaryConditions(grid, &gridInfo);
@@ -190,7 +198,7 @@ int main()
     writePotentialValues("out.vtk", grid, &gridInfo);
 
     free(bNodes);
-    deallocGrid_double(&EField, &gridInfo);
+    deallocEField(&ElectricField, &gridInfo);
     deallocGrid(&grid, &gridInfo);
     free(MD_data);
 
