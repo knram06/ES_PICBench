@@ -1,7 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
-#include <stdbool.h>
+#include <assert.h>
+//#include <stdbool.h>
 // strtok issues resolved with including this header
 #include <string.h>   
 
@@ -69,6 +70,57 @@ void enforceNeumannBC(BoundaryNode* bNodes, const int nodeCount);
 // post process
 void writePotentialValues(const char* fileName, Node*** grid, GridInfo* gInfo);
 
+
+// calculate the ElectricField once Node values are known
+void calcElectricField(double*** EField, Node*** grid, GridInfo* gInfo)
+{
+    const int numNodes = gInfo->numNodes;
+    int i, j, k;
+
+
+}
+
+void allocateGrid_double(double**** grid, GridInfo* gInfo)
+{
+    const int numNodes = gInfo->numNodes;
+    int i, j, k;
+
+    (*grid) = malloc(numNodes * sizeof(double**));
+    assert((*grid) != NULL);
+
+    for(i = 0; i < numNodes; i++)
+    {
+        (*grid)[i] = malloc(numNodes * sizeof(double*));
+        for(j = 0; j < numNodes; j++)
+        {
+            (*grid)[i][j] = malloc(numNodes * sizeof(double));
+            for(k = 0; k < numNodes; k++)
+            {
+                // initialize the struct values
+                (*grid)[i][j][k] = 0.;
+                //val->pos[0] = 0.;
+                //val->pos[1] = 0.;
+                //val->pos[2] = 0.;
+            }
+        }
+    }
+}
+
+void deallocGrid_double(double**** grid, GridInfo* gInfo)
+{
+    const int numNodes = gInfo->numNodes;
+    int i, j;
+
+    for(i = 0; i < numNodes; i++)
+    {
+        for(j = 0; j < numNodes; j++)
+            free((*grid)[i][j]);
+
+        free((*grid)[i]);
+    }
+    free((*grid));
+}
+
 int main()
 {
     // read in MD data
@@ -100,7 +152,9 @@ int main()
 
     // allocate the grid
     Node*** grid = NULL;
+    double*** EField = NULL;
     allocateGrid(&grid, &gridInfo);
+    allocateGrid_double(&EField, &gridInfo);
 
     // setup boundary conditions
     setupBoundaryConditions(grid, &gridInfo);
@@ -136,6 +190,7 @@ int main()
     writePotentialValues("out.vtk", grid, &gridInfo);
 
     free(bNodes);
+    deallocGrid_double(&EField, &gridInfo);
     deallocGrid(&grid, &gridInfo);
     free(MD_data);
 
@@ -213,6 +268,8 @@ void allocateGrid(Node**** grid, GridInfo* gInfo)
     int i, j, k;
 
     (*grid) = malloc(numNodes * sizeof(Node**));
+    assert((*grid) != NULL);
+
     for(i = 0; i < numNodes; i++)
     {
         (*grid)[i] = malloc(numNodes * sizeof(Node*));
