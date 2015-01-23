@@ -167,9 +167,9 @@ void calcElectricField(EField*** ElectricField, Node*** grid, GridInfo* gInfo)
                 // by now ElectricField[i][j][k] needs to be filled
                 ElectricField[i][j][k].components[2] = multFactor * val;
 
-            }
-        }
-    }
+            } // end of k loop
+        } // end of j loop
+    } // end of i loop
 
 }
 
