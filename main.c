@@ -73,7 +73,7 @@ double single_step_solve(Node*** grid, const int numNodes, const double sorOmega
 void enforceNeumannBC(BoundaryNode* bNodes, const int nodeCount);
 
 // post process
-void writePotentialValues(const char* fileName, Node*** grid, GridInfo* gInfo);
+void writeOutputData(const char* fileName, Node*** grid, EField*** ElectricField, GridInfo* gInfo);
 
 
 // calculate the ElectricField once Node values are known
@@ -284,7 +284,7 @@ int main()
     calcElectricField(ElectricField, grid, &gridInfo);
 
     // write out data for post processing
-    writePotentialValues("out.vtk", grid, &gridInfo);
+    writeOutputData("out.vtk", grid, ElectricField, &gridInfo);
 
     free(bNodes);
     deallocEField(&ElectricField, &gridInfo);
@@ -545,7 +545,7 @@ double single_step_solve(Node*** grid, const int numNodes, const double sorOmega
 }
 
 // function for writing out values
-void writePotentialValues(const char* fileName, Node*** grid, GridInfo* gInfo)
+void writeOutputData(const char* fileName, Node*** grid, EField*** ElectricField, GridInfo* gInfo)
 {
     FILE* fileValues = fopen(fileName, "w");
     int i, j, k;
@@ -564,7 +564,10 @@ void writePotentialValues(const char* fileName, Node*** grid, GridInfo* gInfo)
                         "POINTS %d float\n", numNodes, numNodes, numNodes, totalNodes
                         );
 
+    // cache some of the data which will be written later
     double* potentialValues = malloc(totalNodes * sizeof(double));
+    double* electricField   = malloc(3 * totalNodes * sizeof(double));
+
     int count = 0;
     for(i = 0; i < numNodes; i++)
     {
@@ -577,7 +580,16 @@ void writePotentialValues(const char* fileName, Node*** grid, GridInfo* gInfo)
                 double z = spacing * k;
 
                 fprintf(fileValues, "%10.8e %10.8e %10.8e\n", x, y, z);
+
+                // update the potential data array
                 potentialValues[count] = grid[i][j][k].potential;
+
+                // update the electric field array
+                const int pos = 3*count;
+                electricField[pos]     = ElectricField[i][j][k].components[0];
+                electricField[pos + 1] = ElectricField[i][j][k].components[1];
+                electricField[pos + 2] = ElectricField[i][j][k].components[2];
+
                 count++;
             }
         }
@@ -592,6 +604,17 @@ void writePotentialValues(const char* fileName, Node*** grid, GridInfo* gInfo)
     for(count = 0; count < totalNodes; count++)
         fprintf(fileValues, "%10.8e\n", potentialValues[count]);
 
+    // write out the ElectricField values
+    fprintf(fileValues, "\n"
+                        "VECTORS ElectricField float\n");
+    for(count = 0; count < totalNodes; count++)
+    {
+        const int pos = 3*count;
+        fprintf(fileValues, "%10.8e %10.8e %10.8e\n", electricField[pos], electricField[pos+1], electricField[pos+2] );
+    }
+
+
+    free(electricField);
     free(potentialValues);
     fclose(fileValues);
 }
