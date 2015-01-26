@@ -80,8 +80,9 @@ int accumulateNeumannBCNodes(Node*** grid, GridInfo* gInfo, BoundaryNode* bNodes
 //void calculateReleaseRate(int* Nrel, double* Nfrac, int particleCount);
 void releaseParticles(const int numParticlesToRelease,
                       const Particle* inputData, const int inputCount,
-                      Particle* domainParticles,
+                      Particle* domainParticles, int* domainParticleBound,
                       int* lostParticlesArray, int* lostParticlesBound);
+Particle randomizeParticleAttribs(const Particle inputParticle);
 
 // numerics related
 void solve(Node*** grid, GridInfo* gInfo, const double tolerance, const double sorOmega);
@@ -329,7 +330,7 @@ int main()
 
         releaseParticles(numParticlesToRelease,
                          MD_data, particleCount,
-                         domainParticles,
+                         domainParticles, &totalParticles,
                          lostParticles, &lostParticleBound);
     }
 
@@ -588,9 +589,54 @@ void setupBoundaryConditions(Node*** grid, GridInfo* gInfo)
 
 void releaseParticles(const int numParticlesToRelease,
                       const Particle* inputData, const int inputCount,
-                      Particle* domainParticles,
+                      Particle* domainParticles, int* domainParticleBound,
                       int* lostParticlesArray, int* lostParticlesBound)
 {
+    int i;
+
+    // loop through MD_data and randomize particle attributes
+    for(i = 0; i < numParticlesToRelease; i++)
+    {
+        Particle releasedParticle = randomizeParticleAttribs(inputData[rand() % inputCount] );
+
+        // if bound is not 0
+        if(*lostParticlesBound)
+        {
+            domainParticles[ lostParticlesArray[i] ] = releasedParticle;
+            (*lostParticlesBound)--;
+            (*domainParticleBound)--;
+        }
+        // if it is 0
+        // then insert remaining elements at the end of the domainParticle array
+        else
+        {
+            // store a copy of domainParticleBound
+            int particleBoundCopy = (*domainParticleBound);
+            domainParticles[ particleBoundCopy ] = releasedParticle;
+
+            // decrement counter since we are inserting at the end of the
+            // domainParticles array
+            particleBoundCopy--;
+        }
+    }
+}
+
+Particle randomizeParticleAttribs(const Particle inputParticle)
+{
+    Particle ret;                                                                       
+
+    double randNum = (rand() / RAND_MAX) * 2. * M_PI;
+    double rYZ = sqrt(inputParticle.y*inputParticle.y + inputParticle.z*inputParticle.z);              
+    ret.y = rYZ * cos(randNum);
+    ret.z = rYZ * sin(randNum);                                                                        
+
+    // choose a different random number for velocity - just for more randomization                     
+    randNum = (rand() / RAND_MAX) * 2. * M_PI;
+    double velYZ = sqrt(inputParticle.Vy*inputParticle.Vy + inputParticle.Vz*inputParticle.Vz);        
+    ret.Vy = velYZ * cos(randNum);
+    ret.Vz = velYZ * sin(randNum);
+
+    return ret;
 }
 
 
