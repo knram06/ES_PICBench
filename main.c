@@ -9,7 +9,6 @@
 #define GRID_LENGTH (3e-4)
 #define NUM_NODES 101
 
-
 /* geometry dimension */
 // capillary centered on YZ face
 // origin at Corner of domain
@@ -76,6 +75,7 @@ int accumulateNeumannBCNodes(Node*** grid, GridInfo* gInfo, BoundaryNode* bNodes
 
 // release of particles functions
 //void calculateReleaseRate(int* Nrel, double* Nfrac, int particleCount);
+void releaseParticles(int numParticlesToRelease, Particle* domainParticles);
 
 // numerics related
 void solve(Node*** grid, GridInfo* gInfo, const double tolerance, const double sorOmega);
@@ -312,7 +312,11 @@ int main()
     int i;
     for(i = 0; i < TIMESTEPS; i++)
     {
+        // calculate the current timestep's release rate
+        runningNfrac = modf(runningNfrac, &temp);
+        const int numParticlesToRelease = Nrel + (int)(temp);
 
+        releaseParticles(numParticlesToRelease, domainParticles);
     }
 
     // introduce the particles
@@ -566,6 +570,11 @@ void setupBoundaryConditions(Node*** grid, GridInfo* gInfo)
 //    (*Nfrac) = modf(particleReleaseRate, &intPart);
 //    (*Nrel) = (int)(intPart);
 //}
+
+void releaseParticles(int numParticlesToRelease, Particle* domainParticles)
+{
+}
+
 
 /*!
  * Solve takes in a tolerance
