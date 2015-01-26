@@ -23,6 +23,9 @@
 // define all problem parameters in terms of macros
 #define MD_FILE "./input_data/MD_data/10_input_Pos_Q488_20130318.inp"
 
+#define PARTICLE_SIZE ((int)5e4)
+#define TIMESTEPS ((int)8e3)
+
 //#define TEST_FUNCTION (x*x - 2*y*y + z*z)
 #define TEST_FUNCTION 0.
 
@@ -228,8 +231,8 @@ int main()
 
     // count the number of lines in the input file
     // so that we can preallocate later
-    unsigned int lineCount = countLinesInFile(fp);
-    printf("Number of lines read was %d.\n", lineCount);
+    unsigned int particleCount = countLinesInFile(fp);
+    printf("Number of lines read was %d.\n", particleCount);
 
     // fill in GridInfo data
     GridInfo gridInfo;
@@ -238,7 +241,7 @@ int main()
     gridInfo.invSpacing = 1./(gridInfo.spacing);        // just caching this to avoid divisions?
 
     // now preallocate the particles data array
-    Particle* MD_data = malloc(lineCount * sizeof(Particle));
+    Particle* MD_data = malloc(particleCount * sizeof(Particle));
 
     // loop through the file and tokenize entries
     rewind(fp);         // rewind file to the beginning
@@ -283,9 +286,25 @@ int main()
 
     calcElectricField(ElectricField, grid, &gridInfo);
 
+    // allocate for particles
+    Particle* domainParticles = malloc(PARTICLE_SIZE * sizeof(Particle));
+
+    // for required number of timesteps,
+    int i;
+    for(i = 0; i < TIMESTEPS; i++)
+    {
+
+    }
+
+    // introduce the particles
+    // then move them
+
     // write out data for post processing
     writeOutputData("out.vtk", grid, ElectricField, &gridInfo);
 
+
+
+    free(domainParticles);
     free(bNodes);
     deallocEField(&ElectricField, &gridInfo);
     deallocGrid(&grid, &gridInfo);
@@ -334,7 +353,38 @@ void parseMDFileToParticles(Particle particleData[], FILE* fp)
         {
             token = strtok(NULL, " ");
 
-            if(fieldIndex == 1)
+            switch(fieldIndex)
+            {
+                case 1:
+                    particleData[particleCount].y = atof(token) + (GRID_LENGTH / 2.);
+                    break;
+
+                case 2:
+                    particleData[particleCount].z = atof(token) + (GRID_LENGTH / 2.);
+                    break;
+
+                case 3:
+                    particleData[particleCount].Vx = atof(token);
+                    break;
+
+                case 4:
+                    particleData[particleCount].Vy = atof(token);
+                    break;
+
+                case 5:
+                    particleData[particleCount].Vz = atof(token);
+                    break;
+
+                case 6:
+                    particleData[particleCount].mass = atof(token);
+                    break;
+
+                case 7:
+                    particleData[particleCount].charge= atof(token);
+                    break;
+            }
+
+            /*if(fieldIndex == 1)
                 particleData[particleCount].y = atof(token) + (GRID_LENGTH / 2.);
             else if(fieldIndex == 2)
                 particleData[particleCount].z = atof(token) + (GRID_LENGTH / 2.);
@@ -348,6 +398,7 @@ void parseMDFileToParticles(Particle particleData[], FILE* fp)
                 particleData[particleCount].mass = atof(token);
             else if(fieldIndex == 7)
                 particleData[particleCount].charge= atof(token);
+            */
 
             // increment fieldIndex
             fieldIndex++;
