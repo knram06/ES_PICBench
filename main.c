@@ -20,6 +20,10 @@
 #define CAPILLARY_VOLTAGE 0.
 #define EXTRACTOR_VOLTAGE (-1350.)
 
+// timesteps info
+#define T_MD (230e-12)
+#define T_PIC (30e-12)
+
 // define all problem parameters in terms of macros
 #define MD_FILE "./input_data/MD_data/10_input_Pos_Q488_20130318.inp"
 
@@ -69,6 +73,9 @@ void allocateGrid(Node**** grid, GridInfo* gInfo);
 void deallocGrid(Node**** grid, GridInfo* gInfo);
 void setupBoundaryConditions(Node*** grid, GridInfo* gInfo);
 int accumulateNeumannBCNodes(Node*** grid, GridInfo* gInfo, BoundaryNode* bNodes);
+
+// release of particles functions
+//void calculateReleaseRate(int* Nrel, double* Nfrac, int particleCount);
 
 // numerics related
 void solve(Node*** grid, GridInfo* gInfo, const double tolerance, const double sorOmega);
@@ -288,6 +295,18 @@ int main()
 
     // allocate for particles
     Particle* domainParticles = malloc(PARTICLE_SIZE * sizeof(Particle));
+
+    // calculate the release rate
+    int Nrel;
+    double Nfrac, runningNfrac, temp;
+    double particleReleaseRate = particleCount * (T_PIC/ T_MD);
+
+    // set the integer and fractional parts
+    Nfrac = modf(particleReleaseRate, &temp);
+    Nrel = (int)(temp);
+    runningNfrac = Nfrac;
+
+    //calculateReleaseRate(&Nrel, &Nfrac, particleCount);
 
     // for required number of timesteps,
     int i;
@@ -533,6 +552,20 @@ void setupBoundaryConditions(Node*** grid, GridInfo* gInfo)
     }
     //std::cout << grid[1][1][0].potential << " " << grid[2][3][4].potential << std::endl;
 }
+
+//void calculateReleaseRate(int* Nrel, double* Nfrac, int particleCount)
+//{
+//    const double tMD = T_MD;
+//    const double tPIC = T_PIC;
+//
+//    const int nMD = particleCount;
+//
+//    double particleReleaseRate = nMD * tPIC / tMD;
+//    double intPart;
+//
+//    (*Nfrac) = modf(particleReleaseRate, &intPart);
+//    (*Nrel) = (int)(intPart);
+//}
 
 /*!
  * Solve takes in a tolerance
