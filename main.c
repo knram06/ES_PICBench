@@ -23,6 +23,9 @@
 #define T_MD (230e-12)
 #define T_PIC (30e-12)
 
+// array bounds and margins
+#define LOST_PARTICLES_MARGIN 50
+
 // define all problem parameters in terms of macros
 #define MD_FILE "./input_data/MD_data/10_input_Pos_Q488_20130318.inp"
 
@@ -75,7 +78,10 @@ int accumulateNeumannBCNodes(Node*** grid, GridInfo* gInfo, BoundaryNode* bNodes
 
 // release of particles functions
 //void calculateReleaseRate(int* Nrel, double* Nfrac, int particleCount);
-void releaseParticles(int numParticlesToRelease, Particle* domainParticles);
+void releaseParticles(const int numParticlesToRelease,
+                      const Particle* inputData, const int inputCount,
+                      Particle* domainParticles,
+                      int* lostParticlesArray, int* lostParticlesBound);
 
 // numerics related
 void solve(Node*** grid, GridInfo* gInfo, const double tolerance, const double sorOmega);
@@ -295,6 +301,7 @@ int main()
 
     // allocate for particles
     Particle* domainParticles = malloc(PARTICLE_SIZE * sizeof(Particle));
+    int totalParticles = 0;
 
     // calculate the release rate
     int Nrel;
@@ -308,6 +315,10 @@ int main()
 
     //calculateReleaseRate(&Nrel, &Nfrac, particleCount);
 
+    // array to keep track of lost particles
+    int* lostParticles = malloc( (Nrel + LOST_PARTICLES_MARGIN) * sizeof(int) );
+    int lostParticleBound = 0;
+
     // for required number of timesteps,
     int i;
     for(i = 0; i < TIMESTEPS; i++)
@@ -316,7 +327,10 @@ int main()
         runningNfrac = modf(runningNfrac, &temp);
         const int numParticlesToRelease = Nrel + (int)(temp);
 
-        releaseParticles(numParticlesToRelease, domainParticles);
+        releaseParticles(numParticlesToRelease,
+                         MD_data, particleCount,
+                         domainParticles,
+                         lostParticles, &lostParticleBound);
     }
 
     // introduce the particles
@@ -327,6 +341,7 @@ int main()
 
 
 
+    free(lostParticles);
     free(domainParticles);
     free(bNodes);
     deallocEField(&ElectricField, &gridInfo);
@@ -571,7 +586,10 @@ void setupBoundaryConditions(Node*** grid, GridInfo* gInfo)
 //    (*Nrel) = (int)(intPart);
 //}
 
-void releaseParticles(int numParticlesToRelease, Particle* domainParticles)
+void releaseParticles(const int numParticlesToRelease,
+                      const Particle* inputData, const int inputCount,
+                      Particle* domainParticles,
+                      int* lostParticlesArray, int* lostParticlesBound)
 {
 }
 
