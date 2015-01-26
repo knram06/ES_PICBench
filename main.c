@@ -30,7 +30,7 @@
 #define MD_FILE "./input_data/MD_data/10_input_Pos_Q488_20130318.inp"
 
 #define PARTICLE_SIZE ((int)5e4)
-#define TIMESTEPS ((int)8e3)
+#define TIMESTEPS ((int)1e2)
 
 //#define TEST_FUNCTION (x*x - 2*y*y + z*z)
 #define TEST_FUNCTION 0.
@@ -83,6 +83,7 @@ void releaseParticles(const int numParticlesToRelease,
                       Particle* domainParticles, int* domainParticleBound,
                       int* lostParticlesArray, int* lostParticlesBound);
 Particle randomizeParticleAttribs(const Particle inputParticle);
+void moveParticlesInField();
 
 // numerics related
 void solve(Node*** grid, GridInfo* gInfo, const double tolerance, const double sorOmega);
@@ -302,7 +303,8 @@ int main()
 
     // allocate for particles
     Particle* domainParticles = malloc(PARTICLE_SIZE * sizeof(Particle));
-    int totalParticles = 0;
+    int totalParticles = -1;            // this value is CRUCIAL since it affects the one-off indexing
+                                        // TODO: Better way to specify this?
 
     // calculate the release rate
     int Nrel;
@@ -324,18 +326,22 @@ int main()
     int i;
     for(i = 0; i < TIMESTEPS; i++)
     {
+        printf("Timestep %d:\n", i);
+
         // calculate the current timestep's release rate
         runningNfrac = modf(runningNfrac, &temp);
         const int numParticlesToRelease = Nrel + (int)(temp);
 
+        // introduce the particles
         releaseParticles(numParticlesToRelease,
                          MD_data, particleCount,
                          domainParticles, &totalParticles,
                          lostParticles, &lostParticleBound);
+
+        // then move them
+        moveParticlesInField();
     }
 
-    // introduce the particles
-    // then move them
 
     // write out data for post processing
     writeOutputData("out.vtk", grid, ElectricField, &gridInfo);
@@ -594,6 +600,13 @@ void releaseParticles(const int numParticlesToRelease,
 {
     int i;
 
+    // TODO: move this one level above?
+    // increment the domainParticle count in preparation for insertion
+    (*domainParticleBound) += numParticlesToRelease;
+
+    // assert just in case
+    assert((*domainParticleBound) <= PARTICLE_SIZE);
+
     // loop through MD_data and randomize particle attributes
     for(i = 0; i < numParticlesToRelease; i++)
     {
@@ -619,6 +632,13 @@ void releaseParticles(const int numParticlesToRelease,
             particleBoundCopy--;
         }
     }
+
+    // at the end of this, lostParticleBound HAS to be zero again no?
+    assert((*lostParticlesBound) == 0);
+}
+
+void moveParticlesInField()
+{
 }
 
 Particle randomizeParticleAttribs(const Particle inputParticle)
