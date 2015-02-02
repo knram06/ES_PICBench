@@ -23,6 +23,9 @@
 #define T_MD (230e-12)
 #define T_PIC (30e-12)
 
+// Physical constants
+#define ELECTRONIC_CHARGE (1.60217657e-19)
+
 // array bounds and margins
 #define LOST_PARTICLES_MARGIN 50
 
@@ -83,7 +86,9 @@ void releaseParticles(const int numParticlesToRelease,
                       Particle* domainParticles, int domainParticleBound,
                       int* lostParticlesArray, int* lostParticlesBound);
 Particle randomizeParticleAttribs(const Particle inputParticle);
-int moveParticlesInField();
+
+// warning when using const EField***, omitting for now
+int moveParticlesInField(Particle* domainParticles, int domainParticleBound, EField*** ElectricField, GridInfo* gInfo);
 
 // numerics related
 void solve(Node*** grid, GridInfo* gInfo, const double tolerance, const double sorOmega);
@@ -279,8 +284,10 @@ int main()
 
     // calculate the actual BoundaryNodes count and resize the array to that instead
     // to avoid wastage
+    printf("Consolidating Neumann BC nodes into a different structure....");
     int nodeCount = accumulateNeumannBCNodes(grid, &gridInfo, bNodes);
     bNodes = realloc(bNodes, nodeCount * sizeof(BoundaryNode));
+    printf("done\n");
 
     // enforce boundary conditions
     // impose Neumann BCs
@@ -299,7 +306,9 @@ int main()
         printf("norm: %e\n", norm);
     }
 
+    printf("\nCalculating Electric Field.....");
     calcElectricField(ElectricField, grid, &gridInfo);
+    printf("done\n");
 
     // allocate for particles
     Particle* domainParticles = malloc(PARTICLE_SIZE * sizeof(Particle));
@@ -340,7 +349,7 @@ int main()
                          lostParticles, &lostParticleBound);
 
         // then move them
-        lostParticleBound = moveParticlesInField();
+        lostParticleBound = moveParticlesInField(domainParticles, totalParticles, ElectricField, &gridInfo);
     }
 
 
@@ -594,6 +603,7 @@ void setupBoundaryConditions(Node*** grid, GridInfo* gInfo)
 //    (*Nrel) = (int)(intPart);
 //}
 
+// TODO: document the args
 void releaseParticles(const int numParticlesToRelease,
                       const Particle* inputData, const int inputCount,
                       Particle* domainParticles, int domainParticleBound,
@@ -638,9 +648,50 @@ void releaseParticles(const int numParticlesToRelease,
     assert((*lostParticlesBound) == 0);
 }
 
-int moveParticlesInField()
+int moveParticlesInField(Particle* domainParticles, int domainParticleBound, EField*** ElectricField, GridInfo* gInfo)
 {
+    const double invSpacing = gInfo->invSpacing;
+    const double halfTimeStep = 0.5 * T_PIC;
 
+    // FOR NOW
+    // Approximate each particle to nearest node
+    // TODO: Weight it based on distances to other nodes?
+
+    // loop through all particles
+    int i;
+    for(i = 0; i < domainParticleBound; i++)
+    {
+        Particle* p = &domainParticles[i];
+
+        // round off and get the nearest indices
+        int iPos = (int)(round( (p->x)*invSpacing) );
+        int jPos = (int)(round( (p->y)*invSpacing) );
+        int kPos = (int)(round( (p->z)*invSpacing) );
+
+        // now store the ElectricField value
+        EField* elecField = &ElectricField[iPos][jPos][kPos];
+
+        // TODO: generalize as a loop through the number of components?
+        const double multFactor = (p->charge * ELECTRONIC_CHARGE * T_PIC/ p->mass);
+
+        // update the velocity
+        // save the old velocities
+        double old_Vx = p->Vx,
+               old_Vy = p->Vy,
+               old_Vz = p->Vz;
+
+        p->Vx -= elecField->components[0] * multFactor;
+        p->Vy -= elecField->components[1] * multFactor;
+        p->Vz -= elecField->components[2] * multFactor;
+
+        // update the position
+        p->x += halfTimeStep * (old_Vx + p->Vx);
+        p->y += halfTimeStep * (old_Vy + p->Vy);
+        p->z += halfTimeStep * (old_Vz + p->Vz);
+    }
+
+    // TODO: update this with relevant counter
+    // for "lost particles"
     return 0;
 }
 
