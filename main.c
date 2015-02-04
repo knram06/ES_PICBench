@@ -7,7 +7,7 @@
 #include <string.h>   
 
 #define GRID_LENGTH (3e-4)
-#define NUM_NODES 101
+#define NUM_NODES 51
 
 /* geometry dimension */
 // capillary centered on YZ face
@@ -85,10 +85,18 @@ void releaseParticles(const int numParticlesToRelease,
                       const Particle* inputData, const int inputCount,
                       Particle* domainParticles, int domainParticleBound,
                       int* lostParticlesArray, int* lostParticlesBound);
-Particle randomizeParticleAttribs(const Particle inputParticle);
+Particle randomizeParticleAttribs(Particle inputParticle);
+bool isParticleInDomain(const Particle p)
+{
+    return (p.x <= GRID_LENGTH)
+        && (p.y <= GRID_LENGTH)
+        && (p.z <= GRID_LENGTH);
+}
 
 // warning when using const EField***, omitting for now
-int moveParticlesInField(Particle* domainParticles, int domainParticleBound, EField*** ElectricField, GridInfo* gInfo);
+int moveParticlesInField(Particle* domainParticles, int domainParticleBound,
+                         int* lostParticlesArray,
+                         EField*** ElectricField, GridInfo* gInfo);
 
 // numerics related
 void solve(Node*** grid, GridInfo* gInfo, const double tolerance, const double sorOmega);
@@ -292,7 +300,7 @@ int main()
     // enforce boundary conditions
     // impose Neumann BCs
     // solve and at each step, impose Neumann BCs?
-    double tolerance = 1e-9, sorOmega = 1.9;
+    double tolerance = 1e-3, sorOmega = 1.9;
     double norm = 100.;
 
     while(norm >= tolerance)
@@ -312,7 +320,7 @@ int main()
 
     // allocate for particles
     Particle* domainParticles = malloc(PARTICLE_SIZE * sizeof(Particle));
-    int totalParticles = -1;            // this value is CRUCIAL since it affects the one-off indexing
+    int totalParticlesBound = -1;            // this value is CRUCIAL since it affects the one-off indexing
                                         // TODO: Better way to specify this?
 
     // calculate the release rate
@@ -341,15 +349,15 @@ int main()
         runningNfrac = modf(runningNfrac, &temp);
         const int numParticlesToRelease = Nrel + (int)(temp);
 
-        totalParticles = numParticlesToRelease - lostParticleBound;
+        totalParticlesBound += numParticlesToRelease - lostParticleBound;
         // introduce the particles
         releaseParticles(numParticlesToRelease,
                          MD_data, particleCount,
-                         domainParticles, totalParticles,
+                         domainParticles, totalParticlesBound,
                          lostParticles, &lostParticleBound);
 
         // then move them
-        lostParticleBound = moveParticlesInField(domainParticles, totalParticles, ElectricField, &gridInfo);
+        lostParticleBound = moveParticlesInField(domainParticles, totalParticlesBound, lostParticles, ElectricField, &gridInfo);
     }
 
 
@@ -648,7 +656,9 @@ void releaseParticles(const int numParticlesToRelease,
     assert((*lostParticlesBound) == 0);
 }
 
-int moveParticlesInField(Particle* domainParticles, int domainParticleBound, EField*** ElectricField, GridInfo* gInfo)
+int moveParticlesInField(Particle* domainParticles, int domainParticleBound,
+                         int* lostParticlesArray,
+                         EField*** ElectricField, GridInfo* gInfo)
 {
     const double invSpacing = gInfo->invSpacing;
     const double halfTimeStep = 0.5 * T_PIC;
@@ -658,7 +668,7 @@ int moveParticlesInField(Particle* domainParticles, int domainParticleBound, EFi
     // TODO: Weight it based on distances to other nodes?
 
     // loop through all particles
-    int i;
+    int i, lostParticlesBound = 0;
     for(i = 0; i < domainParticleBound; i++)
     {
         Particle* p = &domainParticles[i];
@@ -688,29 +698,35 @@ int moveParticlesInField(Particle* domainParticles, int domainParticleBound, EFi
         p->x += halfTimeStep * (old_Vx + p->Vx);
         p->y += halfTimeStep * (old_Vy + p->Vy);
         p->z += halfTimeStep * (old_Vz + p->Vz);
+
+        // check if the particle is out of bounds
+        if(!isParticleInDomain(*p))
+        {
+            // if so, increment lost particle counter
+            lostParticlesArray[lostParticlesBound] = i;
+            lostParticlesBound++;
+        }
     }
 
-    // TODO: update this with relevant counter
-    // for "lost particles"
-    return 0;
+    return lostParticlesBound;
 }
 
-Particle randomizeParticleAttribs(const Particle inputParticle)
+Particle randomizeParticleAttribs(Particle inputParticle)
 {
-    Particle ret;                                                                       
+    //Particle ret;                                                                       
 
-    double randNum = (rand() / RAND_MAX) * 2. * M_PI;
+    double randNum = (rand() / (double)(RAND_MAX)) * 2. * M_PI;
     double rYZ = sqrt(inputParticle.y*inputParticle.y + inputParticle.z*inputParticle.z);              
-    ret.y = rYZ * cos(randNum);
-    ret.z = rYZ * sin(randNum);                                                                        
+    inputParticle.y = rYZ * cos(randNum);
+    inputParticle.z = rYZ * sin(randNum);                                                                        
 
     // choose a different random number for velocity - just for more randomization                     
-    randNum = (rand() / RAND_MAX) * 2. * M_PI;
+    randNum = (rand() / (double)(RAND_MAX)) * 2. * M_PI;
     double velYZ = sqrt(inputParticle.Vy*inputParticle.Vy + inputParticle.Vz*inputParticle.Vz);        
-    ret.Vy = velYZ * cos(randNum);
-    ret.Vz = velYZ * sin(randNum);
+    inputParticle.Vy = velYZ * cos(randNum);
+    inputParticle.Vz = velYZ * sin(randNum);
 
-    return ret;
+    return inputParticle;
 }
 
 
