@@ -419,11 +419,11 @@ void parseMDFileToParticles(Particle particleData[], FILE* fp)
             switch(fieldIndex)
             {
                 case 1:
-                    particleData[particleCount].y = atof(token) + (GRID_LENGTH / 2.);
+                    particleData[particleCount].y = atof(token);//+ (GRID_LENGTH / 2.);
                     break;
 
                 case 2:
-                    particleData[particleCount].z = atof(token) + (GRID_LENGTH / 2.);
+                    particleData[particleCount].z = atof(token);//+ (GRID_LENGTH / 2.);
                     break;
 
                 case 3:
@@ -690,9 +690,9 @@ int moveParticlesInField(Particle* domainParticles, int domainParticleBound,
                old_Vy = p->Vy,
                old_Vz = p->Vz;
 
-        p->Vx -= elecField->components[0] * multFactor;
-        p->Vy -= elecField->components[1] * multFactor;
-        p->Vz -= elecField->components[2] * multFactor;
+        p->Vx += elecField->components[0] * multFactor;
+        p->Vy += elecField->components[1] * multFactor;
+        p->Vz += elecField->components[2] * multFactor;
 
         // update the position
         p->x += halfTimeStep * (old_Vx + p->Vx);
@@ -716,13 +716,17 @@ Particle randomizeParticleAttribs(Particle inputParticle)
     //Particle ret;                                                                       
 
     double randNum = (rand() / (double)(RAND_MAX)) * 2. * M_PI;
-    double rYZ = sqrt(inputParticle.y*inputParticle.y + inputParticle.z*inputParticle.z);              
-    inputParticle.y = rYZ * cos(randNum);
-    inputParticle.z = rYZ * sin(randNum);                                                                        
+    double rYZ = sqrt(inputParticle.y*inputParticle.y + inputParticle.z*inputParticle.z);
 
-    // choose a different random number for velocity - just for more randomization                     
+    // adjust for the fact that our origin is at corner
+    // whereas MD data origin is at capillary center
+    // TODO: enforce this in a better place?
+    inputParticle.y = rYZ * cos(randNum) + (GRID_LENGTH/2.);
+    inputParticle.z = rYZ * sin(randNum) + (GRID_LENGTH/2.);
+
+    // choose a different random number for velocity - just for more randomization
     randNum = (rand() / (double)(RAND_MAX)) * 2. * M_PI;
-    double velYZ = sqrt(inputParticle.Vy*inputParticle.Vy + inputParticle.Vz*inputParticle.Vz);        
+    double velYZ = sqrt(inputParticle.Vy*inputParticle.Vy + inputParticle.Vz*inputParticle.Vz);
     inputParticle.Vy = velYZ * cos(randNum);
     inputParticle.Vz = velYZ * sin(randNum);
 
