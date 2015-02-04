@@ -33,7 +33,7 @@
 #define MD_FILE "./input_data/MD_data/10_input_Pos_Q488_20130318.inp"
 
 #define PARTICLE_SIZE ((int)5e4)
-#define TIMESTEPS ((int)1e2)
+#define TIMESTEPS ((int)25)
 
 //#define TEST_FUNCTION (x*x - 2*y*y + z*z)
 #define TEST_FUNCTION 0.
@@ -341,9 +341,9 @@ int main()
 
     // for required number of timesteps,
     int i;
-    for(i = 0; i < TIMESTEPS; i++)
+    for(i = 1; i <= TIMESTEPS; i++)
     {
-        printf("Timestep %d:\n", i);
+        printf("\nTimestep %d:\n", i);
 
         // calculate the current timestep's release rate
         runningNfrac = modf(runningNfrac, &temp);
@@ -355,9 +355,15 @@ int main()
                          MD_data, particleCount,
                          domainParticles, totalParticlesBound,
                          lostParticles, &lostParticleBound);
+        printf("Total Number of Particles: %d\n", totalParticlesBound+1); // need +1 for the one-off offset
 
         // then move them
         lostParticleBound = moveParticlesInField(domainParticles, totalParticlesBound, lostParticles, ElectricField, &gridInfo);
+        printf("%d Particles left the domain\n", lostParticleBound);      // CORRECT?
+
+        // IMPORTANT: add Nfrac to runningNfrac to adjust correctly
+        // for the fractional part
+        runningNfrac += Nfrac;
     }
 
 
