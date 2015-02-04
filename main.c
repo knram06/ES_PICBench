@@ -33,7 +33,7 @@
 #define MD_FILE "./input_data/MD_data/10_input_Pos_Q488_20130318.inp"
 
 #define PARTICLE_SIZE ((int)5e4)
-#define TIMESTEPS ((int)25)
+#define TIMESTEPS ((int)1e3)
 
 //#define TEST_FUNCTION (x*x - 2*y*y + z*z)
 #define TEST_FUNCTION 0.
@@ -94,9 +94,9 @@ bool isParticleInDomain(const Particle p)
 }
 
 // warning when using const EField***, omitting for now
-int moveParticlesInField(Particle* domainParticles, int domainParticleBound,
-                         int* lostParticlesArray,
-                         EField*** ElectricField, GridInfo* gInfo);
+void moveParticlesInField(Particle* domainParticles, int domainParticleBound,
+                          int* lostParticlesArray, int* lostParticlesBound,
+                          EField*** ElectricField, GridInfo* gInfo);
 
 // numerics related
 void solve(Node*** grid, GridInfo* gInfo, const double tolerance, const double sorOmega);
@@ -337,9 +337,10 @@ int main()
 
     // array to keep track of lost particles
     int* lostParticles = malloc( (Nrel + LOST_PARTICLES_MARGIN) * sizeof(int) );
-    int lostParticleBound = 0;
+    int lostParticleBound = -1;         // this value is CRUCIAL since it affects the one-off indexing
+                                        // TODO: Better way to specify this?
 
-    // for required number of timesteps,
+    // for required number of timesteps
     int i;
     for(i = 1; i <= TIMESTEPS; i++)
     {
@@ -358,8 +359,9 @@ int main()
         printf("Total Number of Particles: %d\n", totalParticlesBound+1); // need +1 for the one-off offset
 
         // then move them
-        lostParticleBound = moveParticlesInField(domainParticles, totalParticlesBound, lostParticles, ElectricField, &gridInfo);
-        printf("%d Particles left the domain\n", lostParticleBound);      // CORRECT?
+        moveParticlesInField(domainParticles, totalParticlesBound, lostParticles, &lostParticleBound, ElectricField, &gridInfo);
+        //printf("%d Particles left the domain\n", lostParticleBound+1);
+        printf("%d empty slots in the domain particles\n", lostParticleBound+1);
 
         // IMPORTANT: add Nfrac to runningNfrac to adjust correctly
         // for the fractional part
@@ -639,9 +641,10 @@ void releaseParticles(const int numParticlesToRelease,
         Particle releasedParticle = randomizeParticleAttribs(inputData[rand() % inputCount] );
 
         // if bound is not 0
-        if(*lostParticlesBound)
+        if((*lostParticlesBound) >= 0)
         {
-            domainParticles[ lostParticlesArray[i] ] = releasedParticle;
+            // insert particles from the end
+            domainParticles[ lostParticlesArray[(*lostParticlesBound)] ] = releasedParticle;
             (*lostParticlesBound)--;
             //(*domainParticleBound)--;
         }
@@ -659,12 +662,12 @@ void releaseParticles(const int numParticlesToRelease,
     }
 
     // at the end of this, lostParticleBound HAS to be zero again no?
-    assert((*lostParticlesBound) == 0);
+    //assert((*lostParticlesBound) == 0);
 }
 
-int moveParticlesInField(Particle* domainParticles, int domainParticleBound,
-                         int* lostParticlesArray,
-                         EField*** ElectricField, GridInfo* gInfo)
+void moveParticlesInField(Particle* domainParticles, int domainParticleBound,
+                          int* lostParticlesArray, int* lostParticlesBound,
+                          EField*** ElectricField, GridInfo* gInfo)
 {
     const double invSpacing = gInfo->invSpacing;
     const double halfTimeStep = 0.5 * T_PIC;
@@ -674,7 +677,8 @@ int moveParticlesInField(Particle* domainParticles, int domainParticleBound,
     // TODO: Weight it based on distances to other nodes?
 
     // loop through all particles
-    int i, lostParticlesBound = 0;
+    int i;
+    //int lostParticlesBound = -1;
     for(i = 0; i < domainParticleBound; i++)
     {
         Particle* p = &domainParticles[i];
@@ -709,12 +713,12 @@ int moveParticlesInField(Particle* domainParticles, int domainParticleBound,
         if(!isParticleInDomain(*p))
         {
             // if so, increment lost particle counter
-            lostParticlesArray[lostParticlesBound] = i;
-            lostParticlesBound++;
+            (*lostParticlesBound)++;
+            lostParticlesArray[(*lostParticlesBound)] = i;
         }
     }
 
-    return lostParticlesBound;
+    //return lostParticlesBound;
 }
 
 Particle randomizeParticleAttribs(Particle inputParticle)
