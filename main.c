@@ -4,10 +4,11 @@
 #include <assert.h>
 #include <stdbool.h>
 // strtok issues resolved with including this header
-#include <string.h>   
+#include <string.h>
+#include <time.h>
 
 #define GRID_LENGTH (3e-4)
-#define NUM_NODES 51
+#define NUM_NODES 101
 
 /* geometry dimension */
 // capillary centered on YZ face
@@ -33,7 +34,11 @@
 #define MD_FILE "./input_data/MD_data/10_input_Pos_Q488_20130318.inp"
 
 #define PARTICLE_SIZE ((int)5e4)
-#define TIMESTEPS ((int)1e3)
+#define TIMESTEPS ((int)8e3)
+#define ITER_INTERVAL (200)
+#define ITER_HEADER_INTERVAL (5000)
+#define POST_INTERVAL (100)
+#define POST_WRITE_PATH ("output/")
 
 //#define TEST_FUNCTION (x*x - 2*y*y + z*z)
 #define TEST_FUNCTION 0.
@@ -83,8 +88,8 @@ int accumulateNeumannBCNodes(Node*** grid, GridInfo* gInfo, BoundaryNode* bNodes
 //void calculateReleaseRate(int* Nrel, double* Nfrac, int particleCount);
 void releaseParticles(const int numParticlesToRelease,
                       const Particle* inputData, const int inputCount,
-                      Particle* domainParticles, int domainParticleBound,
-                      int* lostParticlesArray, int* lostParticlesBound);
+                      Particle* domainParticles, int* domainParticleBound,
+                      int* lostParticlesArray, int* lostParticleBound);
 Particle randomizeParticleAttribs(Particle inputParticle);
 bool isParticleInDomain(const Particle p)
 {
@@ -92,11 +97,14 @@ bool isParticleInDomain(const Particle p)
         && (p.y <= GRID_LENGTH)
         && (p.z <= GRID_LENGTH);
 }
+void swapGapsWithEndParticles(Particle* domainParticles, int* domainParticleBound,
+                              int* lostParticlesArray, int* lostParticleBound);
 
 // warning when using const EField***, omitting for now
-void moveParticlesInField(Particle* domainParticles, int domainParticleBound,
-                          int* lostParticlesArray, int* lostParticlesBound,
-                          EField*** ElectricField, GridInfo* gInfo);
+int moveParticlesInField(Particle* domainParticles, int domainParticleBound,
+                         int* lostParticlesArray,
+                         //int* lostParticlesBound,
+                         EField*** ElectricField, GridInfo* gInfo);
 
 // numerics related
 void solve(Node*** grid, GridInfo* gInfo, const double tolerance, const double sorOmega);
@@ -105,6 +113,8 @@ void enforceNeumannBC(BoundaryNode* bNodes, const int nodeCount);
 
 // post process
 void writeOutputData(const char* fileName, Node*** grid, EField*** ElectricField, GridInfo* gInfo);
+void writeOutputDataXML(const char* fileName, Node*** grid, EField*** ElectricField, GridInfo* gInfo);
+void writeParticleData(const char* fileName, const Particle* particleData, int particleCount);
 
 
 // calculate the ElectricField once Node values are known
@@ -300,10 +310,13 @@ int main()
     // enforce boundary conditions
     // impose Neumann BCs
     // solve and at each step, impose Neumann BCs?
-    double tolerance = 1e-3, sorOmega = 1.9;
+    double tolerance = 1e-9, sorOmega = 1.9;
     double norm = 100.;
 
-    while(norm >= tolerance)
+    int iterCount = 1;
+    //while(norm >= tolerance)
+    clock_t start = clock(), diff;
+    for(iterCount = 1; norm >= tolerance; iterCount++)
     {
         norm = sqrt(single_step_solve(grid, gridInfo.numNodes, sorOmega));
 
@@ -311,8 +324,15 @@ int main()
         // as it changes the values in the grid?
         enforceNeumannBC(bNodes, nodeCount);
 
-        printf("norm: %e\n", norm);
+        if(!(iterCount % ITER_HEADER_INTERVAL))
+            printf("%10s %20s\n", "Iter_Count", "Norm");
+
+        if(!(iterCount % ITER_INTERVAL) )
+            printf("%10d %20.8e\n", iterCount, norm);
+
     }
+    diff = clock() - start;
+    double solveTime = diff /CLOCKS_PER_SEC;
 
     printf("\nCalculating Electric Field.....");
     calcElectricField(ElectricField, grid, &gridInfo);
@@ -320,8 +340,7 @@ int main()
 
     // allocate for particles
     Particle* domainParticles = malloc(PARTICLE_SIZE * sizeof(Particle));
-    int totalParticlesBound = -1;            // this value is CRUCIAL since it affects the one-off indexing
-                                        // TODO: Better way to specify this?
+    int totalParticlesCount = 0;
 
     // calculate the release rate
     int Nrel;
@@ -337,11 +356,11 @@ int main()
 
     // array to keep track of lost particles
     int* lostParticles = malloc( (Nrel + LOST_PARTICLES_MARGIN) * sizeof(int) );
-    int lostParticleBound = -1;         // this value is CRUCIAL since it affects the one-off indexing
-                                        // TODO: Better way to specify this?
+    int lostParticleBound = -1;
 
+    start = clock();
     // for required number of timesteps
-    int i;
+    int i, lostParticleCount = 0;
     for(i = 1; i <= TIMESTEPS; i++)
     {
         printf("\nTimestep %d:\n", i);
@@ -350,29 +369,49 @@ int main()
         runningNfrac = modf(runningNfrac, &temp);
         const int numParticlesToRelease = Nrel + (int)(temp);
 
-        totalParticlesBound += numParticlesToRelease - lostParticleBound;
+        //totalParticlesBound += numParticlesToRelease - lostParticleCount;
+        lostParticleBound = (lostParticleCount - 1);        // adjust for one off issue
         // introduce the particles
+        //releaseParticles(1,
         releaseParticles(numParticlesToRelease,
                          MD_data, particleCount,
-                         domainParticles, totalParticlesBound,
-                         lostParticles, &lostParticleBound);
-        printf("Total Number of Particles: %d\n", totalParticlesBound+1); // need +1 for the one-off offset
+                         domainParticles, &totalParticlesCount,
+                         lostParticles,
+                         &lostParticleBound);          // adjust for one off issue
+
+        //totalParticlesBound = (totalParticlesCount - 1);
+        swapGapsWithEndParticles(domainParticles, &totalParticlesCount,
+                                 lostParticles, &lostParticleBound);
+
+        printf("Total Number of Particles: %d\n", totalParticlesCount); // need +1 for the one-off offset
 
         // then move them
-        moveParticlesInField(domainParticles, totalParticlesBound, lostParticles, &lostParticleBound, ElectricField, &gridInfo);
-        //printf("%d Particles left the domain\n", lostParticleBound+1);
-        printf("%d empty slots in the domain particles\n", lostParticleBound+1);
+        lostParticleCount = moveParticlesInField(domainParticles, totalParticlesCount,
+                                                 lostParticles,//&lostParticleBound,
+                                                 ElectricField, &gridInfo);
+        printf("%d Particles left the domain\n", lostParticleCount);
+        //printf("%d empty slots in the domain particles\n", lostParticleBound+1);
 
         // IMPORTANT: add Nfrac to runningNfrac to adjust correctly
         // for the fractional part
         runningNfrac += Nfrac;
+
+        char outputPath[50];
+        if(!(i % POST_INTERVAL) )
+        {
+            sprintf(outputPath, "%s/particleOutput_%d.txt", POST_WRITE_PATH, i);
+            writeParticleData(outputPath, domainParticles, totalParticlesCount);
+        }
     }
+
+    diff = clock() - start;
+    double timeStepsTime = diff /CLOCKS_PER_SEC;
+
+    printf("\nTiming Info\n%10s %10.8e\n%10s %10.8e\n", "Solve", solveTime, "TimeSteps", timeStepsTime);
 
 
     // write out data for post processing
     writeOutputData("out.vtk", grid, ElectricField, &gridInfo);
-
-
 
     free(lostParticles);
     free(domainParticles);
@@ -622,8 +661,8 @@ void setupBoundaryConditions(Node*** grid, GridInfo* gInfo)
 // TODO: document the args
 void releaseParticles(const int numParticlesToRelease,
                       const Particle* inputData, const int inputCount,
-                      Particle* domainParticles, int domainParticleBound,
-                      int* lostParticlesArray, int* lostParticlesBound)
+                      Particle* domainParticles, int* domainParticleCount,
+                      int* lostParticlesArray, int* lostParticleBound)
 {
     int i;
 
@@ -633,7 +672,7 @@ void releaseParticles(const int numParticlesToRelease,
     //int particleBoundCopy = (*domainParticleBound);
 
     // assert just in case
-    assert(domainParticleBound <= PARTICLE_SIZE);
+    assert(*domainParticleCount <= PARTICLE_SIZE);
 
     // loop through MD_data and randomize particle attributes
     for(i = 0; i < numParticlesToRelease; i++)
@@ -641,11 +680,11 @@ void releaseParticles(const int numParticlesToRelease,
         Particle releasedParticle = randomizeParticleAttribs(inputData[rand() % inputCount] );
 
         // if bound is not 0
-        if((*lostParticlesBound) >= 0)
+        if(*lostParticleBound >= 0)
         {
             // insert particles from the end
-            domainParticles[ lostParticlesArray[(*lostParticlesBound)] ] = releasedParticle;
-            (*lostParticlesBound)--;
+            domainParticles[ lostParticlesArray[(*lostParticleBound)] ] = releasedParticle;
+            (*lostParticleBound)--;
             //(*domainParticleBound)--;
         }
         // if it is 0
@@ -653,34 +692,39 @@ void releaseParticles(const int numParticlesToRelease,
         else
         {
             // store a copy of domainParticleBound
-            domainParticles[ domainParticleBound ] = releasedParticle;
+            domainParticles[ *domainParticleCount] = releasedParticle;
 
-            // decrement counter since we are inserting at the end of the
+            // increment counter since we are inserting at the end of the
             // domainParticles array
-            domainParticleBound--;
+            (*domainParticleCount)++;
         }
     }
 
+}
+
+void swapGapsWithEndParticles(Particle* domainParticles, int* domainParticleCount,
+                              int* lostParticlesArray, int* lostParticleBound)
+{
     /* if at the end of this, lostParticlesBound is still not zero,
      * that means we lost a large enough number of particles, that the
      * releasedParticles did not fill up the gaps.
      * So swap all gaps with the last few particles and decrement bounds
      * appropriately */
-    while((*lostParticlesBound) >= 0)
+    while(*lostParticleBound >= 0)
     {
         // swap lostParticlesBound with domainParticleBound value
-        domainParticles[ lostParticlesArray[(*lostParticlesBound)] ] = domainParticles[domainParticleBound];
-        (*lostParticlesBound)--;
-        domainParticleBound--;
+        (*domainParticleCount)--;       // important to decrement this first?
+        domainParticles[ lostParticlesArray[*lostParticleBound] ] = domainParticles[ (*domainParticleCount) ];
+        (*lostParticleBound)--;
     }
 
     // at the end of this, lostParticleBound HAS to be -1 again no?
-    assert((*lostParticlesBound) == -1);
+    //assert(*lostParticleBound == -1);
 }
 
-void moveParticlesInField(Particle* domainParticles, int domainParticleBound,
-                          int* lostParticlesArray, int* lostParticlesBound,
-                          EField*** ElectricField, GridInfo* gInfo)
+int moveParticlesInField(Particle* domainParticles, int domainParticleBound,
+                         int* lostParticlesArray,//int* lostParticlesBound,
+                         EField*** ElectricField, GridInfo* gInfo)
 {
     const double invSpacing = gInfo->invSpacing;
     const double halfTimeStep = 0.5 * T_PIC;
@@ -690,7 +734,7 @@ void moveParticlesInField(Particle* domainParticles, int domainParticleBound,
     // TODO: Weight it based on distances to other nodes?
 
     // loop through all particles
-    int i;
+    int i, lostParticleCount = 0;
     //int lostParticlesBound = -1;
     for(i = 0; i < domainParticleBound; i++)
     {
@@ -726,12 +770,12 @@ void moveParticlesInField(Particle* domainParticles, int domainParticleBound,
         if(!isParticleInDomain(*p))
         {
             // if so, increment lost particle counter
-            (*lostParticlesBound)++;
-            lostParticlesArray[(*lostParticlesBound)] = i;
+            lostParticlesArray[lostParticleCount] = i;
+            lostParticleCount++;
         }
     }
 
-    //return lostParticlesBound;
+    return lostParticleCount;
 }
 
 Particle randomizeParticleAttribs(Particle inputParticle)
@@ -890,6 +934,53 @@ void writeOutputData(const char* fileName, Node*** grid, EField*** ElectricField
 
     free(electricField);
     free(potentialValues);
+    fclose(fileValues);
+}
+
+void writeOutputDataXML(const char* fileName, Node*** grid, EField*** ElectricField, GridInfo* gInfo)
+{
+    FILE* fileValues = fopen(fileName, "w");
+    int i, j, k;
+
+    const int numNodes = gInfo->numNodes;
+    const double spacing = gInfo->spacing;
+
+    const int totalNodes = numNodes*numNodes*numNodes;
+
+    // write the VTK header
+    fprintf(fileValues,
+            "<VTKFile type = \"StructuredGrid\" version=\"0.1\" byte_order=\"LittleEndian\">\n"
+            "  <StructuredGrid WholeExtent=\"%f %f %f %f %f %f\">\n",
+                                            0., GRID_LENGTH, 0., GRID_LENGTH, 0., GRID_LENGTH);
+
+    fprintf(fileValues,
+            "    <Piece Extent=\"%f %f %f %f %f %f\">\n",
+                               0., GRID_LENGTH, 0., GRID_LENGTH, 0., GRID_LENGTH);
+
+    fprintf(fileValues,
+            "    </Piece>\n"
+            "  </StructuredGrid>\n"
+            "</VTKFile>\n"
+            );
+    fclose(fileValues);
+}
+
+void writeParticleData(const char* fileName, const Particle* particleData, int particleCount)
+{
+    FILE* fileValues = fopen(fileName, "w");
+    int i;
+
+    // write the particle data header
+    fprintf(fileValues, "%20s %20s %20s %20s %20s %20s %20s %20s\n", "x", "y", "z", "Vx", "Vy", "Vz", "mass", "charge");
+
+    for(i = 0; i < particleCount; i++)
+    {
+        const Particle* p = &particleData[i];
+
+        fprintf(fileValues, "%20.8e %20.8e %20.8e %20.8e %20.8e %20.8e %20.8e %20.8e\n",
+                              p->x,  p->y,  p->z, p->Vx, p->Vy,  p->Vz, p->mass, p->charge);
+    }
+
     fclose(fileValues);
 }
 
