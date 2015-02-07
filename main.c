@@ -661,8 +661,21 @@ void releaseParticles(const int numParticlesToRelease,
         }
     }
 
-    // at the end of this, lostParticleBound HAS to be zero again no?
-    //assert((*lostParticlesBound) == 0);
+    /* if at the end of this, lostParticlesBound is still not zero,
+     * that means we lost a large enough number of particles, that the
+     * releasedParticles did not fill up the gaps.
+     * So swap all gaps with the last few particles and decrement bounds
+     * appropriately */
+    while((*lostParticlesBound) >= 0)
+    {
+        // swap lostParticlesBound with domainParticleBound value
+        domainParticles[ lostParticlesArray[(*lostParticlesBound)] ] = domainParticles[domainParticleBound];
+        (*lostParticlesBound)--;
+        domainParticleBound--;
+    }
+
+    // at the end of this, lostParticleBound HAS to be -1 again no?
+    assert((*lostParticlesBound) == -1);
 }
 
 void moveParticlesInField(Particle* domainParticles, int domainParticleBound,
