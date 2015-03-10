@@ -8,7 +8,7 @@
 #include <time.h>
 
 #define GRID_LENGTH (3e-4)
-#define NUM_NODES 101
+#define NUM_NODES 65
 
 /* geometry dimension */
 // capillary centered on YZ face
@@ -308,6 +308,7 @@ int main()
     bNodes = realloc(bNodes, nodeCount * sizeof(BoundaryNode));
     printf("done\n");
 
+    writeOutputData("initial.vtk", grid, ElectricField, &gridInfo);
     // enforce boundary conditions
     // impose Neumann BCs
     // solve and at each step, impose Neumann BCs?
@@ -338,6 +339,7 @@ int main()
     printf("\nCalculating Electric Field.....");
     calcElectricField(ElectricField, grid, &gridInfo);
     printf("done\n");
+
 
     // allocate for particles
     Particle* domainParticles = malloc(PARTICLE_SIZE * sizeof(Particle));
@@ -887,16 +889,18 @@ void writeOutputData(const char* fileName, Node*** grid, EField*** ElectricField
     double* potentialValues = malloc(totalNodes * sizeof(double));
     double* electricField   = malloc(3 * totalNodes * sizeof(double));
 
+    // temp adjustment to match grid positions
+    const double halfGridLength = GRID_LENGTH/2.;
     int count = 0;
     for(i = 0; i < numNodes; i++)
     {
         double x = spacing * i;
         for(j = 0; j < numNodes; j++)
         {
-            double y = spacing * j;
+            double y = (spacing * j) - halfGridLength;
             for(k = 0; k < numNodes; k++)
             {
-                double z = spacing * k;
+                double z = (spacing * k) - halfGridLength;
 
                 fprintf(fileValues, "%10.8e %10.8e %10.8e\n", x, y, z);
 
