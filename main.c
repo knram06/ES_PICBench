@@ -14,7 +14,7 @@
 // capillary centered on YZ face
 // origin at Corner of domain
 // --> Particle data MUST be corrected for new origin
-#define CAPILLARY_RADIUS (1.3e-5)
+#define CAPILLARY_RADIUS (1.326e-5)
 #define EXTRACTOR_INNER_RADIUS (1e-4)
 #define EXTRACTOR_OUTER_RADIUS (1.4e-4)
 #define CAPILLARY_VOLTAGE 0.
@@ -37,7 +37,8 @@
 #define TIMESTEPS ((int)8e3)
 #define ITER_INTERVAL (200)
 #define ITER_HEADER_INTERVAL (5000)
-#define POST_INTERVAL (100)
+#define POST_WRITE_FILES (false)
+#define POST_INTERVAL (1000)
 #define POST_WRITE_PATH ("output/")
 
 //#define TEST_FUNCTION (x*x - 2*y*y + z*z)
@@ -397,7 +398,7 @@ int main()
         runningNfrac += Nfrac;
 
         char outputPath[50];
-        if(!(i % POST_INTERVAL) )
+        if(POST_WRITE_FILES && !(i % POST_INTERVAL) )
         {
             sprintf(outputPath, "%s/particleOutput_%d.txt", POST_WRITE_PATH, i);
             writeParticleData(outputPath, domainParticles, totalParticlesCount);
