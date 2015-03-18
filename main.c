@@ -622,22 +622,25 @@ void setupBoundaryConditions(Node*** grid, GridInfo* gInfo)
     // on Y-Z faces
     for(j = 0; j < numNodes; j++)
     {
-        double ty = (spacing*j - center[0]);
+        double ty = fabs(spacing*j - center[0]);
 
         for(k = 0; k < numNodes; k++)
         {
-            double tz = (spacing*k - center[1]);
-            double sumSqs = ty*ty + tz*tz;
+            double tz = fabs(spacing*k - center[1]);
+            //double sumSqs = ty*ty + tz*tz;
 
             // CAPILLARY side
             // we need points INSIDE the capillary for Neumann BC
-            if( sumSqs < capillaryRadius*capillaryRadius )
+            if( (ty <= capillaryRadius) && (tz <= capillaryRadius) )
             {
                 grid[0][j][k].potential = CAPILLARY_VOLTAGE;
             }
 
             // EXTRACTOR side
-            if( (sumSqs > extractorInner*extractorInner) && (sumSqs < extractorOuter*extractorOuter ) )
+            if( ((ty >= extractorInner) || (tz >= extractorInner))
+                                &&
+                ((ty <= extractorOuter) && (tz <= extractorOuter))
+              )
             {
                 grid[numNodes - 1][j][k].potential = EXTRACTOR_VOLTAGE;
             }
