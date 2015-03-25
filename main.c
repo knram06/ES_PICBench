@@ -14,10 +14,10 @@
 // capillary centered on YZ face
 // origin at Corner of domain
 // --> Particle data MUST be corrected for new origin
-#define CAPILLARY_RADIUS (1.326e-5)
-#define EXTRACTOR_INNER_RADIUS (1e-4)
-#define EXTRACTOR_OUTER_RADIUS (1.4e-4)
-#define CAPILLARY_VOLTAGE 0.
+#define CAPILLARY_RADIUS (1.40625e-5)
+#define EXTRACTOR_INNER_RADIUS (9.375e-5)
+#define EXTRACTOR_OUTER_RADIUS (1.40625e-4)
+#define CAPILLARY_VOLTAGE 10.
 #define EXTRACTOR_VOLTAGE (-1350.)
 
 // timesteps info
@@ -340,6 +340,9 @@ int main()
     calcElectricField(ElectricField, grid, &gridInfo);
     printf("done\n");
 
+    // write out data for post processing
+    writeOutputData("out.vtk", grid, ElectricField, &gridInfo);
+
 
     // allocate for particles
     Particle* domainParticles = malloc(PARTICLE_SIZE * sizeof(Particle));
@@ -412,9 +415,6 @@ int main()
 
     printf("\nTiming Info\n%10s %10.8e\n%10s %10.8e\n", "Solve", solveTime, "TimeSteps", timeStepsTime);
 
-
-    // write out data for post processing
-    writeOutputData("out.vtk", grid, ElectricField, &gridInfo);
 
     free(lostParticles);
     free(domainParticles);
@@ -637,7 +637,7 @@ void setupBoundaryConditions(Node*** grid, GridInfo* gInfo)
             }
 
             // EXTRACTOR side
-            if( ((ty >= extractorInner) || (tz >= extractorInner))
+            if( ((ty > extractorInner) || (tz > extractorInner))
                                 &&
                 ((ty <= extractorOuter) && (tz <= extractorOuter))
               )
@@ -1013,17 +1013,17 @@ int accumulateNeumannBCNodes(Node*** grid, GridInfo* gInfo, BoundaryNode* bNodes
     for(j = 0; j < numNodes; j++)
     {
         //double y = spacing * j;
-        double ty = (spacing*j - center[0]);
+        double ty = fabs(spacing*j - center[0]);
 
         for(k = 0; k < numNodes; k++)
         {
             //double z = spacing * k;
-            double tz = (spacing*k - center[1]);
-            double sumSqs = ty*ty + tz*tz;
+            double tz = fabs(spacing*k - center[1]);
+            //double sumSqs = ty*ty + tz*tz;
 
             // CAPILLARY side
             // we need points OUTSIDE the capillary for Neumann BC
-            if( sumSqs >= capillaryRadius*capillaryRadius )
+            if( (ty > capillaryRadius) || (tz > capillaryRadius) )
             {
                 bNodes[nodeCount].bndryNodes[0] = &grid[0][j][k];
                 bNodes[nodeCount].bndryNodes[1] = &grid[1][j][k];
@@ -1033,7 +1033,10 @@ int accumulateNeumannBCNodes(Node*** grid, GridInfo* gInfo, BoundaryNode* bNodes
             }
 
             // EXTRACTOR side
-            if( (sumSqs <= extractorInner*extractorInner) || (sumSqs >= extractorOuter*extractorOuter ) )
+            if( ((ty <= extractorInner) && (tz <= extractorInner))
+                               || 
+                ((ty > extractorOuter) || (tz > extractorOuter))
+              )
             {
                 bNodes[nodeCount].bndryNodes[0] = &grid[numNodes-1][j][k];
                 bNodes[nodeCount].bndryNodes[1] = &grid[numNodes-2][j][k];
