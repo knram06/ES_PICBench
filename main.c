@@ -893,17 +893,17 @@ void writeOutputData(const char* fileName, Node*** grid, EField*** ElectricField
     double* electricField   = malloc(3 * totalNodes * sizeof(double));
 
     // temp adjustment to match grid positions
-    const double halfGridLength = GRID_LENGTH/2.;
+    //const double halfGridLength = GRID_LENGTH/2.;
     int count = 0;
     for(i = 0; i < numNodes; i++)
     {
         double x = spacing * i;
         for(j = 0; j < numNodes; j++)
         {
-            double y = (spacing * j) - halfGridLength;
+            double y = (spacing * j);
             for(k = 0; k < numNodes; k++)
             {
-                double z = (spacing * k) - halfGridLength;
+                double z = (spacing * k);
 
                 fprintf(fileValues, "%10.8e %10.8e %10.8e\n", x, y, z);
 
