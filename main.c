@@ -34,7 +34,7 @@
 #define MD_FILE "./input_data/MD_data/10_input_Pos_Q488_20130318.inp"
 
 #define PARTICLE_SIZE ((int)5e4)
-#define TIMESTEPS ((int)8e3)
+#define TIMESTEPS ((int)0)
 #define ITER_INTERVAL (200)
 #define ITER_HEADER_INTERVAL (5000)
 #define POST_WRITE_FILES (false)
@@ -312,13 +312,17 @@ int main()
     // enforce boundary conditions
     // impose Neumann BCs
     // solve and at each step, impose Neumann BCs?
-    double tolerance = 1e-9, sorOmega = 1.9;
+    double tolerance = 1e-9, sorOmega = 1.98;
+    const int iterToRun = (int)1e4;
     double norm = 100.;
 
     int iterCount = 1;
     //while(norm >= tolerance)
     clock_t start = clock(), diff;
-    for(iterCount = 1; norm >= tolerance; iterCount++)
+    for(iterCount = 1;
+        iterCount <= iterToRun;
+        //norm >= tolerance;
+        iterCount++)
     {
         norm = sqrt(single_step_solve(grid, gridInfo.numNodes, sorOmega));
 
