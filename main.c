@@ -34,7 +34,7 @@
 #define MD_FILE "./input_data/MD_data/10_input_Pos_Q488_20130318.inp"
 
 #define PARTICLE_SIZE ((int)5e4)
-#define TIMESTEPS ((int)8e3)
+#define TIMESTEPS ((int)0)
 #define ITER_INTERVAL (200)
 #define ITER_HEADER_INTERVAL (5000)
 #define POST_WRITE_FILES (false)
@@ -299,14 +299,14 @@ int main()
 
     // preallocate NeumannBC nodes in terms of MAX possible
     // i.e. num of sides of cube * num nodes per side
-    BoundaryNode* bNodes = malloc( 6 * (NUM_NODES)*(NUM_NODES) * sizeof(BoundaryNode) );
+    //BoundaryNode* bNodes = malloc( 6 * (NUM_NODES)*(NUM_NODES) * sizeof(BoundaryNode) );
 
     // calculate the actual BoundaryNodes count and resize the array to that instead
     // to avoid wastage
-    printf("Consolidating Neumann BC nodes into a different structure....");
-    int nodeCount = accumulateNeumannBCNodes(grid, &gridInfo, bNodes);
-    bNodes = realloc(bNodes, nodeCount * sizeof(BoundaryNode));
-    printf("done\n");
+    //printf("Consolidating Neumann BC nodes into a different structure....");
+    //int nodeCount = accumulateNeumannBCNodes(grid, &gridInfo, bNodes);
+    //bNodes = realloc(bNodes, nodeCount * sizeof(BoundaryNode));
+    //printf("done\n");
 
     writeOutputData("initial.vtk", grid, ElectricField, &gridInfo);
     // enforce boundary conditions
@@ -324,7 +324,7 @@ int main()
 
         // TODO: norm should be updated with this calculation no?
         // as it changes the values in the grid?
-        enforceNeumannBC(bNodes, nodeCount);
+        //enforceNeumannBC(bNodes, nodeCount);
 
         if(!(iterCount % ITER_HEADER_INTERVAL))
             printf("%10s %20s\n", "Iter_Count", "Norm");
@@ -418,7 +418,7 @@ int main()
 
     free(lostParticles);
     free(domainParticles);
-    free(bNodes);
+    //free(bNodes);
     deallocEField(&ElectricField, &gridInfo);
     deallocGrid(&grid, &gridInfo);
     free(MD_data);
@@ -622,28 +622,22 @@ void setupBoundaryConditions(Node*** grid, GridInfo* gInfo)
     // on Y-Z faces
     for(j = 0; j < numNodes; j++)
     {
-        double ty = fabs(spacing*j - center[0]);
-
         for(k = 0; k < numNodes; k++)
         {
-            double tz = fabs(spacing*k - center[1]);
-            //double sumSqs = ty*ty + tz*tz;
-
             // CAPILLARY side
-            // we need points INSIDE the capillary for Neumann BC
-            if( (ty <= capillaryRadius) && (tz <= capillaryRadius) )
-            {
-                grid[0][j][k].potential = CAPILLARY_VOLTAGE;
-            }
+            //if( (ty <= capillaryRadius) && (tz <= capillaryRadius) )
+            //{
+            grid[0][j][k].potential = CAPILLARY_VOLTAGE;
+            //}
 
             // EXTRACTOR side
-            if( ((ty > extractorInner) || (tz > extractorInner))
-                                &&
-                ((ty <= extractorOuter) && (tz <= extractorOuter))
-              )
-            {
-                grid[numNodes - 1][j][k].potential = EXTRACTOR_VOLTAGE;
-            }
+            //if( ((ty > extractorInner) || (tz > extractorInner))
+            //                    &&
+            //    ((ty <= extractorOuter) && (tz <= extractorOuter))
+            //  )
+            //{
+            grid[numNodes - 1][j][k].potential = EXTRACTOR_VOLTAGE;
+            //}
 
         }
     }
