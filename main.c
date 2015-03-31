@@ -34,7 +34,7 @@
 #define MD_FILE "./input_data/MD_data/10_input_Pos_Q488_20130318.inp"
 
 #define PARTICLE_SIZE ((int)5e4)
-#define TIMESTEPS ((int)8e3)
+#define TIMESTEPS ((int)0)
 #define ITER_INTERVAL (200)
 #define ITER_HEADER_INTERVAL (5000)
 #define POST_WRITE_FILES (false)
@@ -110,7 +110,7 @@ int moveParticlesInField(Particle* domainParticles, int domainParticleBound,
 // numerics related
 void solve(Node*** grid, GridInfo* gInfo, const double tolerance, const double sorOmega);
 double single_step_solve(Node*** grid, const int numNodes, const double sorOmega);
-void enforceNeumannBC(BoundaryNode* bNodes, const int nodeCount);
+double enforceNeumannBC(BoundaryNode* bNodes, const int nodeCount, double sorOmega);
 
 // post process
 void writeOutputData(const char* fileName, Node*** grid, EField*** ElectricField, GridInfo* gInfo);
@@ -312,19 +312,19 @@ int main()
     // enforce boundary conditions
     // impose Neumann BCs
     // solve and at each step, impose Neumann BCs?
-    double tolerance = 1e-9, sorOmega = 1.9;
-    double norm = 100.;
+    double tolerance = 1e+3, sorOmega = 1.9;
+    double norm = 1e5;
 
     int iterCount = 1;
     //while(norm >= tolerance)
     clock_t start = clock(), diff;
     for(iterCount = 1; norm >= tolerance; iterCount++)
     {
-        norm = sqrt(single_step_solve(grid, gridInfo.numNodes, sorOmega));
+        norm = sqrt( single_step_solve(grid, gridInfo.numNodes, sorOmega) + enforceNeumannBC(bNodes, nodeCount, sorOmega) );
 
         // TODO: norm should be updated with this calculation no?
         // as it changes the values in the grid?
-        enforceNeumannBC(bNodes, nodeCount);
+        //enforceNeumannBC(bNodes, nodeCount);
 
         if(!(iterCount % ITER_HEADER_INTERVAL))
             printf("%10s %20s\n", "Iter_Count", "Norm");
@@ -1092,11 +1092,22 @@ int accumulateNeumannBCNodes(Node*** grid, GridInfo* gInfo, BoundaryNode* bNodes
     return nodeCount;
 }
 
-void enforceNeumannBC(BoundaryNode* bNodes, const int nodeCount)
+double enforceNeumannBC(BoundaryNode* bNodes, const int nodeCount, double sorOmega)
 {
     int i;
+    double norm = 0.;
 
     for(i = 0; i < nodeCount; i++)
-        (bNodes[i].bndryNodes[0])->potential = (1./3) * (4 * (bNodes[i].bndryNodes[1])->potential - (bNodes[i].bndryNodes[2])->potential);
+    {
+        double temp = (bNodes[i].bndryNodes[0])->potential;
+        double val = (1./3) * (4 * (bNodes[i].bndryNodes[1])->potential - (bNodes[i].bndryNodes[2])->potential);
+
+        (bNodes[i].bndryNodes[0])->potential = val*sorOmega + (1-sorOmega)*temp;
+
+        temp = (bNodes[i].bndryNodes[0])->potential - temp;
+        norm += temp*temp;
+    }
+
+    return norm;
 
 }
