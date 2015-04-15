@@ -8,7 +8,7 @@
 #include <time.h>
 
 #define GRID_LENGTH (3e-4)
-#define NUM_NODES 65
+#define NUM_NODES 33
 
 /* geometry dimension */
 // capillary centered on YZ face
@@ -312,7 +312,7 @@ int main()
     // enforce boundary conditions
     // impose Neumann BCs
     // solve and at each step, impose Neumann BCs?
-    double tolerance = 1e-9, sorOmega = 1.9;
+    double tolerance = 1e-10, sorOmega = 1.9;
     double norm = 100.;
 
     int iterCount = 1;
