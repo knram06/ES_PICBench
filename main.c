@@ -82,7 +82,7 @@ unsigned int countLinesInFile(FILE* fp);
 void parseMDFileToParticles(Particle particleData[], FILE* fp);
 void allocateGrid(Node**** grid, GridInfo* gInfo);
 void deallocGrid(Node**** grid, GridInfo* gInfo);
-void setupBoundaryConditions(Node*** grid, GridInfo* gInfo);
+int setupBoundaryConditions(Node*** grid, GridInfo* gInfo, BoundaryNode *bNodes);
 int accumulateNeumannBCNodes(Node*** grid, GridInfo* gInfo, BoundaryNode* bNodes);
 
 // release of particles functions
@@ -294,17 +294,17 @@ int main()
     EField*** ElectricField = NULL;
     allocateEField(&ElectricField, &gridInfo);
 
-    // setup boundary conditions
-    setupBoundaryConditions(grid, &gridInfo);
-
     // preallocate NeumannBC nodes in terms of MAX possible
     // i.e. num of sides of cube * num nodes per side
-    BoundaryNode* bNodes = malloc( 6 * (NUM_NODES)*(NUM_NODES) * sizeof(BoundaryNode) );
+    BoundaryNode *bNodes = malloc( 6 * (NUM_NODES)*(NUM_NODES) * sizeof(BoundaryNode) );
 
     // calculate the actual BoundaryNodes count and resize the array to that instead
     // to avoid wastage
     printf("Consolidating Neumann BC nodes into a different structure....");
-    int nodeCount = accumulateNeumannBCNodes(grid, &gridInfo, bNodes);
+    // setup boundary conditions
+    int nodeCount = setupBoundaryConditions(grid, &gridInfo, bNodes);
+
+    //int nodeCount = accumulateNeumannBCNodes(grid, &gridInfo, bNodes);
     bNodes = realloc(bNodes, nodeCount * sizeof(BoundaryNode));
     printf("done\n");
 
@@ -563,7 +563,7 @@ void deallocGrid(Node**** grid, GridInfo* gInfo)
 }
 
 // setup the boundary conditions
-void setupBoundaryConditions(Node*** grid, GridInfo* gInfo)
+int setupBoundaryConditions(Node*** grid, GridInfo* gInfo, BoundaryNode *bNodes)
 {
     const int numNodes           = gInfo->numNodes;
     const double spacing         = gInfo->spacing;
@@ -583,6 +583,7 @@ void setupBoundaryConditions(Node*** grid, GridInfo* gInfo)
     //const double extractorVoltage = EXTRACTOR_VOLTAGE;
 
     int i, j, k;
+    int nodeCount = 0;
 
     // set boundary conditions
     /*********************************************************/
@@ -601,9 +602,22 @@ void setupBoundaryConditions(Node*** grid, GridInfo* gInfo)
             y = 0.;
             //grid[i][0][k] = TEST_FUNCTION;
             grid[i][0][k].potential=TEST_FUNCTION;
+
+            // enforce Neumann boundary nodes
+            bNodes[nodeCount].bndryNodes[0] = &grid[i][0][k];
+            bNodes[nodeCount].bndryNodes[1] = &grid[i][1][k];
+            bNodes[nodeCount].bndryNodes[2] = &grid[i][2][k];
+            nodeCount++;
+
             y = GRID_LENGTH;
             //grid[i][SIZE_Y-1][k] = TEST_FUNCTION;
             grid[i][numNodes - 1][k].potential=TEST_FUNCTION;
+
+            // Y = GRID_LENGTH
+            bNodes[nodeCount].bndryNodes[0] = &grid[i][numNodes-1][k];
+            bNodes[nodeCount].bndryNodes[1] = &grid[i][numNodes-2][k];
+            bNodes[nodeCount].bndryNodes[2] = &grid[i][numNodes-3][k];
+            nodeCount++;
         }
 
         // on X-Y faces
@@ -612,8 +626,22 @@ void setupBoundaryConditions(Node*** grid, GridInfo* gInfo)
             y = spacing*j;
             z = 0.;
             grid[i][j][0].potential=TEST_FUNCTION;
+
+            // enforce Neumann boundary nodes
+            // Z = 0
+            bNodes[nodeCount].bndryNodes[0] = &grid[i][j][0];
+            bNodes[nodeCount].bndryNodes[1] = &grid[i][j][1];
+            bNodes[nodeCount].bndryNodes[2] = &grid[i][j][2];
+            nodeCount++;
+
             z = GRID_LENGTH;
             grid[i][j][numNodes - 1].potential=TEST_FUNCTION;
+
+            // Z = GRID_LENGTH
+            bNodes[nodeCount].bndryNodes[0] = &grid[i][j][numNodes-1];
+            bNodes[nodeCount].bndryNodes[1] = &grid[i][j][numNodes-2];
+            bNodes[nodeCount].bndryNodes[2] = &grid[i][j][numNodes-3];
+            nodeCount++;
         }
     }
 
@@ -633,15 +661,33 @@ void setupBoundaryConditions(Node*** grid, GridInfo* gInfo)
             {
                 grid[0][j][k].potential = CAPILLARY_VOLTAGE;
             }
+            else
+            {
+                bNodes[nodeCount].bndryNodes[0] = &grid[0][j][k];
+                bNodes[nodeCount].bndryNodes[1] = &grid[1][j][k];
+                bNodes[nodeCount].bndryNodes[2] = &grid[2][j][k];
+
+                nodeCount++;
+            }
 
             // EXTRACTOR side
             if( (sumSqs > extractorInner*extractorInner) && (sumSqs < extractorOuter*extractorOuter ) )
             {
                 grid[numNodes - 1][j][k].potential = EXTRACTOR_VOLTAGE;
             }
+            else
+            {
+                bNodes[nodeCount].bndryNodes[0] = &grid[numNodes-1][j][k];
+                bNodes[nodeCount].bndryNodes[1] = &grid[numNodes-2][j][k];
+                bNodes[nodeCount].bndryNodes[2] = &grid[numNodes-3][j][k];
+
+                nodeCount++;
+            }
 
         }
     }
+
+    return nodeCount;
     //std::cout << grid[1][1][0].potential << " " << grid[2][3][4].potential << std::endl;
 }
 
@@ -714,8 +760,8 @@ void swapGapsWithEndParticles(Particle* domainParticles, int* domainParticleCoun
     while(*lostParticleBound >= 0)
     {
         // swap lostParticlesBound with domainParticleBound value
-        (*domainParticleCount)--;       // important to decrement this first?
-        domainParticles[ lostParticlesArray[*lostParticleBound] ] = domainParticles[ (*domainParticleCount) ];
+        domainParticles[ lostParticlesArray[*lostParticleBound] ] = domainParticles[ (*domainParticleCount) - 1 ];
+        (*domainParticleCount)--;
         (*lostParticleBound)--;
     }
 
