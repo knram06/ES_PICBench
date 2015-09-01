@@ -86,7 +86,6 @@ int setupBoundaryConditions(Node*** grid, GridInfo* gInfo, BoundaryNode *bNodes)
 int accumulateNeumannBCNodes(Node*** grid, GridInfo* gInfo, BoundaryNode* bNodes);
 
 // release of particles functions
-//void calculateReleaseRate(int* Nrel, double* Nfrac, int particleCount);
 void releaseParticles(const int numParticlesToRelease,
                       const Particle* inputData, const int inputCount,
                       Particle* domainParticles, int* domainParticleBound,
@@ -353,9 +352,11 @@ int main()
     Nrel = (int)(temp);
     runningNfrac = Nfrac;
 
-    //calculateReleaseRate(&Nrel, &Nfrac, particleCount);
-
-    // array to keep track of lost particles
+    /*! Array to keep track of lost particles
+     * The idea behind is that, particles may leave the domain and this is an index
+     * of such particles.
+     * Using this, new particles can be inserted into those locations appropriately.
+     */
     int* lostParticles = malloc( (Nrel + LOST_PARTICLES_MARGIN) * sizeof(int) );
     int lostParticleBound = -1;
 
@@ -691,25 +692,27 @@ int setupBoundaryConditions(Node*** grid, GridInfo* gInfo, BoundaryNode *bNodes)
     //std::cout << grid[1][1][0].potential << " " << grid[2][3][4].potential << std::endl;
 }
 
-//void calculateReleaseRate(int* Nrel, double* Nfrac, int particleCount)
-//{
-//    const double tMD = T_MD;
-//    const double tPIC = T_PIC;
-//
-//    const int nMD = particleCount;
-//
-//    double particleReleaseRate = nMD * tPIC / tMD;
-//    double intPart;
-//
-//    (*Nfrac) = modf(particleReleaseRate, &intPart);
-//    (*Nrel) = (int)(intPart);
-//}
-
-// TODO: document the args
-void releaseParticles(const int numParticlesToRelease,
-                      const Particle* inputData, const int inputCount,
-                      Particle* domainParticles, int* domainParticleCount,
-                      int* lostParticlesArray, int* lostParticleBound)
+/*!
+ * This routine releases the a specified number of particles into the domain. It uses the lostParticles index
+ * count array to keep track of indices of particles which have left the domain. The outline is as follows:
+ * For each count in number of particles to release
+ * -# Keep ready a particle with randomized attributes.
+ * -# If lostParticle bound is not 0, then we still have more indices to overwrite, so insert it into that.
+ * -# If not, then simply insert particiles at the end of the array.
+ * 
+ * \note End of the array does NOT correspond to end of the domain. There is no relation between the array position
+ * and position inside the domain.
+ *
+ */
+void releaseParticles(
+        const int numParticlesToRelease,  /**< Number of particles to release */
+        const Particle* inputData,        /**< Input data of MD simulated particles to choose from */
+        const int inputCount,             /**< Size of the MD input data */
+        Particle* domainParticles,        /**< An array with the Particles currently in the domain */
+        int* domainParticleCount,         /**< Count of particles in the domain */
+        int* lostParticlesArray,          /**< Array indicating the particle indices where the particles have left the domain */
+        int* lostParticleBound,           /**< Pass by pointer for modifying lostParticles index counts */
+        )
 {
     int i;
 
@@ -749,14 +752,17 @@ void releaseParticles(const int numParticlesToRelease,
 
 }
 
+
+/*!
+ * If when this function is called, lostParticlesBound is still not zero,
+ * that means we lost a large enough number of particles, that the
+ * releasedParticles did not fill up the gaps.
+ * So swap all gaps with the last few particles and decrement bounds
+ * appropriately
+ */
 void swapGapsWithEndParticles(Particle* domainParticles, int* domainParticleCount,
                               int* lostParticlesArray, int* lostParticleBound)
 {
-    /* if at the end of this, lostParticlesBound is still not zero,
-     * that means we lost a large enough number of particles, that the
-     * releasedParticles did not fill up the gaps.
-     * So swap all gaps with the last few particles and decrement bounds
-     * appropriately */
     while(*lostParticleBound >= 0)
     {
         // swap lostParticlesBound with domainParticleBound value
