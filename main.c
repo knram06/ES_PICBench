@@ -8,7 +8,11 @@
 #include <time.h>
 
 #define GRID_LENGTH (3e-4)
-#define NUM_NODES 65
+#define NUM_NODES 101
+
+/*Macro for 3D to 1D indexing */
+#define GRID_1D(grid, i, j, k) ( grid[(k) + NUM_NODES*(j) + NUM_NODES*NUM_NODES*(i)] )
+
 
 /* geometry dimension */
 // capillary centered on YZ face
@@ -71,7 +75,7 @@ typedef struct
 
 typedef struct
 {
-    int    numNodes;
+    int    numNodes, totalNodes;
     double spacing, invSpacing;
 } GridInfo;
 
@@ -80,9 +84,9 @@ unsigned int countLinesInFile(FILE* fp);
 
 // pre-process
 void parseMDFileToParticles(Particle particleData[], FILE* fp);
-void allocateGrid(Node**** grid, GridInfo* gInfo);
-void deallocGrid(Node**** grid, GridInfo* gInfo);
-int setupBoundaryConditions(Node*** grid, GridInfo* gInfo, BoundaryNode *bNodes);
+void allocateGrid(Node** grid, GridInfo* gInfo);
+void deallocGrid(Node** grid);
+int setupBoundaryConditions(Node* grid, GridInfo* gInfo, BoundaryNode *bNodes);
 int accumulateNeumannBCNodes(Node*** grid, GridInfo* gInfo, BoundaryNode* bNodes);
 
 // release of particles functions
@@ -104,21 +108,20 @@ void swapGapsWithEndParticles(Particle* domainParticles, int* domainParticleBoun
 int moveParticlesInField(Particle* domainParticles, int domainParticleBound,
                          int* lostParticlesArray,
                          //int* lostParticlesBound,
-                         EField*** ElectricField, GridInfo* gInfo);
+                         EField* ElectricField, GridInfo* gInfo);
 
 // numerics related
-void solve(Node*** grid, GridInfo* gInfo, const double tolerance, const double sorOmega);
-double single_step_solve(Node*** grid, const int numNodes, const double sorOmega);
+double single_step_solve(Node* grid, const int numNodes, const double sorOmega);
 void enforceNeumannBC(BoundaryNode* bNodes, const int nodeCount);
 
 // post process
-void writeOutputData(const char* fileName, Node*** grid, EField*** ElectricField, GridInfo* gInfo);
+void writeOutputData(const char* fileName, Node* grid, EField* ElectricField, GridInfo* gInfo);
 void writeOutputDataXML(const char* fileName, Node*** grid, EField*** ElectricField, GridInfo* gInfo);
 void writeParticleData(const char* fileName, const Particle* particleData, int particleCount);
 
 
 // calculate the ElectricField once Node values are known
-void calcElectricField(EField*** ElectricField, Node*** grid, GridInfo* gInfo)
+void calcElectricField(EField* ElectricField, Node* grid, GridInfo* gInfo)
 {
     const int   numNodes = gInfo->numNodes;
     const double invSpacing = gInfo->invSpacing;
@@ -147,26 +150,28 @@ void calcElectricField(EField*** ElectricField, Node*** grid, GridInfo* gInfo)
                 bool isK_LEN = (k == (numNodes - 1));
                 bool isK_0_OR_LEN = isK_0 || isK_LEN;
 
+                EField* elecField = &GRID_1D(ElectricField, i, j, k);
+
                 /**************************************/
                 /****** X = 0 || X = GRID_LENGTH ******/
                 double val = 0.;
                 if(isI_0_OR_LEN)
                 {
                     if(isI_0)
-                        val = ( -grid[i+2][j][k].potential
-                             + 4*grid[i+1][j][k].potential
-                             - 3*grid[i  ][j][k].potential );
+                        val = ( -GRID_1D(grid,i+2,j,k).potential
+                             + 4*GRID_1D(grid,i+1,j,k).potential
+                             - 3*GRID_1D(grid,i  ,j,k).potential );
 
                     else if (isI_LEN)
-                        val = -( -grid[i-2][j][k].potential 
-                              + 4*grid[i-1][j][k].potential
-                              - 3*grid[i  ][j][k].potential );
+                        val = -( -GRID_1D(grid,i-2,j,k).potential 
+                              + 4*GRID_1D(grid,i-1,j,k).potential
+                              - 3*GRID_1D(grid,i  ,j,k).potential );
                 }
                 else
-                    val = (grid[i+1][j][k].potential - grid[i-1][j][k].potential);
+                    val = (GRID_1D(grid,i+1,j,k).potential - GRID_1D(grid,i-1,j,k).potential);
 
                 // by now ElectricField[i][j][k] needs to be filled
-                ElectricField[i][j][k].components[0] = multFactor * val;
+                elecField->components[0] = multFactor * val;
 
 
                 /**************************************/
@@ -174,19 +179,19 @@ void calcElectricField(EField*** ElectricField, Node*** grid, GridInfo* gInfo)
                 if(isJ_0_OR_LEN)
                 {
                     if (isJ_0)
-                        val = ( -grid[i][j+2][k].potential
-                             + 4*grid[i][j+1][k].potential
-                             - 3*grid[i][j  ][k].potential );
+                        val = ( -GRID_1D(grid,i,j+2,k).potential
+                             + 4*GRID_1D(grid,i,j+1,k).potential
+                             - 3*GRID_1D(grid,i,j  ,k).potential );
                     else if (isJ_LEN)
-                        val = -(-grid[i][j-2][k].potential 
-                             + 4*grid[i][j-1][k].potential
-                             - 3*grid[i][j  ][k].potential );
+                        val = -(-GRID_1D(grid,i,j-2,k).potential 
+                             + 4*GRID_1D(grid,i,j-1,k).potential
+                             - 3*GRID_1D(grid,i,j  ,k).potential );
                 }
                 else
-                    val = (grid[i][j+1][k].potential - grid[i][j-1][k].potential);
+                    val = (GRID_1D(grid,i,j+1,k).potential - GRID_1D(grid,i,j-1,k).potential);
 
                 // by now ElectricField[i][j][k] needs to be filled
-                ElectricField[i][j][k].components[1] = multFactor * val;
+                elecField->components[1] = multFactor * val;
 
 
                 /**************************************/
@@ -194,19 +199,19 @@ void calcElectricField(EField*** ElectricField, Node*** grid, GridInfo* gInfo)
                 if(isK_0_OR_LEN)
                 {
                     if (isK_0)
-                        val = ( -grid[i][j][k+2].potential
-                             + 4*grid[i][j][k+1].potential
-                             - 3*grid[i][j][k  ].potential );
+                        val = ( -GRID_1D(grid,i,j,k+2).potential
+                             + 4*GRID_1D(grid,i,j,k+1).potential
+                             - 3*GRID_1D(grid,i,j,k  ).potential );
                     else if (isK_LEN)
-                        val = -( -grid[i][j][k-2].potential 
-                              + 4*grid[i][j][k-1].potential
-                              - 3*grid[i][j][k  ].potential );
+                        val = -( -GRID_1D(grid,i,j,k-2).potential 
+                              + 4*GRID_1D(grid,i,j,k-1).potential
+                              - 3*GRID_1D(grid,i,j,k  ).potential );
                 }
                 else
-                    val = (grid[i][j][k+1].potential - grid[i][j][k-1].potential);
+                    val = (GRID_1D(grid,i,j,k+1).potential - GRID_1D(grid,i,j,k-1).potential);
 
                 // by now ElectricField[i][j][k] needs to be filled
-                ElectricField[i][j][k].components[2] = multFactor * val;
+                elecField->components[2] = multFactor * val;
 
             } // end of k loop
         } // end of j loop
@@ -214,46 +219,18 @@ void calcElectricField(EField*** ElectricField, Node*** grid, GridInfo* gInfo)
 
 }
 
-void allocateEField(EField**** grid, GridInfo* gInfo)
+void allocateEField(EField** grid, GridInfo* gInfo)
 {
-    const int numNodes = gInfo->numNodes;
+    const int totalNodes = gInfo->totalNodes;
     int i, j, k;
 
-    (*grid) = malloc(numNodes * sizeof(EField**));
+    (*grid) = malloc(totalNodes * sizeof(EField));
     assert((*grid) != NULL);
 
-    for(i = 0; i < numNodes; i++)
-    {
-        (*grid)[i] = malloc(numNodes * sizeof(EField*));
-        for(j = 0; j < numNodes; j++)
-        {
-            (*grid)[i][j] = malloc(numNodes * sizeof(EField));
-            for(k = 0; k < numNodes; k++)
-            {
-                // initialize the struct values
-                (*grid)[i][j][k].components[0] = 0.;
-                (*grid)[i][j][k].components[1] = 0.;
-                (*grid)[i][j][k].components[2] = 0.;
-                //val->pos[0] = 0.;
-                //val->pos[1] = 0.;
-                //val->pos[2] = 0.;
-            }
-        }
-    }
 }
 
-void deallocEField(EField**** grid, GridInfo* gInfo)
+void deallocEField(EField** grid)
 {
-    const int numNodes = gInfo->numNodes;
-    int i, j;
-
-    for(i = 0; i < numNodes; i++)
-    {
-        for(j = 0; j < numNodes; j++)
-            free((*grid)[i][j]);
-
-        free((*grid)[i]);
-    }
     free((*grid));
 }
 
@@ -275,6 +252,7 @@ int main()
     // fill in GridInfo data
     GridInfo gridInfo;
     gridInfo.numNodes = NUM_NODES;
+    gridInfo.totalNodes = gridInfo.numNodes * gridInfo.numNodes * gridInfo.numNodes;
     gridInfo.spacing = GRID_LENGTH / (NUM_NODES - 1);
     gridInfo.invSpacing = 1./(gridInfo.spacing);        // just caching this to avoid divisions?
 
@@ -287,10 +265,10 @@ int main()
     fclose(fp);
 
     // allocate the grid
-    Node*** grid = NULL;
+    Node* grid = NULL;
     allocateGrid(&grid, &gridInfo);
 
-    EField*** ElectricField = NULL;
+    EField* ElectricField = NULL;
     allocateEField(&ElectricField, &gridInfo);
 
     // preallocate NeumannBC nodes in terms of MAX possible
@@ -374,7 +352,6 @@ int main()
         //totalParticlesBound += numParticlesToRelease - lostParticleCount;
         lostParticleBound = (lostParticleCount - 1);        // adjust for one off issue
         // introduce the particles
-        //releaseParticles(1,
         releaseParticles(numParticlesToRelease,
                          MD_data, particleCount,
                          domainParticles, &totalParticlesCount,
@@ -418,8 +395,8 @@ int main()
     free(lostParticles);
     free(domainParticles);
     free(bNodes);
-    deallocEField(&ElectricField, &gridInfo);
-    deallocGrid(&grid, &gridInfo);
+    deallocEField(&ElectricField);
+    deallocGrid(&grid);
     free(MD_data);
 
     return 0;
@@ -521,50 +498,22 @@ void parseMDFileToParticles(Particle particleData[], FILE* fp)
     }
 }
 
-void allocateGrid(Node**** grid, GridInfo* gInfo)
+void allocateGrid(Node** grid, GridInfo* gInfo)
 {
-    const int numNodes = gInfo->numNodes;
+    const int totalNodes = gInfo->totalNodes;
     int i, j, k;
 
-    (*grid) = malloc(numNodes * sizeof(Node**));
+    (*grid) = malloc(totalNodes * sizeof(Node));
     assert((*grid) != NULL);
-
-    for(i = 0; i < numNodes; i++)
-    {
-        (*grid)[i] = malloc(numNodes * sizeof(Node*));
-        for(j = 0; j < numNodes; j++)
-        {
-            (*grid)[i][j] = malloc(numNodes * sizeof(Node));
-            for(k = 0; k < numNodes; k++)
-            {
-                // initialize the struct values
-                Node* val = &(*grid)[i][j][k];
-                //val->pos[0] = 0.;
-                //val->pos[1] = 0.;
-                //val->pos[2] = 0.;
-                val->potential = 0.;
-            }
-        }
-    }
 }
 
-void deallocGrid(Node**** grid, GridInfo* gInfo)
+void deallocGrid(Node** grid)
 {
-    const int numNodes = gInfo->numNodes;
-    int i, j;
-
-    for(i = 0; i < numNodes; i++)
-    {
-        for(j = 0; j < numNodes; j++)
-            free((*grid)[i][j]);
-
-        free((*grid)[i]);
-    }
     free((*grid));
 }
 
 // setup the boundary conditions
-int setupBoundaryConditions(Node*** grid, GridInfo* gInfo, BoundaryNode *bNodes)
+int setupBoundaryConditions(Node* grid, GridInfo* gInfo, BoundaryNode *bNodes)
 {
     const int numNodes           = gInfo->numNodes;
     const double spacing         = gInfo->spacing;
@@ -601,23 +550,21 @@ int setupBoundaryConditions(Node*** grid, GridInfo* gInfo, BoundaryNode *bNodes)
             // checking with x2 - 2y2 + z2
             //grid[i][0][k] = x*x + z*z;          // y is zero here
             y = 0.;
-            //grid[i][0][k] = TEST_FUNCTION;
-            grid[i][0][k].potential=TEST_FUNCTION;
+            GRID_1D(grid, i, 0, k).potential=TEST_FUNCTION;
 
             // enforce Neumann boundary nodes
-            bNodes[nodeCount].bndryNodes[0] = &grid[i][0][k];
-            bNodes[nodeCount].bndryNodes[1] = &grid[i][1][k];
-            bNodes[nodeCount].bndryNodes[2] = &grid[i][2][k];
+            bNodes[nodeCount].bndryNodes[0] = &GRID_1D(grid, i, 0, k);
+            bNodes[nodeCount].bndryNodes[1] = &GRID_1D(grid, i, 1, k);
+            bNodes[nodeCount].bndryNodes[2] = &GRID_1D(grid, i, 2, k);
             nodeCount++;
 
             y = GRID_LENGTH;
-            //grid[i][SIZE_Y-1][k] = TEST_FUNCTION;
-            grid[i][numNodes - 1][k].potential=TEST_FUNCTION;
+            GRID_1D(grid, i, numNodes-1, k).potential=TEST_FUNCTION;
 
             // Y = GRID_LENGTH
-            bNodes[nodeCount].bndryNodes[0] = &grid[i][numNodes-1][k];
-            bNodes[nodeCount].bndryNodes[1] = &grid[i][numNodes-2][k];
-            bNodes[nodeCount].bndryNodes[2] = &grid[i][numNodes-3][k];
+            bNodes[nodeCount].bndryNodes[0] = &GRID_1D(grid, i, numNodes-1, k);
+            bNodes[nodeCount].bndryNodes[1] = &GRID_1D(grid, i, numNodes-2, k);
+            bNodes[nodeCount].bndryNodes[2] = &GRID_1D(grid, i, numNodes-3, k);
             nodeCount++;
         }
 
@@ -626,22 +573,22 @@ int setupBoundaryConditions(Node*** grid, GridInfo* gInfo, BoundaryNode *bNodes)
         {
             y = spacing*j;
             z = 0.;
-            grid[i][j][0].potential=TEST_FUNCTION;
+            GRID_1D(grid, i, j, 0).potential=TEST_FUNCTION;
 
             // enforce Neumann boundary nodes
             // Z = 0
-            bNodes[nodeCount].bndryNodes[0] = &grid[i][j][0];
-            bNodes[nodeCount].bndryNodes[1] = &grid[i][j][1];
-            bNodes[nodeCount].bndryNodes[2] = &grid[i][j][2];
+            bNodes[nodeCount].bndryNodes[0] = &GRID_1D(grid, i, j, 0);
+            bNodes[nodeCount].bndryNodes[1] = &GRID_1D(grid, i, j, 1);
+            bNodes[nodeCount].bndryNodes[2] = &GRID_1D(grid, i, j, 2);
             nodeCount++;
 
             z = GRID_LENGTH;
-            grid[i][j][numNodes - 1].potential=TEST_FUNCTION;
+            GRID_1D(grid, i, j, numNodes-1).potential=TEST_FUNCTION;
 
             // Z = GRID_LENGTH
-            bNodes[nodeCount].bndryNodes[0] = &grid[i][j][numNodes-1];
-            bNodes[nodeCount].bndryNodes[1] = &grid[i][j][numNodes-2];
-            bNodes[nodeCount].bndryNodes[2] = &grid[i][j][numNodes-3];
+            bNodes[nodeCount].bndryNodes[0] = &GRID_1D(grid, i, j, numNodes-1);
+            bNodes[nodeCount].bndryNodes[1] = &GRID_1D(grid, i, j, numNodes-2);
+            bNodes[nodeCount].bndryNodes[2] = &GRID_1D(grid, i, j, numNodes-3);
             nodeCount++;
         }
     }
@@ -660,13 +607,13 @@ int setupBoundaryConditions(Node*** grid, GridInfo* gInfo, BoundaryNode *bNodes)
             // we need points INSIDE the capillary for Neumann BC
             if( sumSqs < capillaryRadius*capillaryRadius )
             {
-                grid[0][j][k].potential = CAPILLARY_VOLTAGE;
+                GRID_1D(grid, 0, j, k).potential = CAPILLARY_VOLTAGE;
             }
             else
             {
-                bNodes[nodeCount].bndryNodes[0] = &grid[0][j][k];
-                bNodes[nodeCount].bndryNodes[1] = &grid[1][j][k];
-                bNodes[nodeCount].bndryNodes[2] = &grid[2][j][k];
+                bNodes[nodeCount].bndryNodes[0] = &GRID_1D(grid, 0, j, k);
+                bNodes[nodeCount].bndryNodes[1] = &GRID_1D(grid, 1, j, k);
+                bNodes[nodeCount].bndryNodes[2] = &GRID_1D(grid, 2, j, k);
 
                 nodeCount++;
             }
@@ -674,13 +621,13 @@ int setupBoundaryConditions(Node*** grid, GridInfo* gInfo, BoundaryNode *bNodes)
             // EXTRACTOR side
             if( (sumSqs > extractorInner*extractorInner) && (sumSqs < extractorOuter*extractorOuter ) )
             {
-                grid[numNodes - 1][j][k].potential = EXTRACTOR_VOLTAGE;
+                GRID_1D(grid, numNodes-1, j, k).potential = EXTRACTOR_VOLTAGE;
             }
             else
             {
-                bNodes[nodeCount].bndryNodes[0] = &grid[numNodes-1][j][k];
-                bNodes[nodeCount].bndryNodes[1] = &grid[numNodes-2][j][k];
-                bNodes[nodeCount].bndryNodes[2] = &grid[numNodes-3][j][k];
+                bNodes[nodeCount].bndryNodes[0] = &GRID_1D(grid, numNodes-1, j, k);
+                bNodes[nodeCount].bndryNodes[1] = &GRID_1D(grid, numNodes-2, j, k);
+                bNodes[nodeCount].bndryNodes[2] = &GRID_1D(grid, numNodes-3, j, k);
 
                 nodeCount++;
             }
@@ -777,7 +724,7 @@ void swapGapsWithEndParticles(Particle* domainParticles, int* domainParticleCoun
 
 int moveParticlesInField(Particle* domainParticles, int domainParticleBound,
                          int* lostParticlesArray,//int* lostParticlesBound,
-                         EField*** ElectricField, GridInfo* gInfo)
+                         EField* ElectricField, GridInfo* gInfo)
 {
     const double invSpacing = gInfo->invSpacing;
     const double halfTimeStep = 0.5 * T_PIC;
@@ -799,7 +746,7 @@ int moveParticlesInField(Particle* domainParticles, int domainParticleBound,
         int kPos = (int)(round( (p->z)*invSpacing) );
 
         // now store the ElectricField value
-        EField* elecField = &ElectricField[iPos][jPos][kPos];
+        EField* elecField = &GRID_1D(ElectricField, iPos, jPos, kPos);
 
         // TODO: generalize as a loop through the number of components?
         const double multFactor = (p->charge * ELECTRONIC_CHARGE * T_PIC/ p->mass);
@@ -854,36 +801,7 @@ Particle randomizeParticleAttribs(Particle inputParticle)
 }
 
 
-/*!
- * Solve takes in a tolerance
- * 
- * Solves the Laplace Equation using Finite Difference and 
- * using SOR (Successive Over Relaxation) for the resulting
- * Linear system.
- *
- * \todo Improve this to print iteration count and headers
- * Headers in a periodic manner can be printed.
- *
- */
-void solve(Node*** grid, GridInfo* gInfo, const double tolerance, const double sorOmega)
-{
-    const int numNodes = gInfo->numNodes;
-
-    double norm = 100.;
-    int count = 0;
-
-    // solve using criteria
-    // solution in the "inner" cube
-    while (norm >= tolerance)
-    {
-        count++;
-        norm = sqrt(single_step_solve(grid, numNodes, sorOmega));
-
-        printf("norm: %e\n", norm);
-    }
-}
-
-double single_step_solve(Node*** grid, const int numNodes, const double sorOmega)
+double single_step_solve(Node* grid, const int numNodes, const double sorOmega)
 {
     int i, j, k;
     double temp, norm = 0.;
@@ -895,18 +813,18 @@ double single_step_solve(Node*** grid, const int numNodes, const double sorOmega
         {
             for(k = 1; k < numNodes - 1; k++)
             {
-                temp = grid[i][j][k].potential;
+                temp = GRID_1D(grid, i, j, k).potential;
 
                 // obtain the value got by averaging
-                double val = (1./6) * (grid[i+1][j][k].potential + grid[i-1][j][k].potential + grid[i][j-1][k].potential + grid[i][j+1][k].potential + grid[i][j][k-1].potential + grid[i][j][k+1].potential);
+                double val = (1./6) * (GRID_1D(grid,i+1,j,k).potential + GRID_1D(grid,i-1,j,k).potential + GRID_1D(grid,i,j-1,k).potential + GRID_1D(grid,i,j+1,k).potential + GRID_1D(grid,i,j,k-1).potential + GRID_1D(grid,i,j,k+1).potential);
  
                 // obtain the value with SOR
-                grid[i][j][k].potential = val*sorOmega + (1-sorOmega)*temp;
+                GRID_1D(grid, i,j,k).potential = val*sorOmega + (1-sorOmega)*temp;
                 //std::cout << grid[i][j][k].potential << " " << i << " " << j << " " << k << std::endl;
  
                 // store the difference in values at same grid points in temp itself
                 // for norm calculation
-                temp = grid[i][j][k].potential - temp;
+                temp = GRID_1D(grid,i,j,k).potential - temp;
                 norm += temp * temp;
             }
         }
@@ -916,7 +834,7 @@ double single_step_solve(Node*** grid, const int numNodes, const double sorOmega
 }
 
 // function for writing out values
-void writeOutputData(const char* fileName, Node*** grid, EField*** ElectricField, GridInfo* gInfo)
+void writeOutputData(const char* fileName, Node* grid, EField* ElectricField, GridInfo* gInfo)
 {
     FILE* fileValues = fopen(fileName, "w");
     int i, j, k;
@@ -924,7 +842,7 @@ void writeOutputData(const char* fileName, Node*** grid, EField*** ElectricField
     const int numNodes = gInfo->numNodes;
     const double spacing = gInfo->spacing;
 
-    const int totalNodes = numNodes*numNodes*numNodes;
+    const int totalNodes = gInfo->totalNodes;
 
     // write the VTK header
     fprintf(fileValues, "# vtk DataFile Version 2.0\n"
@@ -953,13 +871,14 @@ void writeOutputData(const char* fileName, Node*** grid, EField*** ElectricField
                 fprintf(fileValues, "%10.8e %10.8e %10.8e\n", x, y, z);
 
                 // update the potential data array
-                potentialValues[count] = grid[i][j][k].potential;
+                potentialValues[count] = GRID_1D(grid, i,j,k).potential;
 
+                EField* elecField = &GRID_1D(ElectricField, i, j, k);
                 // update the electric field array
                 const int pos = 3*count;
-                electricField[pos]     = ElectricField[i][j][k].components[0];
-                electricField[pos + 1] = ElectricField[i][j][k].components[1];
-                electricField[pos + 2] = ElectricField[i][j][k].components[2];
+                electricField[pos]     = elecField->components[0];
+                electricField[pos + 1] = elecField->components[1];
+                electricField[pos + 2] = elecField->components[2];
 
                 count++;
             }
