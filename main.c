@@ -8,7 +8,7 @@
 #include <time.h>
 
 #define GRID_LENGTH (3e-4)
-#define NUM_NODES 101
+#define NUM_NODES 65
 
 /* geometry dimension */
 // capillary centered on YZ face
@@ -711,7 +711,7 @@ void releaseParticles(
         Particle* domainParticles,        /**< An array with the Particles currently in the domain */
         int* domainParticleCount,         /**< Count of particles in the domain */
         int* lostParticlesArray,          /**< Array indicating the particle indices where the particles have left the domain */
-        int* lostParticleBound,           /**< Pass by pointer for modifying lostParticles index counts */
+        int* lostParticleBound            /**< Pass by pointer for modifying lostParticles index counts */
         )
 {
     int i;
