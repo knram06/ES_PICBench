@@ -131,6 +131,133 @@ void calcElectricField(EField* ElectricField, Node* grid, GridInfo* gInfo)
     } // end of i loop
 }
 
+// setup the boundary conditions
+int setupBoundaryConditions(Node* grid, GridInfo* gInfo, BoundaryNode *bNodes)
+{
+    const int numNodes           = gInfo->numNodes;
+    const double spacing         = gInfo->spacing;
+
+    const double center[2]       = {GRID_LENGTH / 2., GRID_LENGTH / 2.};
+    const double capillaryRadius = CAPILLARY_RADIUS;
+
+    // extractor dimensions
+    const double extractorInner  = EXTRACTOR_INNER_RADIUS;
+    const double extractorOuter  = EXTRACTOR_OUTER_RADIUS;
+
+    // store the extents in terms of indices for better comparisons
+    //const int extentIndices[2]   = { (int)( fabs(center[0] - capillaryRadius) * gInfo->invSpacing ), (int)( fabs( center[1] + capillaryRadius) * gInfo->invSpacing ) };
+
+    // store the voltage parameters
+    //const double capillaryVoltage = CAPILLARY_VOLTAGE;
+    //const double extractorVoltage = EXTRACTOR_VOLTAGE;
+
+    int i, j, k;
+    int nodeCount = 0;
+
+    // set boundary conditions
+    /*********************************************************/
+    // loop across all X-Z faces on the near and farther side
+    // j = 0 and j = SIZE_Y - 1 facesa
+    double x = 0., y = 0., z = 0.;
+
+    for(i = 0; i < numNodes; i++)
+    {
+        x = spacing * i;
+        for(k = 0; k < numNodes; k++)
+        {
+            z = spacing * k;
+            // checking with x2 - 2y2 + z2
+            //grid[i][0][k] = x*x + z*z;          // y is zero here
+            y = 0.;
+            GRID_1D(grid, i, 0, k).potential=TEST_FUNCTION;
+
+            // enforce Neumann boundary nodes
+            bNodes[nodeCount].bndryNodes[0] = &GRID_1D(grid, i, 0, k);
+            bNodes[nodeCount].bndryNodes[1] = &GRID_1D(grid, i, 1, k);
+            bNodes[nodeCount].bndryNodes[2] = &GRID_1D(grid, i, 2, k);
+            nodeCount++;
+
+            y = GRID_LENGTH;
+            GRID_1D(grid, i, numNodes-1, k).potential=TEST_FUNCTION;
+
+            // Y = GRID_LENGTH
+            bNodes[nodeCount].bndryNodes[0] = &GRID_1D(grid, i, numNodes-1, k);
+            bNodes[nodeCount].bndryNodes[1] = &GRID_1D(grid, i, numNodes-2, k);
+            bNodes[nodeCount].bndryNodes[2] = &GRID_1D(grid, i, numNodes-3, k);
+            nodeCount++;
+        }
+
+        // on X-Y faces
+        for(j = 0; j < numNodes; j++)
+        {
+            y = spacing*j;
+            z = 0.;
+            GRID_1D(grid, i, j, 0).potential=TEST_FUNCTION;
+
+            // enforce Neumann boundary nodes
+            // Z = 0
+            bNodes[nodeCount].bndryNodes[0] = &GRID_1D(grid, i, j, 0);
+            bNodes[nodeCount].bndryNodes[1] = &GRID_1D(grid, i, j, 1);
+            bNodes[nodeCount].bndryNodes[2] = &GRID_1D(grid, i, j, 2);
+            nodeCount++;
+
+            z = GRID_LENGTH;
+            GRID_1D(grid, i, j, numNodes-1).potential=TEST_FUNCTION;
+
+            // Z = GRID_LENGTH
+            bNodes[nodeCount].bndryNodes[0] = &GRID_1D(grid, i, j, numNodes-1);
+            bNodes[nodeCount].bndryNodes[1] = &GRID_1D(grid, i, j, numNodes-2);
+            bNodes[nodeCount].bndryNodes[2] = &GRID_1D(grid, i, j, numNodes-3);
+            nodeCount++;
+        }
+    }
+
+    // on Y-Z faces
+    for(j = 0; j < numNodes; j++)
+    {
+        double ty = (spacing*j - center[0]);
+
+        for(k = 0; k < numNodes; k++)
+        {
+            double tz = (spacing*k - center[1]);
+            double sumSqs = ty*ty + tz*tz;
+
+            // CAPILLARY side
+            // we need points INSIDE the capillary for Neumann BC
+            if( sumSqs < capillaryRadius*capillaryRadius )
+            {
+                GRID_1D(grid, 0, j, k).potential = CAPILLARY_VOLTAGE;
+            }
+            else
+            {
+                bNodes[nodeCount].bndryNodes[0] = &GRID_1D(grid, 0, j, k);
+                bNodes[nodeCount].bndryNodes[1] = &GRID_1D(grid, 1, j, k);
+                bNodes[nodeCount].bndryNodes[2] = &GRID_1D(grid, 2, j, k);
+
+                nodeCount++;
+            }
+
+            // EXTRACTOR side
+            if( (sumSqs > extractorInner*extractorInner) && (sumSqs < extractorOuter*extractorOuter ) )
+            {
+                GRID_1D(grid, numNodes-1, j, k).potential = EXTRACTOR_VOLTAGE;
+            }
+            else
+            {
+                bNodes[nodeCount].bndryNodes[0] = &GRID_1D(grid, numNodes-1, j, k);
+                bNodes[nodeCount].bndryNodes[1] = &GRID_1D(grid, numNodes-2, j, k);
+                bNodes[nodeCount].bndryNodes[2] = &GRID_1D(grid, numNodes-3, j, k);
+
+                nodeCount++;
+            }
+
+        }
+    }
+
+    return nodeCount;
+    //std::cout << grid[1][1][0].potential << " " << grid[2][3][4].potential << std::endl;
+}
+
 void enforceNeumannBC(BoundaryNode* bNodes, const int nodeCount)
 {
     int i;
