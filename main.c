@@ -8,7 +8,7 @@
 #include <time.h>
 
 #define GRID_LENGTH (3e-4)
-#define NUM_NODES 101
+#define NUM_NODES 65
 
 /*Macro for 3D to 1D indexing */
 #define GRID_1D(grid, i, j, k) ( grid[(k) + NUM_NODES*(j) + NUM_NODES*NUM_NODES*(i)] )
@@ -145,6 +145,8 @@ int main()
     printf("Consolidating Neumann BC nodes into a different structure....");
     // setup boundary conditions
     int nodeCount = setupBoundaryConditions(grid, &gridInfo, bNodes);
+    int A_side_size = (gridInfo.numNodes-2);
+    double* A = malloc(sizeof(double) * A_side_size * A_side_size * A_side_size);
 
     bNodes = realloc(bNodes, nodeCount * sizeof(BoundaryNode));
     printf("done\n");
@@ -258,6 +260,7 @@ int main()
 
     free(lostParticles);
     free(domainParticles);
+    free(A);
     free(bNodes);
     deallocEField(&ElectricField);
     deallocGrid(&grid);
