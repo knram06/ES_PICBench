@@ -1,6 +1,11 @@
 #ifndef NUMERICS_H
 #define NUMERICS_H
 
+void build_A_Matrix(Node* grid, const int numNodes, double* A, const int sizeA)
+{
+    int i, j, k;
+}
+
 double single_step_solve(Node* grid, const int numNodes, const double sorOmega)
 {
     int i, j, k;
@@ -256,103 +261,6 @@ int setupBoundaryConditions(Node* grid, GridInfo* gInfo, BoundaryNode *bNodes)
 
     return nodeCount;
     //std::cout << grid[1][1][0].potential << " " << grid[2][3][4].potential << std::endl;
-}
-
-int accumulateNeumannBCNodes(Node*** grid, GridInfo* gInfo, BoundaryNode* bNodes)
-{
-    const int numNodes           = gInfo->numNodes;
-    const double spacing         = gInfo->spacing;
-
-    const double center[2]       = {GRID_LENGTH / 2., GRID_LENGTH / 2.};
-    const double capillaryRadius = CAPILLARY_RADIUS;
-
-    // extractor dimensions
-    const double extractorInner  = EXTRACTOR_INNER_RADIUS;
-    const double extractorOuter  = EXTRACTOR_OUTER_RADIUS;
-
-    int i, j, k;
-    int nodeCount = 0;
-
-    /**** Y-Z faces ****/
-    // Y-Z face with capillary
-    // i.e. X = 0 position with center at corner
-    for(j = 0; j < numNodes; j++)
-    {
-        //double y = spacing * j;
-        double ty = (spacing*j - center[0]);
-
-        for(k = 0; k < numNodes; k++)
-        {
-            //double z = spacing * k;
-            double tz = (spacing*k - center[1]);
-            double sumSqs = ty*ty + tz*tz;
-
-            // CAPILLARY side
-            // we need points OUTSIDE the capillary for Neumann BC
-            if( sumSqs >= capillaryRadius*capillaryRadius )
-            {
-                bNodes[nodeCount].bndryNodes[0] = &grid[0][j][k];
-                bNodes[nodeCount].bndryNodes[1] = &grid[1][j][k];
-                bNodes[nodeCount].bndryNodes[2] = &grid[2][j][k];
-
-                nodeCount++;
-            }
-
-            // EXTRACTOR side
-            if( (sumSqs <= extractorInner*extractorInner) || (sumSqs >= extractorOuter*extractorOuter ) )
-            {
-                bNodes[nodeCount].bndryNodes[0] = &grid[numNodes-1][j][k];
-                bNodes[nodeCount].bndryNodes[1] = &grid[numNodes-2][j][k];
-                bNodes[nodeCount].bndryNodes[2] = &grid[numNodes-3][j][k];
-
-                nodeCount++;
-
-            }
-
-        }
-    }
-
-    /**** X-Z faces ****/
-    for(i = 0; i < numNodes; i++)
-    {
-        for(k = 0; k < numNodes; k++)
-        {
-            // Y = 0
-            bNodes[nodeCount].bndryNodes[0] = &grid[i][0][k];
-            bNodes[nodeCount].bndryNodes[1] = &grid[i][1][k];
-            bNodes[nodeCount].bndryNodes[2] = &grid[i][2][k];
-
-            nodeCount++;
-
-            // Y = GRID_LENGTH
-            bNodes[nodeCount].bndryNodes[0] = &grid[i][numNodes-1][k];
-            bNodes[nodeCount].bndryNodes[1] = &grid[i][numNodes-2][k];
-            bNodes[nodeCount].bndryNodes[2] = &grid[i][numNodes-3][k];
-
-            nodeCount++;
-        }
-    }
-
-    /**** X-Y faces ****/
-    for(i = 0; i < numNodes; i++)
-    {
-        for(j = 0; j < numNodes; j++)
-        {
-            // Z = 0
-            bNodes[nodeCount].bndryNodes[0] = &grid[i][j][0];
-            bNodes[nodeCount].bndryNodes[1] = &grid[i][j][1];
-            bNodes[nodeCount].bndryNodes[2] = &grid[i][j][2];
-            nodeCount++;
-
-            // Z = GRID_LENGTH
-            bNodes[nodeCount].bndryNodes[0] = &grid[i][j][numNodes-1];
-            bNodes[nodeCount].bndryNodes[1] = &grid[i][j][numNodes-2];
-            bNodes[nodeCount].bndryNodes[2] = &grid[i][j][numNodes-3];
-            nodeCount++;
-        }
-    }
-
-    return nodeCount;
 }
 
 void enforceNeumannBC(BoundaryNode* bNodes, const int nodeCount)

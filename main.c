@@ -146,7 +146,6 @@ int main()
     // setup boundary conditions
     int nodeCount = setupBoundaryConditions(grid, &gridInfo, bNodes);
 
-    //int nodeCount = accumulateNeumannBCNodes(grid, &gridInfo, bNodes);
     bNodes = realloc(bNodes, nodeCount * sizeof(BoundaryNode));
     printf("done\n");
 
