@@ -4,6 +4,16 @@
 void build_A_Matrix(Node* grid, const int numNodes, double* A, const int sizeA)
 {
     int i, j, k;
+    // iterate across all points
+    for (i = 1; i < numNodes - 1; i++)
+    {
+        for(j = 1; j < numNodes - 1; j++)
+        {
+            for(k = 1; k < numNodes - 1; k++)
+            {
+            }
+        }
+    }
 }
 
 double single_step_solve(Node* grid, const int numNodes, const double sorOmega)
