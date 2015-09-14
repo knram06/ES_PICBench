@@ -147,7 +147,14 @@ int main()
     // setup boundary conditions
     int nodeCount = setupBoundaryConditions(grid, &gridInfo, bNodes);
     int A_side_size = (gridInfo.numNodes-2);
-    double* A = malloc(sizeof(double) * A_side_size * A_side_size * A_side_size);
+    int A_dim = A_side_size * A_side_size * A_side_size;
+    double* A = malloc(sizeof(double) * A_dim);
+
+    // initialize the A matrix to all zeros
+    int i;
+    for(i = 0; i < A_dim; i++)
+        A[i] = 0.;
+    build_A_Matrix(grid, gridInfo.numNodes, A);
 
     bNodes = realloc(bNodes, nodeCount * sizeof(BoundaryNode));
     printf("done\n");
@@ -207,7 +214,7 @@ int main()
 
     start = clock();
     // for required number of timesteps
-    int i, lostParticleCount = 0;
+    int lostParticleCount = 0;
     for(i = 1; i <= TIMESTEPS; i++)
     {
         printf("\nTimestep %d:\n", i);

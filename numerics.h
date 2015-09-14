@@ -1,19 +1,107 @@
 #ifndef NUMERICS_H
 #define NUMERICS_H
 
-void build_A_Matrix(Node* grid, const int numNodes, double* A, const int sizeA)
+void build_A_Matrix(Node* grid, const int numNodes, double* A)
 {
     int i, j, k;
-    // iterate across all points
-    for (i = 1; i < numNodes - 1; i++)
+
+    // we are going to iterate across the inner "cube" of points
+    // so we need to adjust the indexing into matrix A with the
+    // corresponding offset for point (1, 1, 1)
+    const int selfCoeff = -6;
+    const int nonSelfCoeff = 1;
+
+    /*******************************************/
+    /************X - Faces**********************/
+    i = 1;
+    for(j = 1; j < numNodes-1; j++)
     {
-        for(j = 1; j < numNodes - 1; j++)
+        for(k = 1; k < numNodes-1; k++)
         {
-            for(k = 1; k < numNodes - 1; k++)
-            {
-            }
+            const int offset = INDEX_1D(i-1,j-1,k-1);
+            A[INDEX_1D(i,  j,k)-offset] = selfCoeff;
+            A[INDEX_1D(i-1,j,k)-offset] = 0;
         }
     }
+
+    i = numNodes-2;
+    for(j = 1; j < numNodes-1; j++)
+    {
+        for(k = 1; k < numNodes-1; k++)
+        {
+            const int offset = INDEX_1D(i-1,j-1,k-1);
+            A[INDEX_1D(i,  j,k)-offset] = selfCoeff;
+            A[INDEX_1D(i+1,j,k)-offset] = 0;
+        }
+    }
+    /*******************************************/
+    /************Y - Faces**********************/
+    j = 1;
+    for(i = 1; i < numNodes-1; i++)
+    {
+        for(k = 1; k < numNodes-1; k++)
+        {
+            const int offset = INDEX_1D(i-1,j-1,k-1);
+            A[INDEX_1D(i,j  ,k)-offset] = selfCoeff;
+            A[INDEX_1D(i,j-1,k)-offset] = 0;
+        }
+    }
+
+    j = numNodes-2;
+    for(i = 1; i < numNodes-1; i++)
+    {
+        for(k = 1; k < numNodes-1; k++)
+        {
+            const int offset = INDEX_1D(i-1,j-1,k-1);
+            A[INDEX_1D(i,j  ,k)-offset] = selfCoeff;
+            A[INDEX_1D(i,j+1,k)-offset] = 0;
+        }
+    }
+    /*******************************************/
+    /************Z - Faces**********************/
+    k = 1;
+    for(i = 1; i < numNodes-1; i++)
+    {
+        for(j = 1; j < numNodes-1; j++)
+        {
+            const int offset = INDEX_1D(i-1,j-1,k-1);
+            A[INDEX_1D(i,j,k  )-offset] = selfCoeff;
+            A[INDEX_1D(i,j,k-1)-offset] = 0;
+        }
+    }
+
+    k = numNodes-2;
+    for(i = 1; i < numNodes-1; i++)
+    {
+        for(j = 1; j < numNodes-1; j++)
+        {
+            const int offset = INDEX_1D(i-1,j-1,k-1);
+            A[INDEX_1D(i,j,k  )-offset] = selfCoeff;
+            A[INDEX_1D(i,j,k+1)-offset] = 0;
+        }
+    }
+    /*******************************************/
+    // now set for all inner inner nodes
+    for(i = 2; i < numNodes-2; i++)
+    {
+        for(j = 2; j < numNodes-2; j++)
+        {
+            for(k = 2; k < numNodes-2; k++)
+            {
+                const int offset = INDEX_1D(i-1,j-1,k-1);
+                A[INDEX_1D(i,   j, k)-offset] = selfCoeff;
+
+                A[INDEX_1D(i-1, j, k)-offset] = nonSelfCoeff;
+                A[INDEX_1D(i+1, j, k)-offset] = nonSelfCoeff;
+
+                A[INDEX_1D(i, j-1, k)-offset] = nonSelfCoeff;
+                A[INDEX_1D(i, j+1, k)-offset] = nonSelfCoeff;
+
+                A[INDEX_1D(i, j, k-1)-offset] = nonSelfCoeff;
+                A[INDEX_1D(i, j, k+1)-offset] = nonSelfCoeff;
+            }
+        }
+    } // end of final i loop
 }
 
 double single_step_solve(Node* grid, const int numNodes, const double sorOmega)
