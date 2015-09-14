@@ -148,6 +148,7 @@ int main()
     int nodeCount = setupBoundaryConditions(grid, &gridInfo, bNodes);
     int A_side_size = (gridInfo.numNodes-2);
     int A_dim = A_side_size * A_side_size * A_side_size;
+    A_dim = A_dim * A_dim;
     double* A = malloc(sizeof(double) * A_dim);
 
     // initialize the A matrix to all zeros
