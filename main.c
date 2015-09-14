@@ -11,8 +11,8 @@
 #define NUM_NODES 65
 
 /*Macro for 3D to 1D indexing */
-#define INDEX_1D(i, j, k) ( (k) + NUM_NODES*(j) + NUM_NODES*NUM_NODES*(i) )
-#define GRID_1D(grid, i, j, k) (grid[ INDEX_1D(i, j, k) ] )
+#define INDEX_1D(N, i, j, k) ( (k) + N*(j) + N*N*(i) )
+#define GRID_1D(grid, i, j, k) (grid[ INDEX_1D(NUM_NODES,i, j, k) ] )
 
 /* geometry dimension */
 // capillary centered on YZ face
@@ -154,7 +154,8 @@ int main()
     int i;
     for(i = 0; i < A_dim; i++)
         A[i] = 0.;
-    build_A_Matrix(grid, gridInfo.numNodes, A);
+    build_A_matrix(A, A_side_size);
+    writeAMatToFile("mat_A.txt", A, A_side_size);
 
     bNodes = realloc(bNodes, nodeCount * sizeof(BoundaryNode));
     printf("done\n");

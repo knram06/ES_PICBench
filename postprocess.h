@@ -1,6 +1,8 @@
 #ifndef POSTPROCESS_H
 #define POSTPROCESS_H
 
+#include <math.h>
+
 // function for writing out values
 void writeOutputData(const char* fileName, Node* grid, EField* ElectricField, GridInfo* gInfo)
 {
@@ -75,6 +77,27 @@ void writeOutputData(const char* fileName, Node* grid, EField* ElectricField, Gr
     free(electricField);
     free(potentialValues);
     fclose(fileValues);
+}
+
+void writeAMatToFile(char* filename, double* mat, const int matSize)
+{
+    int i, j, k;
+    FILE* fp = fopen(filename, "w");
+
+    for(i = 0; i < matSize; i++)
+    {
+        for(j = 0; j < matSize; j++)
+        {
+            for(k = 0; k < matSize; k++)
+            {
+                double val = mat[ INDEX_1D(matSize, i, j, k) ];
+                if(fabs(val) > 1e-10)
+                    fprintf(fp, "%10d %10d %10d %20.6lf\n", i, j, k, val );
+            }
+        }
+    } // outer i loop
+
+    fclose(fp);
 }
 
 void writeOutputDataXML(const char* fileName, Node*** grid, EField*** ElectricField, GridInfo* gInfo)

@@ -1,7 +1,7 @@
 #ifndef NUMERICS_H
 #define NUMERICS_H
 
-void build_A_Matrix(Node* grid, const int numNodes, double* A)
+void build_A_matrix(double* A, const int sizeA)
 {
     int i, j, k;
 
@@ -13,92 +13,85 @@ void build_A_Matrix(Node* grid, const int numNodes, double* A)
 
     /*******************************************/
     /************X - Faces**********************/
-    i = 1;
-    for(j = 1; j < numNodes-1; j++)
+    i = 0;
+    for(j = 0; j < sizeA; j++)
     {
-        for(k = 1; k < numNodes-1; k++)
+        for(k = 0; k < sizeA; k++)
         {
-            const int offset = INDEX_1D(i-1,j-1,k-1);
-            A[INDEX_1D(i,  j,k)-offset] = selfCoeff;
-            A[INDEX_1D(i-1,j,k)-offset] = 0;
+            A[INDEX_1D(sizeA, i,  j,k)] = selfCoeff;
+            A[INDEX_1D(sizeA, i+1,j,k)] = nonSelfCoeff;
         }
     }
 
-    i = numNodes-2;
-    for(j = 1; j < numNodes-1; j++)
+    i = sizeA-1;
+    for(j = 0; j < sizeA; j++)
     {
-        for(k = 1; k < numNodes-1; k++)
+        for(k = 0; k < sizeA; k++)
         {
-            const int offset = INDEX_1D(i-1,j-1,k-1);
-            A[INDEX_1D(i,  j,k)-offset] = selfCoeff;
-            A[INDEX_1D(i+1,j,k)-offset] = 0;
+            A[INDEX_1D(sizeA, i,  j,k)] = selfCoeff;
+            A[INDEX_1D(sizeA, i-1,j,k)] = nonSelfCoeff;
         }
     }
     /*******************************************/
     /************Y - Faces**********************/
-    j = 1;
-    for(i = 1; i < numNodes-1; i++)
+    j = 0;
+    for(i = 0; i < sizeA; i++)
     {
-        for(k = 1; k < numNodes-1; k++)
+        for(k = 0; k < sizeA; k++)
         {
-            const int offset = INDEX_1D(i-1,j-1,k-1);
-            A[INDEX_1D(i,j  ,k)-offset] = selfCoeff;
-            A[INDEX_1D(i,j-1,k)-offset] = 0;
+            A[INDEX_1D(sizeA, i,j  ,k)] = selfCoeff;
+            A[INDEX_1D(sizeA, i,j+1,k)] = nonSelfCoeff;
         }
     }
 
-    j = numNodes-2;
-    for(i = 1; i < numNodes-1; i++)
+    j = sizeA-1;
+    for(i = 0; i < sizeA; i++)
     {
-        for(k = 1; k < numNodes-1; k++)
+        for(k = 0; k < sizeA; k++)
         {
-            const int offset = INDEX_1D(i-1,j-1,k-1);
-            A[INDEX_1D(i,j  ,k)-offset] = selfCoeff;
-            A[INDEX_1D(i,j+1,k)-offset] = 0;
+            A[INDEX_1D(sizeA, i,j  ,k)] = selfCoeff;
+            A[INDEX_1D(sizeA, i,j-1,k)] = nonSelfCoeff;
         }
     }
     /*******************************************/
     /************Z - Faces**********************/
-    k = 1;
-    for(i = 1; i < numNodes-1; i++)
+    k = 0;
+    for(i = 0; i < sizeA; i++)
     {
-        for(j = 1; j < numNodes-1; j++)
+        for(j = 0; j < sizeA; j++)
         {
-            const int offset = INDEX_1D(i-1,j-1,k-1);
-            A[INDEX_1D(i,j,k  )-offset] = selfCoeff;
-            A[INDEX_1D(i,j,k-1)-offset] = 0;
+            A[INDEX_1D(sizeA, i,j,k  )] = selfCoeff;
+            A[INDEX_1D(sizeA, i,j,k-1)] = nonSelfCoeff;
         }
     }
 
-    k = numNodes-2;
-    for(i = 1; i < numNodes-1; i++)
+    k = sizeA-1;
+    for(i = 0; i < sizeA; i++)
     {
-        for(j = 1; j < numNodes-1; j++)
+        for(j = 0; j < sizeA; j++)
         {
-            const int offset = INDEX_1D(i-1,j-1,k-1);
-            A[INDEX_1D(i,j,k  )-offset] = selfCoeff;
-            A[INDEX_1D(i,j,k+1)-offset] = 0;
+            A[INDEX_1D(sizeA, i,j,k  )] = selfCoeff;
+            A[INDEX_1D(sizeA, i,j,k+1)] = nonSelfCoeff;
         }
     }
     /*******************************************/
     // now set for all inner inner nodes
-    for(i = 2; i < numNodes-2; i++)
+    for(i = 1; i < sizeA-1; i++)
     {
-        for(j = 2; j < numNodes-2; j++)
+        for(j = 1; j < sizeA-1; j++)
         {
-            for(k = 2; k < numNodes-2; k++)
+            for(k = 1; k < sizeA-1; k++)
             {
-                const int offset = INDEX_1D(i-1,j-1,k-1);
-                A[INDEX_1D(i,   j, k)-offset] = selfCoeff;
+                A[INDEX_1D(sizeA, i,   j, k)] = selfCoeff;
 
-                A[INDEX_1D(i-1, j, k)-offset] = nonSelfCoeff;
-                A[INDEX_1D(i+1, j, k)-offset] = nonSelfCoeff;
+                A[INDEX_1D(sizeA, i-1, j, k)] = nonSelfCoeff;
+                A[INDEX_1D(sizeA, i+1, j, k)] = nonSelfCoeff;
 
-                A[INDEX_1D(i, j-1, k)-offset] = nonSelfCoeff;
-                A[INDEX_1D(i, j+1, k)-offset] = nonSelfCoeff;
+                A[INDEX_1D(sizeA, i, j-1, k)] = nonSelfCoeff;
+                A[INDEX_1D(sizeA, i, j+1, k)] = nonSelfCoeff;
 
-                A[INDEX_1D(i, j, k-1)-offset] = nonSelfCoeff;
-                A[INDEX_1D(i, j, k+1)-offset] = nonSelfCoeff;
+                A[INDEX_1D(sizeA, i, j, k-1)] = nonSelfCoeff;
+                A[INDEX_1D(sizeA, i, j, k+1)] = nonSelfCoeff;
             }
         }
     } // end of final i loop
