@@ -11,8 +11,8 @@
 #define NUM_NODES 65
 
 /*Macro for 3D to 1D indexing */
-#define GRID_1D(grid, i, j, k) (grid[ (k) + NUM_NODES*(j) + NUM_NODES*NUM_NODES*(i) ] )
 #define INDEX_1D(i, j, k) ( (k) + NUM_NODES*(j) + NUM_NODES*NUM_NODES*(i) )
+#define GRID_1D(grid, i, j, k) (grid[ INDEX_1D(i, j, k) ] )
 
 /* geometry dimension */
 // capillary centered on YZ face
