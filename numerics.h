@@ -3,98 +3,54 @@
 
 void build_A_matrix(double* A, const int sizeA)
 {
+    const int mat_side_size = sizeA*sizeA*sizeA;
     int i, j, k;
+    int I, J;
 
-    // we are going to iterate across the inner "cube" of points
-    // so we need to adjust the indexing into matrix A with the
-    // corresponding offset for point (1, 1, 1)
     const int selfCoeff = -6;
     const int nonSelfCoeff = 1;
 
-    /*******************************************/
-    /************X - Faces**********************/
-    i = 0;
-    for(j = 0; j < sizeA; j++)
-    {
-        for(k = 0; k < sizeA; k++)
-        {
-            A[INDEX_1D(sizeA, i,  j,k)] = selfCoeff;
-            A[INDEX_1D(sizeA, i+1,j,k)] = nonSelfCoeff;
-        }
-    }
+    const int steps[2] = {-1, 1};
+    int c;
 
-    i = sizeA-1;
-    for(j = 0; j < sizeA; j++)
-    {
-        for(k = 0; k < sizeA; k++)
-        {
-            A[INDEX_1D(sizeA, i,  j,k)] = selfCoeff;
-            A[INDEX_1D(sizeA, i-1,j,k)] = nonSelfCoeff;
-        }
-    }
     /*******************************************/
-    /************Y - Faces**********************/
-    j = 0;
-    for(i = 0; i < sizeA; i++)
-    {
-        for(k = 0; k < sizeA; k++)
-        {
-            A[INDEX_1D(sizeA, i,j  ,k)] = selfCoeff;
-            A[INDEX_1D(sizeA, i,j+1,k)] = nonSelfCoeff;
-        }
-    }
-
-    j = sizeA-1;
-    for(i = 0; i < sizeA; i++)
-    {
-        for(k = 0; k < sizeA; k++)
-        {
-            A[INDEX_1D(sizeA, i,j  ,k)] = selfCoeff;
-            A[INDEX_1D(sizeA, i,j-1,k)] = nonSelfCoeff;
-        }
-    }
-    /*******************************************/
-    /************Z - Faces**********************/
-    k = 0;
+    /************All - Nodes********************/
     for(i = 0; i < sizeA; i++)
     {
         for(j = 0; j < sizeA; j++)
         {
-            A[INDEX_1D(sizeA, i,j,k  )] = selfCoeff;
-            A[INDEX_1D(sizeA, i,j,k-1)] = nonSelfCoeff;
-        }
-    }
-
-    k = sizeA-1;
-    for(i = 0; i < sizeA; i++)
-    {
-        for(j = 0; j < sizeA; j++)
-        {
-            A[INDEX_1D(sizeA, i,j,k  )] = selfCoeff;
-            A[INDEX_1D(sizeA, i,j,k+1)] = nonSelfCoeff;
-        }
-    }
-    /*******************************************/
-    // now set for all inner inner nodes
-    for(i = 1; i < sizeA-1; i++)
-    {
-        for(j = 1; j < sizeA-1; j++)
-        {
-            for(k = 1; k < sizeA-1; k++)
+            for(k = 0; k < sizeA; k++)
             {
-                A[INDEX_1D(sizeA, i,   j, k)] = selfCoeff;
+                I = INDEX_1D(sizeA, i, j, k);
+                const int NI = mat_side_size * I;
+                A[NI+I] = selfCoeff;
 
-                A[INDEX_1D(sizeA, i-1, j, k)] = nonSelfCoeff;
-                A[INDEX_1D(sizeA, i+1, j, k)] = nonSelfCoeff;
+                for(c = 0; c < 2; c++)
+                {
+                    int step = steps[c];
+                    int iStep = i + step;
+                    int jStep = j + step;
+                    int kStep = k + step;
 
-                A[INDEX_1D(sizeA, i, j-1, k)] = nonSelfCoeff;
-                A[INDEX_1D(sizeA, i, j+1, k)] = nonSelfCoeff;
-
-                A[INDEX_1D(sizeA, i, j, k-1)] = nonSelfCoeff;
-                A[INDEX_1D(sizeA, i, j, k+1)] = nonSelfCoeff;
-            }
-        }
-    } // end of final i loop
+                    if((iStep >= 0) && (iStep < sizeA))
+                    {
+                        J = INDEX_1D(sizeA, iStep, j, k);
+                        A[NI+J] = nonSelfCoeff;
+                    }
+                    if((jStep >= 0) && (jStep < sizeA))
+                    {
+                        J = INDEX_1D(sizeA, i, jStep, k);
+                        A[NI+J] = nonSelfCoeff;
+                    }
+                    if((kStep >= 0) && (kStep < sizeA))
+                    {
+                        J = INDEX_1D(sizeA, i, j, kStep);
+                        A[NI+J] = nonSelfCoeff;
+                    }
+                }
+            } // end of k loop
+        } // end of j loop
+    }
 }
 
 double single_step_solve(Node* grid, const int numNodes, const double sorOmega)
@@ -113,11 +69,11 @@ double single_step_solve(Node* grid, const int numNodes, const double sorOmega)
 
                 // obtain the value got by averaging
                 double val = (1./6) * (GRID_1D(grid,i+1,j,k).potential + GRID_1D(grid,i-1,j,k).potential + GRID_1D(grid,i,j-1,k).potential + GRID_1D(grid,i,j+1,k).potential + GRID_1D(grid,i,j,k-1).potential + GRID_1D(grid,i,j,k+1).potential);
- 
+
                 // obtain the value with SOR
                 GRID_1D(grid, i,j,k).potential = val*sorOmega + (1-sorOmega)*temp;
                 //std::cout << grid[i][j][k].potential << " " << i << " " << j << " " << k << std::endl;
- 
+
                 // store the difference in values at same grid points in temp itself
                 // for norm calculation
                 temp = GRID_1D(grid,i,j,k).potential - temp;
@@ -168,13 +124,13 @@ void calcElectricField(EField* ElectricField, Node* grid, GridInfo* gInfo)
                 {
                     if(isI_0)
                         val = ( -GRID_1D(grid,i+2,j,k).potential
-                             + 4*GRID_1D(grid,i+1,j,k).potential
-                             - 3*GRID_1D(grid,i  ,j,k).potential );
+                                + 4*GRID_1D(grid,i+1,j,k).potential
+                                - 3*GRID_1D(grid,i  ,j,k).potential );
 
                     else if (isI_LEN)
                         val = -( -GRID_1D(grid,i-2,j,k).potential 
-                              + 4*GRID_1D(grid,i-1,j,k).potential
-                              - 3*GRID_1D(grid,i  ,j,k).potential );
+                                + 4*GRID_1D(grid,i-1,j,k).potential
+                                - 3*GRID_1D(grid,i  ,j,k).potential );
                 }
                 else
                     val = (GRID_1D(grid,i+1,j,k).potential - GRID_1D(grid,i-1,j,k).potential);
@@ -189,12 +145,12 @@ void calcElectricField(EField* ElectricField, Node* grid, GridInfo* gInfo)
                 {
                     if (isJ_0)
                         val = ( -GRID_1D(grid,i,j+2,k).potential
-                             + 4*GRID_1D(grid,i,j+1,k).potential
-                             - 3*GRID_1D(grid,i,j  ,k).potential );
+                                + 4*GRID_1D(grid,i,j+1,k).potential
+                                - 3*GRID_1D(grid,i,j  ,k).potential );
                     else if (isJ_LEN)
                         val = -(-GRID_1D(grid,i,j-2,k).potential 
-                             + 4*GRID_1D(grid,i,j-1,k).potential
-                             - 3*GRID_1D(grid,i,j  ,k).potential );
+                                + 4*GRID_1D(grid,i,j-1,k).potential
+                                - 3*GRID_1D(grid,i,j  ,k).potential );
                 }
                 else
                     val = (GRID_1D(grid,i,j+1,k).potential - GRID_1D(grid,i,j-1,k).potential);
@@ -209,12 +165,12 @@ void calcElectricField(EField* ElectricField, Node* grid, GridInfo* gInfo)
                 {
                     if (isK_0)
                         val = ( -GRID_1D(grid,i,j,k+2).potential
-                             + 4*GRID_1D(grid,i,j,k+1).potential
-                             - 3*GRID_1D(grid,i,j,k  ).potential );
+                                + 4*GRID_1D(grid,i,j,k+1).potential
+                                - 3*GRID_1D(grid,i,j,k  ).potential );
                     else if (isK_LEN)
                         val = -( -GRID_1D(grid,i,j,k-2).potential 
-                              + 4*GRID_1D(grid,i,j,k-1).potential
-                              - 3*GRID_1D(grid,i,j,k  ).potential );
+                                + 4*GRID_1D(grid,i,j,k-1).potential
+                                - 3*GRID_1D(grid,i,j,k  ).potential );
                 }
                 else
                     val = (GRID_1D(grid,i,j,k+1).potential - GRID_1D(grid,i,j,k-1).potential);

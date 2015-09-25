@@ -86,15 +86,10 @@ void writeAMatToFile(char* filename, double* mat, const int matSize)
 
     for(i = 0; i < matSize; i++)
     {
+        const int ni = i*matSize;
         for(j = 0; j < matSize; j++)
-        {
-            for(k = 0; k < matSize; k++)
-            {
-                double val = mat[ INDEX_1D(matSize, i, j, k) ];
-                if(fabs(val) > 1e-10)
-                    fprintf(fp, "%10d %10d %10d %20.6lf\n", i, j, k, val );
-            }
-        }
+            fprintf(fp, "%lf ", mat[ni+j] );
+        fprintf(fp, "\n");
     } // outer i loop
 
     fclose(fp);

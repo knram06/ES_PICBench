@@ -8,7 +8,7 @@
 #include <time.h>
 
 #define GRID_LENGTH (3e-4)
-#define NUM_NODES 65
+#define NUM_NODES 5
 
 /*Macro for 3D to 1D indexing */
 #define INDEX_1D(N, i, j, k) ( (k) + N*(j) + N*N*(i) )
@@ -147,16 +147,16 @@ int main()
     // setup boundary conditions
     int nodeCount = setupBoundaryConditions(grid, &gridInfo, bNodes);
     int A_side_size = (gridInfo.numNodes-2);
-    int A_dim = A_side_size * A_side_size * A_side_size;
-    A_dim = A_dim * A_dim;
-    double* A = malloc(sizeof(double) * A_dim);
+    int A_total_nodes = A_side_size * A_side_size * A_side_size;
+    int A_mat_size = A_total_nodes * A_total_nodes;
+    double* A = malloc(sizeof(double) * A_mat_size);
 
     // initialize the A matrix to all zeros
     int i;
-    for(i = 0; i < A_dim; i++)
+    for(i = 0; i < A_mat_size; i++)
         A[i] = 0.;
     build_A_matrix(A, A_side_size);
-    writeAMatToFile("mat_A.txt", A, A_side_size);
+    writeAMatToFile("mat_A.txt", A, A_total_nodes);
 
     bNodes = realloc(bNodes, nodeCount * sizeof(BoundaryNode));
     printf("done\n");
