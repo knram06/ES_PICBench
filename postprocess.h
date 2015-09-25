@@ -79,7 +79,7 @@ void writeOutputData(const char* fileName, Node* grid, EField* ElectricField, Gr
     fclose(fileValues);
 }
 
-void writeAMatToFile(char* filename, double* mat, const int matSize)
+void writeAMatToFile(char* filename, const double* mat, const int matSize)
 {
     int i, j, k;
     FILE* fp = fopen(filename, "w");
@@ -91,6 +91,17 @@ void writeAMatToFile(char* filename, double* mat, const int matSize)
             fprintf(fp, "%lf ", mat[ni+j] );
         fprintf(fp, "\n");
     } // outer i loop
+
+    fclose(fp);
+}
+
+void writeVecToFile(char* filename, const double *vec, const int vecSize)
+{
+    int i;
+    FILE *fp = fopen(filename, "w");
+
+    for(i = 0; i < vecSize; i++)
+        fprintf(fp, "%lf\n", vec[i]);
 
     fclose(fp);
 }

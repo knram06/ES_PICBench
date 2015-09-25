@@ -7,7 +7,8 @@
 #include <string.h>
 #include <time.h>
 
-#define GRID_LENGTH (3e-4)
+//#define GRID_LENGTH (3e-4)
+#define GRID_LENGTH 1
 #define NUM_NODES 5
 
 /*Macro for 3D to 1D indexing */
@@ -45,8 +46,8 @@
 #define POST_INTERVAL (1000)
 #define POST_WRITE_PATH ("output/")
 
-//#define TEST_FUNCTION (x*x - 2*y*y + z*z)
-#define TEST_FUNCTION 0.
+#define TEST_FUNCTION(x, y, z) ( (x*x) - (2*(y*y)) + (z*z) )
+//#define TEST_FUNCTION 0.
 
 // declare the Particle data type here
 typedef struct
@@ -119,7 +120,7 @@ int main()
     GridInfo gridInfo;
     gridInfo.numNodes = NUM_NODES;
     gridInfo.totalNodes = gridInfo.numNodes * gridInfo.numNodes * gridInfo.numNodes;
-    gridInfo.spacing = GRID_LENGTH / (NUM_NODES - 1);
+    gridInfo.spacing = (double)GRID_LENGTH / (NUM_NODES - 1);
     gridInfo.invSpacing = 1./(gridInfo.spacing);        // just caching this to avoid divisions?
 
     // now preallocate the particles data array
@@ -150,13 +151,25 @@ int main()
     int A_total_nodes = A_side_size * A_side_size * A_side_size;
     int A_mat_size = A_total_nodes * A_total_nodes;
     double* A = malloc(sizeof(double) * A_mat_size);
+    double* b = malloc(sizeof(double) * A_total_nodes);
+    double* x = malloc(sizeof(double) * A_total_nodes);
 
     // initialize the A matrix to all zeros
     int i;
     for(i = 0; i < A_mat_size; i++)
         A[i] = 0.;
-    build_A_matrix(A, A_side_size);
-    writeAMatToFile("mat_A.txt", A, A_total_nodes);
+    for(i = 0; i < A_total_nodes; i++)
+        b[i] = 0.;
+    //build_A_matrix(A, A_side_size);
+    build_b_vec(b, &gridInfo, A_side_size);
+
+    cg_solve(A, b, 1e-12, x, A_total_nodes);
+
+    //writeAMatToFile("mat_A.txt", A, A_total_nodes);
+    //writeVecToFile("vect_b.txt", b, A_total_nodes);
+
+    // TEMP RETURN - for now
+    return 0;
 
     bNodes = realloc(bNodes, nodeCount * sizeof(BoundaryNode));
     printf("done\n");
@@ -270,13 +283,16 @@ int main()
 
     free(lostParticles);
     free(domainParticles);
+
+    free(x);
+    free(b);
     free(A);
+
     free(bNodes);
     deallocEField(&ElectricField);
     deallocGrid(&grid);
     free(MD_data);
 
-    return 0;
 }
 
 

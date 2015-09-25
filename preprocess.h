@@ -82,10 +82,13 @@ void parseMDFileToParticles(Particle particleData[], FILE* fp)
 void allocateGrid(Node** grid, GridInfo* gInfo)
 {
     const int totalNodes = gInfo->totalNodes;
-    int i, j, k;
+    int i;
 
     (*grid) = malloc(totalNodes * sizeof(Node));
     assert((*grid) != NULL);
+
+    for(i = 0; i < totalNodes; i++)
+        (*grid)[i].potential = 0.;
 }
 
 void deallocGrid(Node** grid)

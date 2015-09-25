@@ -7,8 +7,10 @@ void build_A_matrix(double* A, const int sizeA)
     int i, j, k;
     int I, J;
 
-    const int selfCoeff = -6;
-    const int nonSelfCoeff = 1;
+    // define coeff in this manner
+    // to make this positive definite
+    const int selfCoeff = 6;
+    const int nonSelfCoeff = -1;
 
     const int steps[2] = {-1, 1};
     int c;
@@ -51,6 +53,58 @@ void build_A_matrix(double* A, const int sizeA)
             } // end of k loop
         } // end of j loop
     }
+}
+
+void build_b_vec(double* b, GridInfo* gridInfo, const int sideSize)
+{
+    int i, j, k;
+    int I, J;
+    const double spacing = gridInfo->spacing;
+    const int steps[2] = {-1, 1};
+    int c;
+
+    /*******************************************/
+    /************All - Nodes********************/
+    for(i = 0; i < sideSize; i++)
+    {
+        const double x = spacing*i;
+        for(j = 0; j < sideSize; j++)
+        {
+            const double y = spacing*j;
+            for(k = 0; k < sideSize; k++)
+            {
+                const double z = spacing*k;
+                I = INDEX_1D(sideSize, i, j, k);
+                b[I] = 0.;
+
+                for(c = 0; c < 2; c++)
+                {
+                    int step = steps[c];
+                    int iStep = i + step;
+                    int jStep = j + step;
+                    int kStep = k + step;
+
+                    // X-Face boundary
+                    if(iStep < 0)
+                        b[I] += TEST_FUNCTION(0, y, z);
+                    else if (iStep == sideSize)
+                        b[I] += TEST_FUNCTION(GRID_LENGTH, y, z);
+
+                    // Y-Face boundary
+                    if(jStep < 0)
+                        b[I] += TEST_FUNCTION(x, 0,           z);
+                    else if (jStep == sideSize)
+                        b[I] += TEST_FUNCTION(x, GRID_LENGTH, z);
+
+                    // Z-Face boundary
+                    if(kStep < 0)
+                        b[I] += TEST_FUNCTION(x, y,           0);
+                    else if (kStep == sideSize)
+                        b[I] += TEST_FUNCTION(x, y, GRID_LENGTH);
+                }
+            }
+        } // end of j loop
+    } // end of i loop
 }
 
 double single_step_solve(Node* grid, const int numNodes, const double sorOmega)
@@ -214,14 +268,12 @@ int setupBoundaryConditions(Node* grid, GridInfo* gInfo, BoundaryNode *bNodes)
 
     for(i = 0; i < numNodes; i++)
     {
-        x = spacing * i;
+        //x = spacing * i;
         for(k = 0; k < numNodes; k++)
         {
-            z = spacing * k;
-            // checking with x2 - 2y2 + z2
-            //grid[i][0][k] = x*x + z*z;          // y is zero here
-            y = 0.;
-            GRID_1D(grid, i, 0, k).potential=TEST_FUNCTION;
+            //z = spacing * k;
+            //y = 0.;
+            //GRID_1D(grid, i, 0, k).potential=TEST_FUNCTION;
 
             // enforce Neumann boundary nodes
             bNodes[nodeCount].bndryNodes[0] = &GRID_1D(grid, i, 0, k);
@@ -229,8 +281,8 @@ int setupBoundaryConditions(Node* grid, GridInfo* gInfo, BoundaryNode *bNodes)
             bNodes[nodeCount].bndryNodes[2] = &GRID_1D(grid, i, 2, k);
             nodeCount++;
 
-            y = GRID_LENGTH;
-            GRID_1D(grid, i, numNodes-1, k).potential=TEST_FUNCTION;
+            //y = GRID_LENGTH;
+            //GRID_1D(grid, i, numNodes-1, k).potential=TEST_FUNCTION;
 
             // Y = GRID_LENGTH
             bNodes[nodeCount].bndryNodes[0] = &GRID_1D(grid, i, numNodes-1, k);
@@ -242,9 +294,9 @@ int setupBoundaryConditions(Node* grid, GridInfo* gInfo, BoundaryNode *bNodes)
         // on X-Y faces
         for(j = 0; j < numNodes; j++)
         {
-            y = spacing*j;
-            z = 0.;
-            GRID_1D(grid, i, j, 0).potential=TEST_FUNCTION;
+            //y = spacing*j;
+            //z = 0.;
+            //GRID_1D(grid, i, j, 0).potential=TEST_FUNCTION;
 
             // enforce Neumann boundary nodes
             // Z = 0
@@ -253,8 +305,8 @@ int setupBoundaryConditions(Node* grid, GridInfo* gInfo, BoundaryNode *bNodes)
             bNodes[nodeCount].bndryNodes[2] = &GRID_1D(grid, i, j, 2);
             nodeCount++;
 
-            z = GRID_LENGTH;
-            GRID_1D(grid, i, j, numNodes-1).potential=TEST_FUNCTION;
+            //z = GRID_LENGTH;
+            //GRID_1D(grid, i, j, numNodes-1).potential=TEST_FUNCTION;
 
             // Z = GRID_LENGTH
             bNodes[nodeCount].bndryNodes[0] = &GRID_1D(grid, i, j, numNodes-1);
@@ -318,4 +370,124 @@ void enforceNeumannBC(BoundaryNode* bNodes, const int nodeCount)
         (bNodes[i].bndryNodes[0])->potential = (1./3) * (4 * (bNodes[i].bndryNodes[1])->potential - (bNodes[i].bndryNodes[2])->potential);
 
 }
+
+
+/********** CG-SOLVER Routines ***********/
+
+// TODO: add and check restrict usage here
+void matvec(const double* const mat, double *vec, double *result, const int n)
+{
+    int i, j;
+    for(i = 0; i < n; i++)
+    {
+        double sum = 0.;
+        for(j = 0; j < n; j++)
+            sum += GRID_1D(mat, i, j) * vec[j];
+
+        result[i] = sum;
+    }
+}
+
+void vec_sub(double *a, double *b, double *res, const int n)
+{
+    int i;
+    for(i = 0; i < n; i++)
+        res[i] = a[i] - b[i];
+}
+
+void vec_add(double* a, double *b, double *res, const int n)
+{
+    int i;
+    for(i = 0; i < n; i++)
+        res[i] = a[i] + b[i];
+}
+
+void vec_mult(double val, double *v, double *res, const int n)
+{
+    int i;
+    for(i = 0; i < n; i++)
+        res[i] = val*v[i];
+}
+
+void daxpy(const double alpha, const double *x, double *y, const int n)
+{
+    int i;
+    for(i = 0; i < n; i++)
+        y[i] += alpha*x[i];
+}
+
+
+void vec_set_equal(double *dst, const double* const src, const int n)
+{
+    int i;
+    for(i = 0; i < n; i++)
+        dst[i] = src[i];
+}
+
+double vec_transp_mult(const double* const v, const double* const r, const int n)
+{
+    double ret = 0.;
+    int i;
+
+    for(i = 0; i < n; i++)
+        ret += v[i] * r[i];
+
+    return ret;
+}
+
+int cg_solve(const double* A, const double* b, double tolerance,
+                   double* x, const int n)
+{
+    double *r = malloc(n * sizeof(double));
+    double *d = malloc(n * sizeof(double));
+
+    // some ops to setup initial conditions and values
+    matvec(A, x, r, n);
+    vec_sub(b, r, r, n);
+    vec_set_equal(d, r, n);
+
+    // store some variables used in the while looping
+    double residual = vec_transp_mult(r, r, n);
+    double *Ad = malloc(n*sizeof(double));
+    double *temp = malloc(n*sizeof(double));
+
+    // residual is the square, so tolerance is also squared
+    int iterCount = 0;
+    tolerance = tolerance*tolerance;
+    while(residual > tolerance)
+    {
+        iterCount++;
+        matvec(A, d, Ad, n);
+
+        double alpha = residual / vec_transp_mult(d, Ad, n);
+        daxpy(alpha, d, x, n);
+
+        // multiply alpha and d - store in temp
+        //vec_mult(alpha, d, temp, n);
+
+        // add x and alpha*d - store in x
+        //vec_add(x, temp, x, n);
+
+        // now do d_transp * Ad and store in temp
+        daxpy(-alpha, Ad, r, n);
+        //vec_mult(alpha, Ad, temp, n);
+        //vec_sub(r, temp, r, n);
+
+        double residualOld = residual;
+        residual = vec_transp_mult(r, r, n);
+
+        double beta = residual / residualOld;
+
+        // multiply Beta and d
+        vec_mult(beta, d, temp, n);
+        vec_add(r, temp, d, n);
+    }
+
+    // IMPORTANT!! - free all malloc'ed memory
+    free(temp); free(Ad);
+    free(d); free(r);
+
+    return iterCount;
+}
+
 #endif
