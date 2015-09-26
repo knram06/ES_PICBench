@@ -8,9 +8,10 @@
 #include <time.h>
 
 #define GRID_LENGTH (3e-4)
-#define NUM_NODES 101
+#define NUM_NODES 65
 
 /*Macro for 3D to 1D indexing */
+//#define GRID_1D(grid, i, j, k) ( grid[(k) + NUM_NODES*(j) + NUM_NODES*NUM_NODES*(i) ] )
 #define INDEX_1D(i, j, k) ( (k) + NUM_NODES*(j) + NUM_NODES*NUM_NODES*(i) )
 #define GRID_1D(grid, i, j, k) (grid[ INDEX_1D(i, j, k) ] )
 
@@ -88,7 +89,6 @@ typedef struct
 void allocateEField(EField** grid, GridInfo* gInfo)
 {
     const int totalNodes = gInfo->totalNodes;
-    int i, j, k;
 
     (*grid) = malloc(totalNodes * sizeof(EField));
     assert((*grid) != NULL);

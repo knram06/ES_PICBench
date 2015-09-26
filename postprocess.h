@@ -77,6 +77,8 @@ void writeOutputData(const char* fileName, Node* grid, EField* ElectricField, Gr
     fclose(fileValues);
 }
 
+/*
+ * TODO: Uncomment when this is needed for better storage.
 void writeOutputDataXML(const char* fileName, Node*** grid, EField*** ElectricField, GridInfo* gInfo)
 {
     FILE* fileValues = fopen(fileName, "w");
@@ -104,6 +106,7 @@ void writeOutputDataXML(const char* fileName, Node*** grid, EField*** ElectricFi
             );
     fclose(fileValues);
 }
+*/
 
 void writeParticleData(const char* fileName, const Particle* particleData, int particleCount)
 {
