@@ -5,15 +5,16 @@
 #include <stdbool.h>
 // strtok issues resolved with including this header
 #include <string.h>
+#include <limits.h>
 #include <time.h>
 
 #define GRID_LENGTH (3e-4)
-#define NUM_NODES 65
+#define NUM_NODES 3
 
 /*Macro for 3D to 1D indexing */
 //#define GRID_1D(grid, i, j, k) ( grid[(k) + NUM_NODES*(j) + NUM_NODES*NUM_NODES*(i) ] )
-#define INDEX_1D(i, j, k) ( (k) + NUM_NODES*(j) + NUM_NODES*NUM_NODES*(i) )
-#define GRID_1D(grid, i, j, k) (grid[ INDEX_1D(i, j, k) ] )
+#define INDEX_1D(n, i, j, k) ( (k) + (n)*(j) + (n)*(n)*(i) )
+#define GRID_1D(grid, i, j, k) (grid[ INDEX_1D(NUM_NODES, i, j, k) ] )
 
 /* geometry dimension */
 // capillary centered on YZ face
@@ -86,6 +87,8 @@ typedef struct
 #include "numerics.h"
 #include "postprocess.h"
 
+#include "solvers/petsc/solver.h"
+
 void allocateEField(EField** grid, GridInfo* gInfo)
 {
     const int totalNodes = gInfo->totalNodes;
@@ -100,7 +103,7 @@ void deallocEField(EField** grid)
     free((*grid));
 }
 
-int main()
+int main(int argc, char **argv)
 {
     // read in MD data
     FILE *fp = fopen(MD_FILE, "r");
@@ -109,6 +112,8 @@ int main()
         fprintf(stderr, "Error in opening file %s \n", MD_FILE);
         return EXIT_FAILURE;
     }
+
+    SolverInitialize(&argc, &argv);
 
     // count the number of lines in the input file
     // so that we can preallocate later
@@ -121,6 +126,23 @@ int main()
     gridInfo.totalNodes = gridInfo.numNodes * gridInfo.numNodes * gridInfo.numNodes;
     gridInfo.spacing = GRID_LENGTH / (NUM_NODES - 1);
     gridInfo.invSpacing = 1./(gridInfo.spacing);        // just caching this to avoid divisions?
+
+    // make sure we don't exceed int limits?
+    assert(gridInfo.totalNodes < INT_MAX);
+
+    // build the sparse form for the matrices
+    const int maxNonZerosPerRow = 7;
+    MatCSR mcsr;
+    allocCSRForm(&mcsr, gridInfo.totalNodes, maxNonZerosPerRow);
+    buildSparseMatFormat(mcsr.rowOffsets, mcsr.colIndices, mcsr.mat, &gridInfo);
+
+    // send to Solver
+    buildSolverMatrixFromCSR(mcsr.rowOffsets, mcsr.colIndices, mcsr.mat, mcsr.numRows); 
+
+    deallocCSRForm(&mcsr);
+    SolverFinalize();
+    // TEMP RETURN - for now
+    return 0;
 
     // now preallocate the particles data array
     Particle* MD_data = malloc(particleCount * sizeof(Particle));
@@ -263,6 +285,7 @@ int main()
     deallocEField(&ElectricField);
     deallocGrid(&grid);
     free(MD_data);
+
 
     return 0;
 }

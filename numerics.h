@@ -1,6 +1,133 @@
 #ifndef NUMERICS_H
 #define NUMERICS_H
 
+typedef struct __csr_t
+{
+    double *mat;
+    int *rowOffsets;
+    int *colIndices;
+    int numRows;
+} MatCSR;
+
+void allocCSRForm(MatCSR* matcsr, const int numRows, const int maxNZPerRow)
+{
+    const int maxNZ = numRows * maxNZPerRow;
+    matcsr->mat = malloc(sizeof(double) * maxNZ);
+    matcsr->rowOffsets = malloc(sizeof(int) * (numRows+1));
+    matcsr->colIndices = malloc(sizeof(int) * maxNZ);
+    matcsr->numRows = numRows;
+}
+
+void deallocCSRForm(MatCSR *matcsr)
+{
+    free(matcsr->mat);
+    free(matcsr->rowOffsets);
+    free(matcsr->colIndices);
+}
+
+void buildSparseMatFormat(int *rowOffsets, int *colIndices, double *vals,
+                          GridInfo* gridInfo)
+{
+    int i, j, k;
+    const int numNodes = gridInfo->numNodes;
+
+    // for convenient indexing
+    int *rowPtr = &rowOffsets[1];
+
+    const int selfCoeff = -6;
+    const int nonSelfCoeff = 1;
+
+    int runningIndex = 0;
+    for(i = 0; i < numNodes; i++)
+    {
+        bool isI_0 =   (i == 0);
+        bool isI_LEN = (i == (numNodes-1));
+        bool isI_0_OR_LEN = isI_0 || isI_LEN;
+
+        for(j = 0; j < numNodes; j++)
+        {
+            bool isJ_0 =   (j == 0);
+            bool isJ_LEN = (j == (numNodes-1));
+            bool isJ_0_OR_LEN = isJ_0 || isJ_LEN;
+
+            for(k = 0; k < numNodes; k++)
+            {
+                bool isK_0 =   (k == 0);
+                bool isK_LEN = (k == (numNodes-1));
+                bool isK_0_OR_LEN = isK_0 || isK_LEN;
+
+                const int I = INDEX_1D(numNodes, i, j, k);
+
+                // if on boundary
+                if(isI_0_OR_LEN || isJ_0_OR_LEN || isK_0_OR_LEN)
+                {
+                    // for now keep all dirichlet
+                    colIndices[runningIndex] = I;
+                    vals[runningIndex] = 1;
+                    runningIndex++;
+                }
+                // else
+                // fill in coefficients for interior point behaviour
+                else
+                {
+                    // all these points are guaranteed to be in the
+                    // interior, so we can fill in the coefficients as needed
+                    int J = 0;
+
+                    // explicitly writing this - to make it look like
+                    // LOOP UNROLLING?
+                    // We expect this convention to be in increasing order
+                    // of I, since we define I as k+n*j+n*n*i)
+                    // CONVENTION: i-1, j-1, k-1, k, k+1, j+1, i+1
+                    J = INDEX_1D(numNodes, i-1, j  , k  );
+                    colIndices[runningIndex] = J;
+                    vals[runningIndex] = nonSelfCoeff;
+                    runningIndex++;
+
+                    J = INDEX_1D(numNodes, i  , j-1, k  );
+                    colIndices[runningIndex] = J;
+                    vals[runningIndex] = nonSelfCoeff;
+                    runningIndex++;
+
+                    J = INDEX_1D(numNodes, i  , j  , k-1);
+                    colIndices[runningIndex] = J;
+                    vals[runningIndex] = nonSelfCoeff;
+                    runningIndex++;
+
+                    /********** SELF COEFF ***************/
+                    /*************************************/
+                    J = INDEX_1D(numNodes, i  , j  , k  );
+                    colIndices[runningIndex] = J;
+                    vals[runningIndex] = selfCoeff;
+                    runningIndex++;
+                    /*************************************/
+                    /*************************************/
+
+                    J = INDEX_1D(numNodes, i  , j  , k+1);
+                    colIndices[runningIndex] = J;
+                    vals[runningIndex] = nonSelfCoeff;
+                    runningIndex++;
+
+                    J = INDEX_1D(numNodes, i  , j+1, k  );
+                    colIndices[runningIndex] = J;
+                    vals[runningIndex] = nonSelfCoeff;
+                    runningIndex++;
+
+                    J = INDEX_1D(numNodes, i+1, j  , k  );
+                    colIndices[runningIndex] = J;
+                    vals[runningIndex] = nonSelfCoeff;
+                    runningIndex++;
+
+                } // end of else condition - i.e. at interior points
+                // update the row offsets vector
+                // using the one off adjusted pointer
+                rowPtr[I] = runningIndex;
+            } // end of k loop
+        } // end of j loop
+    } // end of i loop
+
+}
+
 double single_step_solve(Node* grid, const int numNodes, const double sorOmega)
 {
     int i, j, k;
