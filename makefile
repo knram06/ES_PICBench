@@ -12,6 +12,8 @@ include ${PETSC_DIR}/conf/variables
 include ${PETSC_DIR}/conf/rules
 PCC		 = mpicc
 
+main.o: main.c
+
 piccode: main.o
 	${CLINKER} -o piccode main.o ${PETSC_KSP_LIB}
 

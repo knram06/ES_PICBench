@@ -134,11 +134,32 @@ int main(int argc, char **argv)
     const int maxNonZerosPerRow = 7;
     MatCSR mcsr;
     allocCSRForm(&mcsr, gridInfo.totalNodes, maxNonZerosPerRow);
-    buildSparseMatFormat(mcsr.rowOffsets, mcsr.colIndices, mcsr.mat, &gridInfo);
+
+    // build the vector b
+    double *rhs = malloc(sizeof(double) * gridInfo.totalNodes);
+    buildSparseMatAndRHSVec(mcsr.rowOffsets, mcsr.colIndices, mcsr.mat, rhs, &gridInfo);
+
+    int i;
+    //for(i = 0; i < gridInfo.totalNodes; i++)
+    //    printf("%f ", rhs[i]);
+    //printf("\n");
 
     // send to Solver
-    buildSolverMatrixFromCSR(mcsr.rowOffsets, mcsr.colIndices, mcsr.mat, mcsr.numRows); 
+    buildSolverMatCSRAndVec(mcsr.rowOffsets, mcsr.colIndices, mcsr.mat, rhs, mcsr.numRows); 
 
+    // initialize solver parameters
+    initSolverParameters();
+    SolverLinSolve();
+
+    // since rhs is the same size, just reuse that array
+    getSolution(rhs);
+
+    // examine the transferred data
+    //for(i = 0; i < gridInfo.totalNodes; i++)
+    //    printf("%f ", rhs[i]);
+    //printf("\n");
+
+    free(rhs);
     deallocCSRForm(&mcsr);
     SolverFinalize();
     // TEMP RETURN - for now
@@ -227,7 +248,7 @@ int main(int argc, char **argv)
 
     start = clock();
     // for required number of timesteps
-    int i, lostParticleCount = 0;
+    int lostParticleCount = 0;
     for(i = 1; i <= TIMESTEPS; i++)
     {
         printf("\nTimestep %d:\n", i);

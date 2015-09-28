@@ -13,7 +13,11 @@ void allocCSRForm(MatCSR* matcsr, const int numRows, const int maxNZPerRow)
 {
     const int maxNZ = numRows * maxNZPerRow;
     matcsr->mat = malloc(sizeof(double) * maxNZ);
+
     matcsr->rowOffsets = malloc(sizeof(int) * (numRows+1));
+
+    // first starting point has to be zero
+    matcsr->rowOffsets[0] = 0; 
     matcsr->colIndices = malloc(sizeof(int) * maxNZ);
     matcsr->numRows = numRows;
 }
@@ -25,8 +29,8 @@ void deallocCSRForm(MatCSR *matcsr)
     free(matcsr->colIndices);
 }
 
-void buildSparseMatFormat(int *rowOffsets, int *colIndices, double *vals,
-                          GridInfo* gridInfo)
+void buildSparseMatAndRHSVec(int *rowOffsets, int *colIndices, double *vals,
+                             double *rhs, GridInfo* gridInfo)
 {
     int i, j, k;
     const int numNodes = gridInfo->numNodes;
@@ -65,6 +69,8 @@ void buildSparseMatFormat(int *rowOffsets, int *colIndices, double *vals,
                     colIndices[runningIndex] = I;
                     vals[runningIndex] = 1;
                     runningIndex++;
+
+                    rhs[I] = 2; // (say)
                 }
                 // else
                 // fill in coefficients for interior point behaviour
@@ -72,6 +78,7 @@ void buildSparseMatFormat(int *rowOffsets, int *colIndices, double *vals,
                 {
                     // all these points are guaranteed to be in the
                     // interior, so we can fill in the coefficients as needed
+                    rhs[I] = 0;
                     int J = 0;
 
                     // explicitly writing this - to make it look like
