@@ -2,7 +2,7 @@
 #define POSTPROCESS_H
 
 // function for writing out values
-void writeOutputData(const char* fileName, Node* grid, EField* ElectricField, GridInfo* gInfo)
+void writeOutputData(const char* fileName, double *grid, GridInfo* gInfo)
 {
     FILE* fileValues = fopen(fileName, "w");
     int i, j, k;
@@ -22,8 +22,8 @@ void writeOutputData(const char* fileName, Node* grid, EField* ElectricField, Gr
                         );
 
     // cache some of the data which will be written later
-    double* potentialValues = malloc(totalNodes * sizeof(double));
-    double* electricField   = malloc(3 * totalNodes * sizeof(double));
+    //double* potentialValues = malloc(totalNodes * sizeof(double));
+    //double* electricField   = malloc(3 * totalNodes * sizeof(double));
 
     int count = 0;
     for(i = 0; i < numNodes; i++)
@@ -35,20 +35,7 @@ void writeOutputData(const char* fileName, Node* grid, EField* ElectricField, Gr
             for(k = 0; k < numNodes; k++)
             {
                 double z = spacing * k;
-
                 fprintf(fileValues, "%10.8e %10.8e %10.8e\n", x, y, z);
-
-                // update the potential data array
-                potentialValues[count] = GRID_1D(grid, i,j,k).potential;
-
-                EField* elecField = &GRID_1D(ElectricField, i, j, k);
-                // update the electric field array
-                const int pos = 3*count;
-                electricField[pos]     = elecField->components[0];
-                electricField[pos + 1] = elecField->components[1];
-                electricField[pos + 2] = elecField->components[2];
-
-                count++;
             }
         }
     }
@@ -60,20 +47,17 @@ void writeOutputData(const char* fileName, Node* grid, EField* ElectricField, Gr
                         "LOOKUP_TABLE default\n", totalNodes
             );
     for(count = 0; count < totalNodes; count++)
-        fprintf(fileValues, "%10.8e\n", potentialValues[count]);
+        fprintf(fileValues, "%10.8e\n", grid[count]);
 
     // write out the ElectricField values
-    fprintf(fileValues, "\n"
-                        "VECTORS ElectricField float\n");
-    for(count = 0; count < totalNodes; count++)
-    {
-        const int pos = 3*count;
-        fprintf(fileValues, "%10.8e %10.8e %10.8e\n", electricField[pos], electricField[pos+1], electricField[pos+2] );
-    }
+//    fprintf(fileValues, "\n"
+//                        "VECTORS ElectricField float\n");
+//    for(count = 0; count < totalNodes; count++)
+//    {
+//        const int pos = 3*count;
+//        fprintf(fileValues, "%10.8e %10.8e %10.8e\n", electricField[pos], electricField[pos+1], electricField[pos+2] );
+//    }
 
-
-    free(electricField);
-    free(potentialValues);
     fclose(fileValues);
 }
 

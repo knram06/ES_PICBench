@@ -9,7 +9,7 @@
 #include <time.h>
 
 #define GRID_LENGTH (3e-4)
-#define NUM_NODES 5
+#define NUM_NODES 41
 
 /*Macro for 3D to 1D indexing */
 //#define GRID_1D(grid, i, j, k) ( grid[(k) + NUM_NODES*(j) + NUM_NODES*NUM_NODES*(i) ] )
@@ -154,6 +154,7 @@ int main(int argc, char **argv)
     // since rhs is the same size, just reuse that array
     getSolution(rhs);
 
+    writeOutputData("out.vtk", rhs, &gridInfo);
     // examine the transferred data
     //for(i = 0; i < gridInfo.totalNodes; i++)
     //    printf("%f ", rhs[i]);
@@ -165,150 +166,150 @@ int main(int argc, char **argv)
     // TEMP RETURN - for now
     return 0;
 
-    // now preallocate the particles data array
-    Particle* MD_data = malloc(particleCount * sizeof(Particle));
-
-    // loop through the file and tokenize entries
-    rewind(fp);         // rewind file to the beginning
-    parseMDFileToParticles(MD_data, fp);
-    fclose(fp);
-
-    // allocate the grid
-    Node* grid = NULL;
-    allocateGrid(&grid, &gridInfo);
-
-    EField* ElectricField = NULL;
-    allocateEField(&ElectricField, &gridInfo);
-
-    // preallocate NeumannBC nodes in terms of MAX possible
-    // i.e. num of sides of cube * num nodes per side
-    BoundaryNode *bNodes = malloc( 6 * (NUM_NODES)*(NUM_NODES) * sizeof(BoundaryNode) );
-
-    // calculate the actual BoundaryNodes count and resize the array to that instead
-    // to avoid wastage
-    printf("Consolidating Neumann BC nodes into a different structure....");
-    // setup boundary conditions
-    int nodeCount = setupBoundaryConditions(grid, &gridInfo, bNodes);
-
-    bNodes = realloc(bNodes, nodeCount * sizeof(BoundaryNode));
-    printf("done\n");
-
-    // enforce boundary conditions
-    // impose Neumann BCs
-    // solve and at each step, impose Neumann BCs?
-    double tolerance = 1e-9, sorOmega = 1.9;
-    double norm = 100.;
-
-    int iterCount = 1;
-    //while(norm >= tolerance)
-    clock_t start = clock(), diff;
-    for(iterCount = 1; norm >= tolerance; iterCount++)
-    {
-        norm = sqrt(single_step_solve(grid, gridInfo.numNodes, sorOmega));
-
-        // TODO: norm should be updated with this calculation no?
-        // as it changes the values in the grid?
-        enforceNeumannBC(bNodes, nodeCount);
-
-        if(!(iterCount % ITER_HEADER_INTERVAL))
-            printf("%10s %20s\n", "Iter_Count", "Norm");
-
-        if(!(iterCount % ITER_INTERVAL) )
-            printf("%10d %20.8e\n", iterCount, norm);
-
-    }
-    diff = clock() - start;
-    double solveTime = diff /CLOCKS_PER_SEC;
-
-    printf("\nCalculating Electric Field.....");
-    calcElectricField(ElectricField, grid, &gridInfo);
-    printf("done\n");
-
-    // allocate for particles
-    Particle* domainParticles = malloc(PARTICLE_SIZE * sizeof(Particle));
-    int totalParticlesCount = 0;
-
-    // calculate the release rate
-    int Nrel;
-    double Nfrac, runningNfrac, temp;
-    double particleReleaseRate = particleCount * (T_PIC/ T_MD);
-
-    // set the integer and fractional parts
-    Nfrac = modf(particleReleaseRate, &temp);
-    Nrel = (int)(temp);
-    runningNfrac = Nfrac;
-
-    /*! Array to keep track of lost particles
-     * The idea behind is that, particles may leave the domain and this is an index
-     * of such particles.
-     * Using this, new particles can be inserted into those locations appropriately.
-     */
-    int* lostParticles = malloc( (Nrel + LOST_PARTICLES_MARGIN) * sizeof(int) );
-    int lostParticleBound = -1;
-
-    start = clock();
-    // for required number of timesteps
-    int lostParticleCount = 0;
-    for(i = 1; i <= TIMESTEPS; i++)
-    {
-        printf("\nTimestep %d:\n", i);
-
-        // calculate the current timestep's release rate
-        runningNfrac = modf(runningNfrac, &temp);
-        const int numParticlesToRelease = Nrel + (int)(temp);
-
-        //totalParticlesBound += numParticlesToRelease - lostParticleCount;
-        lostParticleBound = (lostParticleCount - 1);        // adjust for one off issue
-        // introduce the particles
-        releaseParticles(numParticlesToRelease,
-                         MD_data, particleCount,
-                         domainParticles, &totalParticlesCount,
-                         lostParticles,
-                         &lostParticleBound);          // adjust for one off issue
-
-        //totalParticlesBound = (totalParticlesCount - 1);
-        swapGapsWithEndParticles(domainParticles, &totalParticlesCount,
-                                 lostParticles, &lostParticleBound);
-
-        printf("Total Number of Particles: %d\n", totalParticlesCount); // need +1 for the one-off offset
-
-        // then move them
-        lostParticleCount = moveParticlesInField(domainParticles, totalParticlesCount,
-                                                 lostParticles,//&lostParticleBound,
-                                                 ElectricField, &gridInfo);
-        printf("%d Particles left the domain\n", lostParticleCount);
-        //printf("%d empty slots in the domain particles\n", lostParticleBound+1);
-
-        // IMPORTANT: add Nfrac to runningNfrac to adjust correctly
-        // for the fractional part
-        runningNfrac += Nfrac;
-
-        char outputPath[50];
-        if(POST_WRITE_FILES && !(i % POST_INTERVAL) )
-        {
-            sprintf(outputPath, "%s/particleOutput_%d.txt", POST_WRITE_PATH, i);
-            writeParticleData(outputPath, domainParticles, totalParticlesCount);
-        }
-    }
-
-    diff = clock() - start;
-    double timeStepsTime = diff /CLOCKS_PER_SEC;
-
-    printf("\nTiming Info\n%10s %10.8e\n%10s %10.8e\n", "Solve", solveTime, "TimeSteps", timeStepsTime);
-
-
-    // write out data for post processing
-    writeOutputData("out.vtk", grid, ElectricField, &gridInfo);
-
-    free(lostParticles);
-    free(domainParticles);
-    free(bNodes);
-    deallocEField(&ElectricField);
-    deallocGrid(&grid);
-    free(MD_data);
+//    // now preallocate the particles data array
+//    Particle* MD_data = malloc(particleCount * sizeof(Particle));
+//
+//    // loop through the file and tokenize entries
+//    rewind(fp);         // rewind file to the beginning
+//    parseMDFileToParticles(MD_data, fp);
+//    fclose(fp);
+//
+//    // allocate the grid
+//    Node* grid = NULL;
+//    allocateGrid(&grid, &gridInfo);
+//
+//    EField* ElectricField = NULL;
+//    allocateEField(&ElectricField, &gridInfo);
+//
+//    // preallocate NeumannBC nodes in terms of MAX possible
+//    // i.e. num of sides of cube * num nodes per side
+//    BoundaryNode *bNodes = malloc( 6 * (NUM_NODES)*(NUM_NODES) * sizeof(BoundaryNode) );
+//
+//    // calculate the actual BoundaryNodes count and resize the array to that instead
+//    // to avoid wastage
+//    printf("Consolidating Neumann BC nodes into a different structure....");
+//    // setup boundary conditions
+//    int nodeCount = setupBoundaryConditions(grid, &gridInfo, bNodes);
+//
+//    bNodes = realloc(bNodes, nodeCount * sizeof(BoundaryNode));
+//    printf("done\n");
+//
+//    // enforce boundary conditions
+//    // impose Neumann BCs
+//    // solve and at each step, impose Neumann BCs?
+//    double tolerance = 1e-9, sorOmega = 1.9;
+//    double norm = 100.;
+//
+//    int iterCount = 1;
+//    //while(norm >= tolerance)
+//    clock_t start = clock(), diff;
+//    for(iterCount = 1; norm >= tolerance; iterCount++)
+//    {
+//        norm = sqrt(single_step_solve(grid, gridInfo.numNodes, sorOmega));
+//
+//        // TODO: norm should be updated with this calculation no?
+//        // as it changes the values in the grid?
+//        enforceNeumannBC(bNodes, nodeCount);
+//
+//        if(!(iterCount % ITER_HEADER_INTERVAL))
+//            printf("%10s %20s\n", "Iter_Count", "Norm");
+//
+//        if(!(iterCount % ITER_INTERVAL) )
+//            printf("%10d %20.8e\n", iterCount, norm);
+//
+//    }
+//    diff = clock() - start;
+//    double solveTime = diff /CLOCKS_PER_SEC;
+//
+//    printf("\nCalculating Electric Field.....");
+//    calcElectricField(ElectricField, grid, &gridInfo);
+//    printf("done\n");
+//
+//    // allocate for particles
+//    Particle* domainParticles = malloc(PARTICLE_SIZE * sizeof(Particle));
+//    int totalParticlesCount = 0;
+//
+//    // calculate the release rate
+//    int Nrel;
+//    double Nfrac, runningNfrac, temp;
+//    double particleReleaseRate = particleCount * (T_PIC/ T_MD);
+//
+//    // set the integer and fractional parts
+//    Nfrac = modf(particleReleaseRate, &temp);
+//    Nrel = (int)(temp);
+//    runningNfrac = Nfrac;
+//
+//    /*! Array to keep track of lost particles
+//     * The idea behind is that, particles may leave the domain and this is an index
+//     * of such particles.
+//     * Using this, new particles can be inserted into those locations appropriately.
+//     */
+//    int* lostParticles = malloc( (Nrel + LOST_PARTICLES_MARGIN) * sizeof(int) );
+//    int lostParticleBound = -1;
+//
+//    start = clock();
+//    // for required number of timesteps
+//    int lostParticleCount = 0;
+//    for(i = 1; i <= TIMESTEPS; i++)
+//    {
+//        printf("\nTimestep %d:\n", i);
+//
+//        // calculate the current timestep's release rate
+//        runningNfrac = modf(runningNfrac, &temp);
+//        const int numParticlesToRelease = Nrel + (int)(temp);
+//
+//        //totalParticlesBound += numParticlesToRelease - lostParticleCount;
+//        lostParticleBound = (lostParticleCount - 1);        // adjust for one off issue
+//        // introduce the particles
+//        releaseParticles(numParticlesToRelease,
+//                         MD_data, particleCount,
+//                         domainParticles, &totalParticlesCount,
+//                         lostParticles,
+//                         &lostParticleBound);          // adjust for one off issue
+//
+//        //totalParticlesBound = (totalParticlesCount - 1);
+//        swapGapsWithEndParticles(domainParticles, &totalParticlesCount,
+//                                 lostParticles, &lostParticleBound);
+//
+//        printf("Total Number of Particles: %d\n", totalParticlesCount); // need +1 for the one-off offset
+//
+//        // then move them
+//        lostParticleCount = moveParticlesInField(domainParticles, totalParticlesCount,
+//                                                 lostParticles,//&lostParticleBound,
+//                                                 ElectricField, &gridInfo);
+//        printf("%d Particles left the domain\n", lostParticleCount);
+//        //printf("%d empty slots in the domain particles\n", lostParticleBound+1);
+//
+//        // IMPORTANT: add Nfrac to runningNfrac to adjust correctly
+//        // for the fractional part
+//        runningNfrac += Nfrac;
+//
+//        char outputPath[50];
+//        if(POST_WRITE_FILES && !(i % POST_INTERVAL) )
+//        {
+//            sprintf(outputPath, "%s/particleOutput_%d.txt", POST_WRITE_PATH, i);
+//            writeParticleData(outputPath, domainParticles, totalParticlesCount);
+//        }
+//    }
+//
+//    diff = clock() - start;
+//    double timeStepsTime = diff /CLOCKS_PER_SEC;
+//
+//    printf("\nTiming Info\n%10s %10.8e\n%10s %10.8e\n", "Solve", solveTime, "TimeSteps", timeStepsTime);
 
 
-    return 0;
+//    // write out data for post processing
+//    writeOutputData("out.vtk", grid, ElectricField, &gridInfo);
+//
+//    free(lostParticles);
+//    free(domainParticles);
+//    free(bNodes);
+//    deallocEField(&ElectricField);
+//    deallocGrid(&grid);
+//    free(MD_data);
+//
+//
+//    return 0;
 }
 
 
