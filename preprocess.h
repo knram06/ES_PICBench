@@ -26,11 +26,11 @@ void parseMDFileToParticles(Particle particleData[], FILE* fp)
             switch(fieldIndex)
             {
                 case 1:
-                    particleData[particleCount].y = atof(token);//+ (GRID_LENGTH / 2.);
+                    particleData[particleCount].y = atof(token) + (GRID_LENGTH / 2.);
                     break;
 
                 case 2:
-                    particleData[particleCount].z = atof(token);//+ (GRID_LENGTH / 2.);
+                    particleData[particleCount].z = atof(token) + (GRID_LENGTH / 2.);
                     break;
 
                 case 3:

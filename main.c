@@ -9,7 +9,7 @@
 #include <time.h>
 
 #define GRID_LENGTH (3e-4)
-#define NUM_NODES 41
+#define NUM_NODES 101
 
 /*Macro for 3D to 1D indexing */
 //#define GRID_1D(grid, i, j, k) ( grid[(k) + NUM_NODES*(j) + NUM_NODES*NUM_NODES*(i) ] )
@@ -40,10 +40,11 @@
 #define MD_FILE "./input_data/MD_data/10_input_Pos_Q488_20130318.inp"
 
 #define PARTICLE_SIZE ((int)5e4)
-#define TIMESTEPS ((int)8e3)
+
+#define TIMESTEPS ((int)0)
 #define ITER_INTERVAL (200)
 #define ITER_HEADER_INTERVAL (5000)
-#define POST_WRITE_FILES (false)
+#define POST_WRITE_FILES (true)
 #define POST_INTERVAL (1000)
 #define POST_WRITE_PATH ("output/")
 
@@ -84,6 +85,7 @@ typedef struct
 #include "utilities.h"
 #include "preprocess.h"
 #include "particleFns.h"
+#include "csrroutines.h"
 #include "numerics.h"
 #include "postprocess.h"
 
@@ -130,6 +132,10 @@ int main(int argc, char **argv)
     // make sure we don't exceed int limits?
     assert(gridInfo.totalNodes < INT_MAX);
 
+    // allocate the grid
+    double* grid = NULL;
+    allocateGrid(&grid, &gridInfo);
+
     // build the sparse form for the matrices
     const int maxNonZerosPerRow = 7;
     MatCSR mcsr;
@@ -157,7 +163,7 @@ int main(int argc, char **argv)
     double solveTime = diff/CLOCKS_PER_SEC;
 
     // since rhs is the same size, just reuse that array
-    getSolution(rhs);
+    getSolution(grid);
 
     // examine the transferred data
     //for(i = 0; i < gridInfo.totalNodes; i++)
@@ -171,10 +177,6 @@ int main(int argc, char **argv)
     rewind(fp);         // rewind file to the beginning
     parseMDFileToParticles(MD_data, fp);
     fclose(fp);
-
-    // allocate the grid
-    double* grid = NULL;
-    allocateGrid(&grid, &gridInfo);
 
     EField* ElectricField = NULL;
     allocateEField(&ElectricField, &gridInfo);
@@ -221,9 +223,6 @@ int main(int argc, char **argv)
     printf("\nCalculating Electric Field.....");
     calcElectricField(ElectricField, grid, &gridInfo);
     printf("done\n");
-
-    SolverFinalize();
-    return 0;
 
     // allocate for particles
     Particle* domainParticles = malloc(PARTICLE_SIZE * sizeof(Particle));
@@ -311,7 +310,6 @@ int main(int argc, char **argv)
     deallocEField(&ElectricField);
     deallocGrid(&grid);
     free(MD_data);
-
 
     return 0;
 }

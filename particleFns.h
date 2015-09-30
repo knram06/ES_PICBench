@@ -4,9 +4,11 @@
 
 bool isParticleInDomain(const Particle p)
 {
-    return (p.x <= GRID_LENGTH)
-        && (p.y <= GRID_LENGTH)
-        && (p.z <= GRID_LENGTH);
+    // assuming that domain lengths can never go -ve
+    // or beyond the max GRID_LENGTH
+    return ( (p.x >= 0) && (p.x <= GRID_LENGTH) )
+        && ( (p.y >= 0) && (p.y <= GRID_LENGTH) )
+        && ( (p.z >= 0) && (p.z <= GRID_LENGTH) );
 }
 
 Particle randomizeParticleAttribs(Particle inputParticle)
@@ -14,11 +16,14 @@ Particle randomizeParticleAttribs(Particle inputParticle)
     //Particle ret;                                                                       
 
     double randNum = (rand() / (double)(RAND_MAX)) * 2. * M_PI;
-    double rYZ = sqrt(inputParticle.y*inputParticle.y + inputParticle.z*inputParticle.z);
+
+    double temp1 = (inputParticle.y - (GRID_LENGTH/2.));
+    double temp2 = (inputParticle.z - (GRID_LENGTH/2.));
+
+    double rYZ = sqrt(temp1*temp1 + temp2*temp2);
 
     // adjust for the fact that our origin is at corner
     // whereas MD data origin is at capillary center
-    // TODO: enforce this in a better place?
     inputParticle.y = rYZ * cos(randNum) + (GRID_LENGTH/2.);
     inputParticle.z = rYZ * sin(randNum) + (GRID_LENGTH/2.);
 
