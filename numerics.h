@@ -328,7 +328,7 @@ double single_step_solve(Node* grid, const int numNodes, const double sorOmega)
 }
 
 // calculate the ElectricField once Node values are known
-void calcElectricField(EField* ElectricField, Node* grid, GridInfo* gInfo)
+void calcElectricField(EField* ElectricField, double* grid, GridInfo* gInfo)
 {
     const int   numNodes = gInfo->numNodes;
     const double invSpacing = gInfo->invSpacing;
@@ -365,17 +365,17 @@ void calcElectricField(EField* ElectricField, Node* grid, GridInfo* gInfo)
                 if(isI_0_OR_LEN)
                 {
                     if(isI_0)
-                        val = ( -GRID_1D(grid,i+2,j,k).potential
-                             + 4*GRID_1D(grid,i+1,j,k).potential
-                             - 3*GRID_1D(grid,i  ,j,k).potential );
+                        val = ( -GRID_1D(grid,i+2,j,k)
+                             + 4*GRID_1D(grid,i+1,j,k)
+                             - 3*GRID_1D(grid,i  ,j,k) );
 
                     else if (isI_LEN)
-                        val = -( -GRID_1D(grid,i-2,j,k).potential 
-                              + 4*GRID_1D(grid,i-1,j,k).potential
-                              - 3*GRID_1D(grid,i  ,j,k).potential );
+                        val = -( -GRID_1D(grid,i-2,j,k) 
+                              + 4*GRID_1D(grid,i-1,j,k)
+                              - 3*GRID_1D(grid,i  ,j,k) );
                 }
                 else
-                    val = (GRID_1D(grid,i+1,j,k).potential - GRID_1D(grid,i-1,j,k).potential);
+                    val = (GRID_1D(grid,i+1,j,k) - GRID_1D(grid,i-1,j,k));
 
                 // by now ElectricField[i][j][k] needs to be filled
                 elecField->components[0] = multFactor * val;
@@ -386,16 +386,16 @@ void calcElectricField(EField* ElectricField, Node* grid, GridInfo* gInfo)
                 if(isJ_0_OR_LEN)
                 {
                     if (isJ_0)
-                        val = ( -GRID_1D(grid,i,j+2,k).potential
-                             + 4*GRID_1D(grid,i,j+1,k).potential
-                             - 3*GRID_1D(grid,i,j  ,k).potential );
+                        val = ( -GRID_1D(grid,i,j+2,k)
+                             + 4*GRID_1D(grid,i,j+1,k)
+                             - 3*GRID_1D(grid,i,j  ,k) );
                     else if (isJ_LEN)
-                        val = -(-GRID_1D(grid,i,j-2,k).potential 
-                             + 4*GRID_1D(grid,i,j-1,k).potential
-                             - 3*GRID_1D(grid,i,j  ,k).potential );
+                        val = -(-GRID_1D(grid,i,j-2,k) 
+                             + 4*GRID_1D(grid,i,j-1,k)
+                             - 3*GRID_1D(grid,i,j  ,k) );
                 }
                 else
-                    val = (GRID_1D(grid,i,j+1,k).potential - GRID_1D(grid,i,j-1,k).potential);
+                    val = (GRID_1D(grid,i,j+1,k) - GRID_1D(grid,i,j-1,k));
 
                 // by now ElectricField[i][j][k] needs to be filled
                 elecField->components[1] = multFactor * val;
@@ -406,16 +406,16 @@ void calcElectricField(EField* ElectricField, Node* grid, GridInfo* gInfo)
                 if(isK_0_OR_LEN)
                 {
                     if (isK_0)
-                        val = ( -GRID_1D(grid,i,j,k+2).potential
-                             + 4*GRID_1D(grid,i,j,k+1).potential
-                             - 3*GRID_1D(grid,i,j,k  ).potential );
+                        val = ( -GRID_1D(grid,i,j,k+2)
+                             + 4*GRID_1D(grid,i,j,k+1)
+                             - 3*GRID_1D(grid,i,j,k  ) );
                     else if (isK_LEN)
-                        val = -( -GRID_1D(grid,i,j,k-2).potential 
-                              + 4*GRID_1D(grid,i,j,k-1).potential
-                              - 3*GRID_1D(grid,i,j,k  ).potential );
+                        val = -( -GRID_1D(grid,i,j,k-2) 
+                              + 4*GRID_1D(grid,i,j,k-1)
+                              - 3*GRID_1D(grid,i,j,k  ) );
                 }
                 else
-                    val = (GRID_1D(grid,i,j,k+1).potential - GRID_1D(grid,i,j,k-1).potential);
+                    val = (GRID_1D(grid,i,j,k+1) - GRID_1D(grid,i,j,k-1));
 
                 // by now ElectricField[i][j][k] needs to be filled
                 elecField->components[2] = multFactor * val;

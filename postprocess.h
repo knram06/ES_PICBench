@@ -2,7 +2,7 @@
 #define POSTPROCESS_H
 
 // function for writing out values
-void writeOutputData(const char* fileName, double *grid, GridInfo* gInfo)
+void writeOutputData(const char* fileName, double *grid, EField* electricField, GridInfo* gInfo)
 {
     FILE* fileValues = fopen(fileName, "w");
     int i, j, k;
@@ -50,13 +50,13 @@ void writeOutputData(const char* fileName, double *grid, GridInfo* gInfo)
         fprintf(fileValues, "%10.8e\n", grid[count]);
 
     // write out the ElectricField values
-//    fprintf(fileValues, "\n"
-//                        "VECTORS ElectricField float\n");
-//    for(count = 0; count < totalNodes; count++)
-//    {
-//        const int pos = 3*count;
-//        fprintf(fileValues, "%10.8e %10.8e %10.8e\n", electricField[pos], electricField[pos+1], electricField[pos+2] );
-//    }
+    fprintf(fileValues, "\n"
+                        "VECTORS ElectricField float\n");
+    for(count = 0; count < totalNodes; count++)
+    {
+        EField *efield = &electricField[count];
+        fprintf(fileValues, "%10.8e %10.8e %10.8e\n", efield->components[0], efield->components[1], efield->components[2] );
+    }
 
     fclose(fileValues);
 }
