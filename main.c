@@ -9,7 +9,7 @@
 #include <time.h>
 
 #define GRID_LENGTH (3e-4)
-#define NUM_NODES 101
+#define NUM_NODES 41
 
 /*Macro for 3D to 1D indexing */
 //#define GRID_1D(grid, i, j, k) ( grid[(k) + NUM_NODES*(j) + NUM_NODES*NUM_NODES*(i) ] )
@@ -32,6 +32,7 @@
 
 // Physical constants
 #define ELECTRONIC_CHARGE (1.60217657e-19)
+#define FREE_SPACE_PERMITTIVITY (8.8542e-12)
 
 // array bounds and margins
 #define LOST_PARTICLES_MARGIN 50
@@ -40,14 +41,16 @@
 #define MD_FILE "./input_data/MD_data/10_input_Pos_Q488_20130318.inp"
 
 #define PARTICLE_SIZE ((int)5e4)
+#define PARTICLE_SORT_INTERVAL (20)
 
-#define TIMESTEPS ((int)0)
+#define TIMESTEPS ((int)2000)
 #define ITER_INTERVAL (200)
-#define ITER_HEADER_INTERVAL (5000)
-#define POST_WRITE_FILES (true)
-#define POST_INTERVAL (1000)
+#define ITER_HEADER_INTERVAL (500)
+#define POST_WRITE_FILES (false)
+#define POST_INTERVAL (200)
 #define POST_WRITE_PATH ("output/")
 
+#define POISSON_TIMESTEPS ((int)1)
 //#define TEST_FUNCTION (x*x - 2*y*y + z*z)
 #define TEST_FUNCTION 0.
 
@@ -152,6 +155,7 @@ int main(int argc, char **argv)
 
     // send to Solver
     buildSolverMatCSRAndVec(mcsr.rowOffsets, mcsr.colIndices, mcsr.mat, rhs, mcsr.numRows); 
+    writeSparseMatRowColForm("mat_A.txt", &mcsr, true);
 
     // initialize solver parameters
     initSolverParameters();
@@ -181,6 +185,7 @@ int main(int argc, char **argv)
     EField* ElectricField = NULL;
     allocateEField(&ElectricField, &gridInfo);
 
+    // TODO: cleanup these functions
     //// preallocate NeumannBC nodes in terms of MAX possible
     //// i.e. num of sides of cube * num nodes per side
     //BoundaryNode *bNodes = malloc( 6 * (NUM_NODES)*(NUM_NODES) * sizeof(BoundaryNode) );
@@ -286,20 +291,104 @@ int main(int argc, char **argv)
         char outputPath[50];
         if(POST_WRITE_FILES && !(i % POST_INTERVAL) )
         {
-            sprintf(outputPath, "%s/particleOutput_%d.txt", POST_WRITE_PATH, i);
+            sprintf(outputPath, "%s/particleOutput/particleOutput_%d.txt", POST_WRITE_PATH, i);
             writeParticleData(outputPath, domainParticles, totalParticlesCount);
         }
     }
+    getRHS(rhs);
+    writeVectorToFile("laplace_v.txt", rhs, gridInfo.totalNodes);
 
     diff = clock() - start;
     double timeStepsTime = diff /CLOCKS_PER_SEC;
+    writeOutputData("laplace.vtk", grid, ElectricField, &gridInfo);
 
-    printf("\nTiming Info\n%10s %10.8e\n%10s %10.8e\n", "Solve", solveTime, "TimeSteps", timeStepsTime);
+    // TEMP - remove later
+    resortParticles(domainParticles, totalParticlesCount);
+    /*********************************************/
+    /***********POISSON SOLVER********************/
+    /*********************************************/
+    int *rhsIndices = malloc(sizeof(int) * gridInfo.totalNodes);
+
+    FILE *iterData = fopen("iter_data.txt", "w");
+    for(i = 1; i <= POISSON_TIMESTEPS; i++)
+    {
+        printf("\nPoisson Timestep %d:\n", i);
+
+        // calculate the current timestep's release rate
+        runningNfrac = modf(runningNfrac, &temp);
+        const int numParticlesToRelease = Nrel + (int)(temp);
+
+        //totalParticlesBound += numParticlesToRelease - lostParticleCount;
+        lostParticleBound = (lostParticleCount - 1);        // adjust for one off issue
+        // introduce the particles
+        releaseParticles(numParticlesToRelease,
+                         MD_data, particleCount,
+                         domainParticles, &totalParticlesCount,
+                         lostParticles,
+                         &lostParticleBound);          // adjust for one off issue
+
+        //totalParticlesBound = (totalParticlesCount - 1);
+        swapGapsWithEndParticles(domainParticles, &totalParticlesCount,
+                                 lostParticles, &lostParticleBound);
+
+        printf("Total Number of Particles: %d\n", totalParticlesCount); // need +1 for the one-off offset
+
+        // Re-sort Particles based on their distance from the capillary center
+        // improves locality and some searches
+        // BUT don't do this every iteration, since we will use qsort
+        // and QUICKSORT WORST CASE performance is when array is ALMOST SORTED - O(n^2)
+        if( !(i % PARTICLE_SORT_INTERVAL) )
+            resortParticles(domainParticles, totalParticlesCount);
+
+        // reset the rhs vector
+        //memset(rhs, 0, sizeof(double) * gridInfo.totalNodes);
+        // based on the new particle positions, update charge fractions at nodes
+        int validNodesCount = updateChargeFractions(domainParticles, totalParticlesCount, rhs, rhsIndices, &gridInfo);
+
+        // using validNodesNumber, send modified rhs to solver
+        updateRHS(rhs, gridInfo.totalNodes, rhsIndices, validNodesCount);
+        clock_t tstart = clock();
+        int iterNum = SolverLinSolve();
+        diff = clock() - tstart;
+        double timeTaken = (double)diff/CLOCKS_PER_SEC;
+        fprintf(iterData, "%10d %10lf\n", iterNum, timeTaken);
+
+        getSolution(grid);
+        calcElectricField(ElectricField, grid, &gridInfo);
+
+        // then move them
+        lostParticleCount = moveParticlesInField(domainParticles, totalParticlesCount,
+                                                 lostParticles,//&lostParticleBound,
+                                                 ElectricField, &gridInfo);
+        printf("%d Particles left the domain\n", lostParticleCount);
+        //printf("%d empty slots in the domain particles\n", lostParticleBound+1);
+
+        // IMPORTANT: add Nfrac to runningNfrac to adjust correctly
+        // for the fractional part
+        runningNfrac += Nfrac;
+
+        char outputPath[50];
+        if(POST_WRITE_FILES && !(i % POST_INTERVAL) )
+        {
+            sprintf(outputPath, "%s/particleOutput/particleOutput_%d.txt", POST_WRITE_PATH, i);
+            writeParticleData(outputPath, domainParticles, totalParticlesCount);
+
+            sprintf(outputPath, "%s/solutions/out_%d.vtk", POST_WRITE_PATH, i);
+            writeOutputData(outputPath, grid, ElectricField, &gridInfo);
+        }
+    } // end of Poisson timestep loop
+    fclose(iterData);
+
+    writeOutputData("poisson.vtk", grid, ElectricField, &gridInfo);
+    getRHS(rhs);
+    writeVectorToFile("poisson_v.txt", rhs, gridInfo.totalNodes);
+
+    diff = clock() - start;
+    double poissonStepsTime = diff /CLOCKS_PER_SEC;
+    printf("\nTiming Info\n%10s %10.8e\n%10s %10.8e\n%10s %10.8e\n", "Solve", solveTime, "TimeSteps", timeStepsTime, "Poisson TimeSteps", poissonStepsTime);
 
 
-    // write out data for post processing
-    writeOutputData("out.vtk", grid, ElectricField, &gridInfo);
-
+    free(rhsIndices);
     free(rhs);
     deallocCSRForm(&mcsr);
     SolverFinalize();
@@ -313,5 +402,4 @@ int main(int argc, char **argv)
 
     return 0;
 }
-
 

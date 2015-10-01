@@ -104,7 +104,7 @@ void buildSparseMatAndRHSVec(int *rowOffsets, int *colIndices, double *vals,
                 int elementsInserted = 0;
 
                 // supply a default
-                //rhs[I] = 0;
+                rhs[I] = 0;
 
                 // TODO: improve this using ghost cells?
                 // if on boundary faces

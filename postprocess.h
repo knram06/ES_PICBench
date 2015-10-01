@@ -2,7 +2,7 @@
 #define POSTPROCESS_H
 
 // function for writing out values
-void writeOutputData(const char* fileName, double *grid, EField* electricField, GridInfo* gInfo)
+void writeOutputData(const char* fileName, const double *grid, const EField* electricField, GridInfo* gInfo)
 {
     FILE* fileValues = fopen(fileName, "w");
     int i, j, k;
@@ -54,7 +54,7 @@ void writeOutputData(const char* fileName, double *grid, EField* electricField, 
                         "VECTORS ElectricField float\n");
     for(count = 0; count < totalNodes; count++)
     {
-        EField *efield = &electricField[count];
+        const EField *efield = &electricField[count];
         fprintf(fileValues, "%10.8e %10.8e %10.8e\n", efield->components[0], efield->components[1], efield->components[2] );
     }
 
@@ -110,4 +110,42 @@ void writeParticleData(const char* fileName, const Particle* particleData, int p
 
     fclose(fileValues);
 }
+
+void writeSparseMatRowColForm(const char *filename, MatCSR *mcsr, bool useOneBasedIndex)
+{
+    const int numRows = mcsr->numRows;
+    const int numRowsOffset = numRows + 1;
+
+    short int offset = useOneBasedIndex ? 1 : 0;
+
+    FILE *fp = fopen(filename, "w");
+
+    int i, j;
+
+    // we will be accessing till numRows-1, which is desired
+    // since rowsOffset's size is numRows+1, so second last index is
+    // numRows-1
+    for(i = 0; i < numRows; i++)
+    {
+        int start = mcsr->rowOffsets[i];
+        int end = mcsr->rowOffsets[i+1];
+
+        for(j = start; j < end; j++)
+            fprintf(fp, "%10d %10d %10lf\n", i+offset, mcsr->colIndices[j]+offset, mcsr->mat[j]);
+    }
+
+    fclose(fp);
+}
+
+void writeVectorToFile(const char* filename, const double *vec, const int vecCount)
+{
+    FILE *fp = fopen(filename, "w");
+    int i;
+
+    for(i = 0; i < vecCount; i++)
+        fprintf(fp, "%lf\n", vec[i]);
+
+    fclose(fp);
+}
+
 #endif

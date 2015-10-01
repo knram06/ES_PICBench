@@ -74,6 +74,7 @@ PetscErrorCode buildSolverMatCSRAndVec(const int *rowOffsets, const int *colIndi
 
     // allocate the same storage for x
     VecDuplicate(b, &x);
+    VecCopy(b, x);
 
     //VecView(b, PETSC_VIEWER_STDOUT_WORLD);
     PetscFunctionReturn(0);
@@ -93,11 +94,48 @@ PetscErrorCode initSolverParameters()
 
 #undef __FUNCT__
 #define __FUNCT__ "SolverLinSolve"
-PetscErrorCode SolverLinSolve()
+PetscInt SolverLinSolve()
 {
     PetscFunctionBegin;
+    PetscInt it;
     KSPSolve(ksp, b, x);
+
+    KSPGetIterationNumber(ksp, &it);
     //VecView(x, PETSC_VIEWER_STDOUT_WORLD);
+    return it;
+}
+
+
+// TODO: optimize these calls?
+// seems inefficient
+#undef __FUNCT__
+#define __FUNCT__ "updateRHS"
+PetscErrorCode updateRHS(const double *rhs, const int size, const int* indices, const int valCount)
+{
+    PetscFunctionBegin;
+
+    PetscInt i;
+    PetscInt ni = (PetscInt)(valCount);
+    PetscInt *ix = malloc(sizeof(PetscInt) * valCount);
+
+    // zeroed out array
+    PetscScalar *y = malloc(sizeof(PetscScalar) * size);
+
+    for(i = 0; i < valCount; i++)
+    {
+        ix[i] = (PetscInt)indices[i];
+        y[ ix[i] ] = (PetscScalar)rhs[ ix[i] ];
+    }
+
+    // update the vector with this information
+    VecSetValues(b, ni, ix, y, INSERT_VALUES);
+
+    VecAssemblyBegin(b);
+    VecAssemblyEnd(b);
+
+    free(y);
+    free(ix);
+
     PetscFunctionReturn(0);
 }
 
@@ -107,13 +145,12 @@ PetscErrorCode getSolution(double *sol)
 {
     PetscFunctionBegin;
 
-    PetscInt sizeX;
+    PetscInt i,sizeX;
     VecGetLocalSize(x, &sizeX);
 
     PetscScalar *s;
     VecGetArray(x, &s);
 
-    int i;
     for(i = 0; i < sizeX; i++)
         sol[i] = (double)s[i];
 
@@ -122,16 +159,36 @@ PetscErrorCode getSolution(double *sol)
 }
 
 #undef __FUNCT__
+#define __FUNCT__ "getRHS"
+PetscErrorCode getRHS(double *rhs)
+{
+    PetscFunctionBegin;
+
+    PetscInt i,sizeX;
+    VecGetLocalSize(b, &sizeX);
+
+    PetscScalar *s;
+    VecGetArray(b, &s);
+
+    for(i = 0; i < sizeX; i++)
+        rhs[i] = (double)s[i];
+
+    VecRestoreArray(b, &s);
+    PetscFunctionReturn(0);
+}
+
+#undef __FUNCT__
 #define __FUNCT__ "SolverFinalize"
 PetscErrorCode SolverFinalize()
 {
     PetscFunctionBegin;
-    KSPDestroy(&ksp);
-    //VecDestroy(&x);
-    VecDestroy(&b);
-    free(rhsVals);
 
+    KSPDestroy(&ksp);
+    VecDestroy(&x);
+    VecDestroy(&b);
     MatDestroy(&A);
+
+    free(rhsVals);
     free(values); free(cols); free(rows);
     PetscFinalize();
     PetscFunctionReturn(0);
