@@ -110,32 +110,21 @@ PetscInt SolverLinSolve()
 // seems inefficient
 #undef __FUNCT__
 #define __FUNCT__ "updateRHS"
-PetscErrorCode updateRHS(const double *rhs, const int size, const int* indices, const int valCount)
+PetscErrorCode updateRHS(const double *rhs, const int* indices, const int valCount)
 {
     PetscFunctionBegin;
 
     PetscInt i;
     PetscInt ni = (PetscInt)(valCount);
-    PetscInt *ix = malloc(sizeof(PetscInt) * valCount);
+    PetscScalar *y;
 
-    // zeroed out array
-    PetscScalar *y = malloc(sizeof(PetscScalar) * size);
+    VecGetArray(b, &y);
 
+    // modify array
     for(i = 0; i < valCount; i++)
-    {
-        ix[i] = (PetscInt)indices[i];
-        y[ ix[i] ] = (PetscScalar)rhs[ ix[i] ];
-    }
+        y[ indices[i] ] = (PetscScalar)rhs[i];
 
-    // update the vector with this information
-    VecSetValues(b, ni, ix, y, INSERT_VALUES);
-
-    VecAssemblyBegin(b);
-    VecAssemblyEnd(b);
-
-    free(y);
-    free(ix);
-
+    VecRestoreArray(b, &y);
     PetscFunctionReturn(0);
 }
 

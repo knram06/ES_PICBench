@@ -9,7 +9,7 @@
 #include <time.h>
 
 #define GRID_LENGTH (3e-4)
-#define NUM_NODES 41
+#define NUM_NODES 101
 
 /*Macro for 3D to 1D indexing */
 //#define GRID_1D(grid, i, j, k) ( grid[(k) + NUM_NODES*(j) + NUM_NODES*NUM_NODES*(i) ] )
@@ -149,13 +149,10 @@ int main(int argc, char **argv)
     buildSparseMatAndRHSVec(mcsr.rowOffsets, mcsr.colIndices, mcsr.mat, rhs, &gridInfo);
 
     int i;
-    //for(i = 0; i < gridInfo.totalNodes; i++)
-    //    printf("%f ", rhs[i]);
-    //printf("\n");
 
     // send to Solver
     buildSolverMatCSRAndVec(mcsr.rowOffsets, mcsr.colIndices, mcsr.mat, rhs, mcsr.numRows); 
-    writeSparseMatRowColForm("mat_A.txt", &mcsr, true);
+    //writeSparseMatRowColForm("mat_A.txt", &mcsr, true);
 
     // initialize solver parameters
     initSolverParameters();
@@ -168,11 +165,6 @@ int main(int argc, char **argv)
 
     // since rhs is the same size, just reuse that array
     getSolution(grid);
-
-    // examine the transferred data
-    //for(i = 0; i < gridInfo.totalNodes; i++)
-    //    printf("%f ", rhs[i]);
-    //printf("\n");
 
     // now preallocate the particles data array
     Particle* MD_data = malloc(particleCount * sizeof(Particle));
@@ -296,7 +288,7 @@ int main(int argc, char **argv)
         }
     }
     getRHS(rhs);
-    writeVectorToFile("laplace_v.txt", rhs, gridInfo.totalNodes);
+    //writeVectorToFile("laplace_v.txt", rhs, gridInfo.totalNodes);
 
     diff = clock() - start;
     double timeStepsTime = diff /CLOCKS_PER_SEC;
@@ -310,8 +302,10 @@ int main(int argc, char **argv)
     int *rhsIndices = malloc(sizeof(int) * gridInfo.totalNodes);
 
     FILE *iterData = fopen("iter_data.txt", "w");
+    start = clock();
     for(i = 1; i <= POISSON_TIMESTEPS; i++)
     {
+        clock_t tstart = clock();
         printf("\nPoisson Timestep %d:\n", i);
 
         // calculate the current timestep's release rate
@@ -346,12 +340,8 @@ int main(int argc, char **argv)
         int validNodesCount = updateChargeFractions(domainParticles, totalParticlesCount, rhs, rhsIndices, &gridInfo);
 
         // using validNodesNumber, send modified rhs to solver
-        updateRHS(rhs, gridInfo.totalNodes, rhsIndices, validNodesCount);
-        clock_t tstart = clock();
+        updateRHS(rhs, rhsIndices, validNodesCount);
         int iterNum = SolverLinSolve();
-        diff = clock() - tstart;
-        double timeTaken = (double)diff/CLOCKS_PER_SEC;
-        fprintf(iterData, "%10d %10lf\n", iterNum, timeTaken);
 
         getSolution(grid);
         calcElectricField(ElectricField, grid, &gridInfo);
@@ -367,6 +357,11 @@ int main(int argc, char **argv)
         // for the fractional part
         runningNfrac += Nfrac;
 
+        // avoid timing the IO portion
+        diff = clock() - tstart;
+        double timeTaken = (double)diff/CLOCKS_PER_SEC;
+        fprintf(iterData, "%10d %10lf\n", iterNum, timeTaken);
+
         char outputPath[50];
         if(POST_WRITE_FILES && !(i % POST_INTERVAL) )
         {
@@ -380,8 +375,8 @@ int main(int argc, char **argv)
     fclose(iterData);
 
     writeOutputData("poisson.vtk", grid, ElectricField, &gridInfo);
-    getRHS(rhs);
-    writeVectorToFile("poisson_v.txt", rhs, gridInfo.totalNodes);
+    //getRHS(rhs);
+    //writeVectorToFile("poisson_v.txt", rhs, gridInfo.totalNodes);
 
     diff = clock() - start;
     double poissonStepsTime = diff /CLOCKS_PER_SEC;

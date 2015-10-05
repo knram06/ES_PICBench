@@ -65,15 +65,6 @@ Particle randomizeParticleAttribs(Particle inputParticle)
     return inputParticle;
 }
 
-double _getSquaredDistance(double x1, double y1, double z1, double x2, double y2, double z2)
-{
-    double tx = (x1 - x2);
-    double ty = (y1 - y2);
-    double tz = (z1 - z2);
-
-    return (tx*tx + ty*ty + tz*tz);
-}
-
 int updateChargeFractions(
         const Particle *particleList, int particleCount,
         double *chargeFractionList,
@@ -96,105 +87,102 @@ int updateChargeFractions(
     {
         const Particle *p = &particleList[i];
 
-        // round off and get the nearest indices - these must be the lower
-        // corner indices of a cell - due to nature of rounding?
-        int iPos = (int)(round( (p->x)*invSpacing) );
-        int jPos = (int)(round( (p->y)*invSpacing) );
-        int kPos = (int)(round( (p->z)*invSpacing) );
+        // get the nearest indices - these must be the lower
+        // corner indices of a cell - due to nature of (int) cast
+        int iPos = (int)((p->x)*invSpacing);
+        int jPos = (int)((p->y)*invSpacing);
+        int kPos = (int)((p->z)*invSpacing);
+
+        double hx = (p->x - iPos*spacing)*invSpacing;
+        double hy = (p->y - jPos*spacing)*invSpacing;
+        double hz = (p->z - kPos*spacing)*invSpacing;
 
         // array to store calculated distances from vertices
         // distances can be squared as it does not affect the comparison
-        double distances[8];
+        double weightFactors[8];
         int indices[8][3];
 
         // manually fill in the distances and indices to each of the vertices
         int ti = iPos, tj = jPos, tk = kPos;
         indices[0][0] = ti; indices[0][1] = tj; indices[0][2] = tk;
-        distances[0] = _getSquaredDistance(p->x, p->y, p->z, ti*spacing, tj*spacing, tk*spacing);
+        weightFactors[0] = (1-hx)*(1-hy)*(1-hz);
 
         // even if it is redundant, explicitly setting to make it clear
         ti = iPos; tj = jPos; tk = kPos+1;
         indices[1][0] = ti; indices[1][1] = tj; indices[1][2] = tk;
-        distances[1] = _getSquaredDistance(p->x, p->y, p->z, ti*spacing, tj*spacing, tk*spacing);
+        weightFactors[1] = (1-hx)*(1-hy)*(hz);
 
         ti = iPos; tj = jPos+1; tk = kPos;
         indices[2][0] = ti; indices[2][1] = tj; indices[2][2] = tk;
-        distances[2] = _getSquaredDistance(p->x, p->y, p->z, ti*spacing, tj*spacing, tk*spacing);
+        weightFactors[2] = (1-hx)*(hy)*(1-hz);
 
         ti = iPos; tj = jPos+1; tk = kPos+1;
         indices[3][0] = ti; indices[3][1] = tj; indices[3][2] = tk;
-        distances[3] = _getSquaredDistance(p->x, p->y, p->z, ti*spacing, tj*spacing, tk*spacing);
+        weightFactors[3] = (1-hx)*(hy)*(hz);
 
         /*********************************************/
         /*********************************************/
         ti = iPos+1, tj = jPos, tk = kPos;
         indices[4][0] = ti; indices[4][1] = tj; indices[4][2] = tk;
-        distances[4] = _getSquaredDistance(p->x, p->y, p->z, ti*spacing, tj*spacing, tk*spacing);
+        weightFactors[4] = (hx)*(1-hy)*(1-hz);
 
         // even if it is redundant, explicitly setting to make it clear
         ti = iPos+1; tj = jPos; tk = kPos+1;
         indices[5][0] = ti; indices[5][1] = tj; indices[5][2] = tk;
-        distances[5] = _getSquaredDistance(p->x, p->y, p->z, ti*spacing, tj*spacing, tk*spacing);
+        weightFactors[5] = (hx)*(1-hy)*(hz);
 
         ti = iPos+1; tj = jPos+1; tk = kPos;
         indices[6][0] = ti; indices[6][1] = tj; indices[6][2] = tk;
-        distances[6] = _getSquaredDistance(p->x, p->y, p->z, ti*spacing, tj*spacing, tk*spacing);
+        weightFactors[6] = (hx)*(hy)*(1-hz);
 
         ti = iPos+1; tj = jPos+1; tk = kPos+1;
         indices[7][0] = ti; indices[7][1] = tj; indices[7][2] = tk;
-        distances[7] = _getSquaredDistance(p->x, p->y, p->z, ti*spacing, tj*spacing, tk*spacing);
+        weightFactors[7] = (hx)*(hy)*(hz);
 
-        // MIN NODE DISTANCE
-        // FOR CHARGE ASSIGNMENT - for now
-        // now get the minindex corresponding to minDistance
+        // now loop through the weight factors
+        // and update positions in the charge fractions list
         int j;
-        double minDistance = 1e8;
-        int minIndex;
         for(j = 0; j < 8; j++)
         {
-            if(distances[j] < minDistance)
+            ti = indices[j][0];
+            tj = indices[j][1];
+            tk = indices[j][2];
+
+            // if within interior points of the grid
+            // since we don't want to overwrite boundary
+            // portion of the grid
+            if( ((ti > 0) && (ti < numNodes-1))
+                          &&
+                ((tj > 0) && (tj < numNodes-1))
+                          &&
+                ((tk > 0) && (tk < numNodes-1)) )
             {
-                minDistance = distances[j];
-                minIndex = j;
-            }
+                int pos = INDEX_1D(numNodes, ti, tj, tk);
+
+                int k;
+                for(k = 0; k < validNodesNumber; k++)
+                {
+                    // wrap around index
+                    // reusing last searched value to speed things up?
+                    searchIndex = searchIndex % validNodesNumber;
+                    if(chargeFractionIndices[searchIndex] == pos)
+                    {
+                        chargeFractionList[searchIndex] += p->charge * multFactor;
+                        break;
+                    }
+                    searchIndex++;
+                }
+
+                // if pos was not found, then write into and expand size
+                if(k == validNodesNumber)
+                {
+                    chargeFractionIndices[validNodesNumber] = pos;
+                    chargeFractionList[validNodesNumber] = p->charge * multFactor;
+                    validNodesNumber++;
+                }
+            } // end of if check for indices within valid limits
         } // end of for loop for min distance
 
-        // now if the point is in the interior
-        // then store it
-        // Why do we do this? Since points on the boundaries have the BCs imposed,
-        // we don't want to overwrite it in the Solver data
-        // so we specify an array of indices explicitly
-        ti = indices[minIndex][0];
-        tj = indices[minIndex][1];
-        tk = indices[minIndex][2];
-
-        // if within interior points of the grid
-        if( ((ti > 0) && (ti < numNodes-1))
-                      &&
-            ((tj > 0) && (tj < numNodes-1))
-                      &&
-            ((tk > 0) && (tk < numNodes-1)) )
-        {
-            int pos = INDEX_1D(numNodes, ti, tj, tk);
-
-            // wrap around index
-            // reusing last searched value to speed things up?
-            for(j = 0; j < validNodesNumber; j++)
-            {
-                searchIndex = searchIndex % validNodesNumber;
-                if(chargeFractionIndices[searchIndex] == pos)
-                    chargeFractionList[searchIndex] += p->charge * multFactor;
-            }
-
-            // if pos was not found, then write into and expand size
-            if(j == validNodesNumber)
-            {
-                chargeFractionIndices[validNodesNumber] = pos;
-                chargeFractionList[validNodesNumber] = p->charge * multFactor;
-                validNodesNumber++;
-            }
-        } // end of if check for indices within valid limits
-        
     } // end of loop through particles array
 
     return validNodesNumber;
