@@ -71,7 +71,7 @@ typedef struct
 
 typedef struct
 {
-    Node* bndryNodes[3];
+    double* bndryNodes[3];
 } BoundaryNode;
 
 typedef struct
@@ -92,7 +92,7 @@ typedef struct
 #include "numerics.h"
 #include "postprocess.h"
 
-#include "solvers/petsc/solver.h"
+//#include "solvers/petsc/solver.h"
 
 void allocateEField(EField** grid, GridInfo* gInfo)
 {
@@ -118,7 +118,7 @@ int main(int argc, char **argv)
         return EXIT_FAILURE;
     }
 
-    SolverInitialize(&argc, &argv);
+    //SolverInitialize(&argc, &argv);
 
     // count the number of lines in the input file
     // so that we can preallocate later
@@ -140,31 +140,30 @@ int main(int argc, char **argv)
     allocateGrid(&grid, &gridInfo);
 
     // build the sparse form for the matrices
-    const int maxNonZerosPerRow = 7;
-    MatCSR mcsr;
-    allocCSRForm(&mcsr, gridInfo.totalNodes, maxNonZerosPerRow);
+    //const int maxNonZerosPerRow = 7;
+    //MatCSR mcsr;
+    //allocCSRForm(&mcsr, gridInfo.totalNodes, maxNonZerosPerRow);
 
-    // build the vector b
-    double *rhs = malloc(sizeof(double) * gridInfo.totalNodes);
-    buildSparseMatAndRHSVec(mcsr.rowOffsets, mcsr.colIndices, mcsr.mat, rhs, &gridInfo);
+    //// build the vector b
+    //double *rhs = malloc(sizeof(double) * gridInfo.totalNodes);
+    //buildSparseMatAndRHSVec(mcsr.rowOffsets, mcsr.colIndices, mcsr.mat, rhs, &gridInfo);
 
-    int i;
 
-    // send to Solver
-    buildSolverMatCSRAndVec(mcsr.rowOffsets, mcsr.colIndices, mcsr.mat, rhs, mcsr.numRows); 
-    //writeSparseMatRowColForm("mat_A.txt", &mcsr, true);
+    //// send to Solver
+    //buildSolverMatCSRAndVec(mcsr.rowOffsets, mcsr.colIndices, mcsr.mat, rhs, mcsr.numRows); 
+    ////writeSparseMatRowColForm("mat_A.txt", &mcsr, true);
 
-    // initialize solver parameters
-    initSolverParameters();
+    //// initialize solver parameters
+    //initSolverParameters();
 
-    clock_t start, diff;
-    start = clock();
-    SolverLinSolve();
-    diff = clock() - start;
-    double solveTime = diff/CLOCKS_PER_SEC;
+    //clock_t start, diff;
+    //start = clock();
+    //SolverLinSolve();
+    //diff = clock() - start;
+    //double solveTime = diff/CLOCKS_PER_SEC;
 
-    // since rhs is the same size, just reuse that array
-    getSolution(grid);
+    //// since rhs is the same size, just reuse that array
+    //getSolution(grid);
 
     // now preallocate the particles data array
     Particle* MD_data = malloc(particleCount * sizeof(Particle));
@@ -177,45 +176,46 @@ int main(int argc, char **argv)
     EField* ElectricField = NULL;
     allocateEField(&ElectricField, &gridInfo);
 
-    // TODO: cleanup these functions
-    //// preallocate NeumannBC nodes in terms of MAX possible
-    //// i.e. num of sides of cube * num nodes per side
-    //BoundaryNode *bNodes = malloc( 6 * (NUM_NODES)*(NUM_NODES) * sizeof(BoundaryNode) );
+    // preallocate NeumannBC nodes in terms of MAX possible
+    // i.e. num of sides of cube * num nodes per side
+    BoundaryNode *bNodes = malloc( 6 * (NUM_NODES)*(NUM_NODES) * sizeof(BoundaryNode) );
 
-    //// calculate the actual BoundaryNodes count and resize the array to that instead
-    //// to avoid wastage
-    //printf("Consolidating Neumann BC nodes into a different structure....");
-    //// setup boundary conditions
-    //int nodeCount = setupBoundaryConditions(grid, &gridInfo, bNodes);
+    // calculate the actual BoundaryNodes count and resize the array to that instead
+    // to avoid wastage
+    printf("Consolidating Neumann BC nodes into a different structure....");
+    // setup boundary conditions
+    int nodeCount = setupBoundaryConditions(grid, &gridInfo, bNodes);
 
-    //bNodes = realloc(bNodes, nodeCount * sizeof(BoundaryNode));
-    //printf("done\n");
+    bNodes = realloc(bNodes, nodeCount * sizeof(BoundaryNode));
+    printf("done\n");
 
-    //// enforce boundary conditions
-    //// impose Neumann BCs
-    //// solve and at each step, impose Neumann BCs?
-    //double tolerance = 1e-9, sorOmega = 1.9;
-    //double norm = 100.;
+    // enforce boundary conditions
+    // impose Neumann BCs
+    // solve and at each step, impose Neumann BCs?
+    double tolerance = 1e-9, sorOmega = 1.9;
+    double norm = 100.;
 
-    //int iterCount = 1;
-    ////while(norm >= tolerance)
-    //for(iterCount = 1; norm >= tolerance; iterCount++)
-    //{
-    //    norm = sqrt(single_step_solve(grid, gridInfo.numNodes, sorOmega));
+    clock_t start, diff;
+    int iterCount = 1;
+    //while(norm >= tolerance)
+    start = clock();
+    for(iterCount = 1; norm >= tolerance; iterCount++)
+    {
+        norm = sqrt(single_step_solve(grid, gridInfo.numNodes, sorOmega));
 
-    //    // TODO: norm should be updated with this calculation no?
-    //    // as it changes the values in the grid?
-    //    enforceNeumannBC(bNodes, nodeCount);
+        // TODO: norm should be updated with this calculation no?
+        // as it changes the values in the grid?
+        enforceNeumannBC(bNodes, nodeCount);
 
-    //    if(!(iterCount % ITER_HEADER_INTERVAL))
-    //        printf("%10s %20s\n", "Iter_Count", "Norm");
+        if(!(iterCount % ITER_HEADER_INTERVAL))
+            printf("%10s %20s\n", "Iter_Count", "Norm");
 
-    //    if(!(iterCount % ITER_INTERVAL) )
-    //        printf("%10d %20.8e\n", iterCount, norm);
+        if(!(iterCount % ITER_INTERVAL) )
+            printf("%10d %20.8e\n", iterCount, norm);
 
-    //}
-    //diff = clock() - start;
-    //double solveTime = diff /CLOCKS_PER_SEC;
+    }
+    diff = clock() - start;
+    double solveTime = diff /CLOCKS_PER_SEC;
 
     printf("\nCalculating Electric Field.....");
     calcElectricField(ElectricField, grid, &gridInfo);
@@ -245,6 +245,7 @@ int main(int argc, char **argv)
 
     start = clock();
     // for required number of timesteps
+    int i;
     int lostParticleCount = 0;
     for(i = 1; i <= TIMESTEPS; i++)
     {
@@ -287,8 +288,6 @@ int main(int argc, char **argv)
             writeParticleData(outputPath, domainParticles, totalParticlesCount);
         }
     }
-    getRHS(rhs);
-    //writeVectorToFile("laplace_v.txt", rhs, gridInfo.totalNodes);
 
     diff = clock() - start;
     double timeStepsTime = diff /CLOCKS_PER_SEC;
@@ -299,9 +298,9 @@ int main(int argc, char **argv)
     /*********************************************/
     /***********POISSON SOLVER********************/
     /*********************************************/
-    int *rhsIndices = malloc(sizeof(int) * gridInfo.totalNodes);
+    //int *rhsIndices = malloc(sizeof(int) * gridInfo.totalNodes);
 
-    FILE *iterData = fopen("iter_data.txt", "w");
+    //FILE *iterData = fopen("iter_data.txt", "w");
     start = clock();
     for(i = 1; i <= POISSON_TIMESTEPS; i++)
     {
@@ -337,13 +336,13 @@ int main(int argc, char **argv)
         // reset the rhs vector
         //memset(rhs, 0, sizeof(double) * gridInfo.totalNodes);
         // based on the new particle positions, update charge fractions at nodes
-        int validNodesCount = updateChargeFractions(domainParticles, totalParticlesCount, rhs, rhsIndices, &gridInfo);
+        //int validNodesCount = updateChargeFractions(domainParticles, totalParticlesCount, rhs, rhsIndices, &gridInfo);
 
         // using validNodesNumber, send modified rhs to solver
-        updateRHS(rhs, rhsIndices, validNodesCount);
-        int iterNum = SolverLinSolve();
+        //updateRHS(rhs, rhsIndices, validNodesCount);
+        //int iterNum = SolverLinSolve();
 
-        getSolution(grid);
+        //getSolution(grid);
         calcElectricField(ElectricField, grid, &gridInfo);
 
         // then move them
@@ -360,7 +359,7 @@ int main(int argc, char **argv)
         // avoid timing the IO portion
         diff = clock() - tstart;
         double timeTaken = (double)diff/CLOCKS_PER_SEC;
-        fprintf(iterData, "%10d %10lf\n", iterNum, timeTaken);
+        //fprintf(iterData, "%10d %10lf\n", iterNum, timeTaken);
 
         char outputPath[50];
         if(POST_WRITE_FILES && !(i % POST_INTERVAL) )
@@ -372,9 +371,9 @@ int main(int argc, char **argv)
             writeOutputData(outputPath, grid, ElectricField, &gridInfo);
         }
     } // end of Poisson timestep loop
-    fclose(iterData);
+    //fclose(iterData);
 
-    writeOutputData("poisson.vtk", grid, ElectricField, &gridInfo);
+    //writeOutputData("poisson.vtk", grid, ElectricField, &gridInfo);
     //getRHS(rhs);
     //writeVectorToFile("poisson_v.txt", rhs, gridInfo.totalNodes);
 
@@ -383,14 +382,14 @@ int main(int argc, char **argv)
     printf("\nTiming Info\n%10s %10.8e\n%10s %10.8e\n%10s %10.8e\n", "Solve", solveTime, "TimeSteps", timeStepsTime, "Poisson TimeSteps", poissonStepsTime);
 
 
-    free(rhsIndices);
-    free(rhs);
-    deallocCSRForm(&mcsr);
-    SolverFinalize();
+    //free(rhsIndices);
+    //free(rhs);
+    //deallocCSRForm(&mcsr);
+    //SolverFinalize();
 
     free(lostParticles);
     free(domainParticles);
-    //free(bNodes);
+    free(bNodes);
     deallocEField(&ElectricField);
     deallocGrid(&grid);
     free(MD_data);

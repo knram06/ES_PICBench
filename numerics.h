@@ -1,7 +1,7 @@
 #ifndef NUMERICS_H
 #define NUMERICS_H
 
-double single_step_solve(Node* grid, const int numNodes, const double sorOmega)
+double single_step_solve(double* grid, const int numNodes, const double sorOmega)
 {
     int i, j, k;
     double temp, norm = 0.;
@@ -13,18 +13,18 @@ double single_step_solve(Node* grid, const int numNodes, const double sorOmega)
         {
             for(k = 1; k < numNodes - 1; k++)
             {
-                temp = GRID_1D(grid, i, j, k).potential;
+                temp = GRID_1D(grid, i, j, k);
 
                 // obtain the value got by averaging
-                double val = (1./6) * (GRID_1D(grid,i+1,j,k).potential + GRID_1D(grid,i-1,j,k).potential + GRID_1D(grid,i,j-1,k).potential + GRID_1D(grid,i,j+1,k).potential + GRID_1D(grid,i,j,k-1).potential + GRID_1D(grid,i,j,k+1).potential);
+                double val = (1./6) * (GRID_1D(grid,i+1,j,k) + GRID_1D(grid,i-1,j,k) + GRID_1D(grid,i,j-1,k) + GRID_1D(grid,i,j+1,k) + GRID_1D(grid,i,j,k-1) + GRID_1D(grid,i,j,k+1));
  
                 // obtain the value with SOR
-                GRID_1D(grid, i,j,k).potential = val*sorOmega + (1-sorOmega)*temp;
+                GRID_1D(grid, i,j,k) = val*sorOmega + (1-sorOmega)*temp;
                 //std::cout << grid[i][j][k].potential << " " << i << " " << j << " " << k << std::endl;
  
                 // store the difference in values at same grid points in temp itself
                 // for norm calculation
-                temp = GRID_1D(grid,i,j,k).potential - temp;
+                temp = GRID_1D(grid,i,j,k) - temp;
                 norm += temp * temp;
             }
         }
@@ -132,7 +132,7 @@ void calcElectricField(EField* ElectricField, double* grid, GridInfo* gInfo)
 }
 
 // setup the boundary conditions
-int setupBoundaryConditions(Node* grid, GridInfo* gInfo, BoundaryNode *bNodes)
+int setupBoundaryConditions(double* grid, GridInfo* gInfo, BoundaryNode *bNodes)
 {
     const int numNodes           = gInfo->numNodes;
     const double spacing         = gInfo->spacing;
@@ -165,11 +165,10 @@ int setupBoundaryConditions(Node* grid, GridInfo* gInfo, BoundaryNode *bNodes)
         x = spacing * i;
         for(k = 0; k < numNodes; k++)
         {
-            z = spacing * k;
+            //z = spacing * k;
             // checking with x2 - 2y2 + z2
-            //grid[i][0][k] = x*x + z*z;          // y is zero here
-            y = 0.;
-            GRID_1D(grid, i, 0, k).potential=TEST_FUNCTION;
+            //y = 0.;
+            //GRID_1D(grid, i, 0, k) =TEST_FUNCTION;
 
             // enforce Neumann boundary nodes
             bNodes[nodeCount].bndryNodes[0] = &GRID_1D(grid, i, 0, k);
@@ -177,8 +176,8 @@ int setupBoundaryConditions(Node* grid, GridInfo* gInfo, BoundaryNode *bNodes)
             bNodes[nodeCount].bndryNodes[2] = &GRID_1D(grid, i, 2, k);
             nodeCount++;
 
-            y = GRID_LENGTH;
-            GRID_1D(grid, i, numNodes-1, k).potential=TEST_FUNCTION;
+            //y = GRID_LENGTH;
+            //GRID_1D(grid, i, numNodes-1, k).potential=TEST_FUNCTION;
 
             // Y = GRID_LENGTH
             bNodes[nodeCount].bndryNodes[0] = &GRID_1D(grid, i, numNodes-1, k);
@@ -190,9 +189,9 @@ int setupBoundaryConditions(Node* grid, GridInfo* gInfo, BoundaryNode *bNodes)
         // on X-Y faces
         for(j = 0; j < numNodes; j++)
         {
-            y = spacing*j;
-            z = 0.;
-            GRID_1D(grid, i, j, 0).potential=TEST_FUNCTION;
+            //y = spacing*j;
+            //z = 0.;
+            //GRID_1D(grid, i, j, 0).potential=TEST_FUNCTION;
 
             // enforce Neumann boundary nodes
             // Z = 0
@@ -201,8 +200,8 @@ int setupBoundaryConditions(Node* grid, GridInfo* gInfo, BoundaryNode *bNodes)
             bNodes[nodeCount].bndryNodes[2] = &GRID_1D(grid, i, j, 2);
             nodeCount++;
 
-            z = GRID_LENGTH;
-            GRID_1D(grid, i, j, numNodes-1).potential=TEST_FUNCTION;
+            //z = GRID_LENGTH;
+            //GRID_1D(grid, i, j, numNodes-1).potential=TEST_FUNCTION;
 
             // Z = GRID_LENGTH
             bNodes[nodeCount].bndryNodes[0] = &GRID_1D(grid, i, j, numNodes-1);
@@ -226,7 +225,7 @@ int setupBoundaryConditions(Node* grid, GridInfo* gInfo, BoundaryNode *bNodes)
             // we need points INSIDE the capillary for Neumann BC
             if( sumSqs < capillaryRadius*capillaryRadius )
             {
-                GRID_1D(grid, 0, j, k).potential = CAPILLARY_VOLTAGE;
+                GRID_1D(grid, 0, j, k) = CAPILLARY_VOLTAGE;
             }
             else
             {
@@ -240,7 +239,7 @@ int setupBoundaryConditions(Node* grid, GridInfo* gInfo, BoundaryNode *bNodes)
             // EXTRACTOR side
             if( (sumSqs > extractorInner*extractorInner) && (sumSqs < extractorOuter*extractorOuter ) )
             {
-                GRID_1D(grid, numNodes-1, j, k).potential = EXTRACTOR_VOLTAGE;
+                GRID_1D(grid, numNodes-1, j, k) = EXTRACTOR_VOLTAGE;
             }
             else
             {
@@ -263,7 +262,7 @@ void enforceNeumannBC(BoundaryNode* bNodes, const int nodeCount)
     int i;
 
     for(i = 0; i < nodeCount; i++)
-        (bNodes[i].bndryNodes[0])->potential = (1./3) * (4 * (bNodes[i].bndryNodes[1])->potential - (bNodes[i].bndryNodes[2])->potential);
+        *(bNodes[i].bndryNodes[0]) = (1./3) * (4 * *(bNodes[i].bndryNodes[1]) - *(bNodes[i].bndryNodes[2]));
 
 }
 #endif
