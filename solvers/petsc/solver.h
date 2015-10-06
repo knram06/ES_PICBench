@@ -1,5 +1,5 @@
-#ifndef SOLVER_H
-#define SOLVER_H
+#ifndef PETSC_SOLVER_H
+#define PETSC_SOLVER_H
 
 #include <petscksp.h>
 #include <petscmat.h>

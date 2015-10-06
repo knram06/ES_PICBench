@@ -92,7 +92,8 @@ typedef struct
 #include "numerics.h"
 #include "postprocess.h"
 
-#include "solvers/petsc/solver.h"
+//#include "solvers/petsc/solver.h"
+#include "solvers/pardiso/solver.h"
 
 void allocateEField(EField** grid, GridInfo* gInfo)
 {
@@ -152,6 +153,7 @@ int main(int argc, char **argv)
 
     // send to Solver
     buildSolverMatCSRAndVec(mcsr.rowOffsets, mcsr.colIndices, mcsr.mat, rhs, mcsr.numRows); 
+    return 0;
     //writeSparseMatRowColForm("mat_A.txt", &mcsr, true);
 
     // initialize solver parameters
@@ -373,12 +375,12 @@ int main(int argc, char **argv)
         }
     } // end of Poisson timestep loop
     fclose(iterData);
+    diff = clock() - start;
 
     writeOutputData("poisson.vtk", grid, ElectricField, &gridInfo);
     //getRHS(rhs);
     //writeVectorToFile("poisson_v.txt", rhs, gridInfo.totalNodes);
 
-    diff = clock() - start;
     double poissonStepsTime = diff /CLOCKS_PER_SEC;
     printf("\nTiming Info\n%10s %10.8e\n%10s %10.8e\n%10s %10.8e\n", "Solve", solveTime, "TimeSteps", timeStepsTime, "Poisson TimeSteps", poissonStepsTime);
 
