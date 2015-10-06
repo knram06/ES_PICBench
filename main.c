@@ -45,7 +45,7 @@
 
 #define TIMESTEPS ((int)2000)
 #define ITER_INTERVAL (200)
-#define ITER_HEADER_INTERVAL (500)
+#define ITER_HEADER_INTERVAL (1500)
 #define POST_WRITE_FILES (false)
 #define POST_INTERVAL (200)
 #define POST_WRITE_PATH ("output/")
@@ -87,8 +87,8 @@ typedef struct
 
 #include "utilities.h"
 #include "preprocess.h"
-#include "particleFns.h"
 #include "csrroutines.h"
+#include "particleFns.h"
 #include "numerics.h"
 #include "postprocess.h"
 
@@ -145,7 +145,6 @@ int main(int argc, char **argv)
     //allocCSRForm(&mcsr, gridInfo.totalNodes, maxNonZerosPerRow);
 
     //// build the vector b
-    //double *rhs = malloc(sizeof(double) * gridInfo.totalNodes);
     //buildSparseMatAndRHSVec(mcsr.rowOffsets, mcsr.colIndices, mcsr.mat, rhs, &gridInfo);
 
 
@@ -298,7 +297,9 @@ int main(int argc, char **argv)
     /*********************************************/
     /***********POISSON SOLVER********************/
     /*********************************************/
-    //int *rhsIndices = malloc(sizeof(int) * gridInfo.totalNodes);
+    //double *rhs = malloc(sizeof(double) * 8 * totalParticlesCount);
+    //int *rhsIndices = malloc(sizeof(int) * 8 * totalParticlesCount);
+    ColVal *indVals = malloc(sizeof(ColVal) * 8 * totalParticlesCount);
 
     //FILE *iterData = fopen("iter_data.txt", "w");
     start = clock();
@@ -336,7 +337,7 @@ int main(int argc, char **argv)
         // reset the rhs vector
         //memset(rhs, 0, sizeof(double) * gridInfo.totalNodes);
         // based on the new particle positions, update charge fractions at nodes
-        //int validNodesCount = updateChargeFractions(domainParticles, totalParticlesCount, rhs, rhsIndices, &gridInfo);
+        int validNodesCount = updateChargeFractions(domainParticles, totalParticlesCount, indVals, &gridInfo);
 
         // using validNodesNumber, send modified rhs to solver
         //updateRHS(rhs, rhsIndices, validNodesCount);
@@ -382,6 +383,7 @@ int main(int argc, char **argv)
     printf("\nTiming Info\n%10s %10.8e\n%10s %10.8e\n%10s %10.8e\n", "Solve", solveTime, "TimeSteps", timeStepsTime, "Poisson TimeSteps", poissonStepsTime);
 
 
+    free(indVals);
     //free(rhsIndices);
     //free(rhs);
     //deallocCSRForm(&mcsr);

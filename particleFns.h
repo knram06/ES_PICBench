@@ -67,8 +67,7 @@ Particle randomizeParticleAttribs(Particle inputParticle)
 
 int updateChargeFractions(
         const Particle *particleList, int particleCount,
-        double *chargeFractionList,
-        int *chargeFractionIndices,
+        ColVal *indexVals,
         GridInfo *gInfo
         )
 {
@@ -165,9 +164,9 @@ int updateChargeFractions(
                     // wrap around index
                     // reusing last searched value to speed things up?
                     searchIndex = searchIndex % validNodesNumber;
-                    if(chargeFractionIndices[searchIndex] == pos)
+                    if(indexVals[searchIndex].index == pos)
                     {
-                        chargeFractionList[searchIndex] += p->charge * multFactor;
+                        indexVals[searchIndex].val += p->charge * multFactor;
                         break;
                     }
                     searchIndex++;
@@ -176,8 +175,8 @@ int updateChargeFractions(
                 // if pos was not found, then write into and expand size
                 if(k == validNodesNumber)
                 {
-                    chargeFractionIndices[validNodesNumber] = pos;
-                    chargeFractionList[validNodesNumber] = p->charge * multFactor;
+                    indexVals[validNodesNumber].index = pos;
+                    indexVals[validNodesNumber].val = p->charge * multFactor;
                     validNodesNumber++;
                 }
             } // end of if check for indices within valid limits
