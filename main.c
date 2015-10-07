@@ -9,7 +9,7 @@
 #include <time.h>
 
 #define GRID_LENGTH (3e-4)
-#define NUM_NODES 101
+#define NUM_NODES 21
 
 /*Macro for 3D to 1D indexing */
 //#define GRID_1D(grid, i, j, k) ( grid[(k) + NUM_NODES*(j) + NUM_NODES*NUM_NODES*(i) ] )
@@ -43,7 +43,7 @@
 #define PARTICLE_SIZE ((int)5e4)
 #define PARTICLE_SORT_INTERVAL (20)
 
-#define TIMESTEPS ((int)2000)
+#define TIMESTEPS ((int)0)
 #define ITER_INTERVAL (200)
 #define ITER_HEADER_INTERVAL (500)
 #define POST_WRITE_FILES (false)
@@ -152,12 +152,13 @@ int main(int argc, char **argv)
     int i;
 
     // send to Solver
-    buildSolverMatCSRAndVec(mcsr.rowOffsets, mcsr.colIndices, mcsr.mat, rhs, mcsr.numRows); 
-    return 0;
+    buildSolverMatCSRAndVec(mcsr.rowOffsets, mcsr.colIndices, mcsr.mat, rhs, mcsr.numRows);
+    //checkMatAndVec();
     //writeSparseMatRowColForm("mat_A.txt", &mcsr, true);
 
     // initialize solver parameters
     initSolverParameters();
+    setSolutionVector(grid);
 
     clock_t start, diff;
     start = clock();
@@ -166,7 +167,7 @@ int main(int argc, char **argv)
     double solveTime = diff/CLOCKS_PER_SEC;
 
     // since rhs is the same size, just reuse that array
-    getSolution(grid);
+    //getSolution(grid);
 
     // now preallocate the particles data array
     Particle* MD_data = malloc(particleCount * sizeof(Particle));
@@ -289,12 +290,13 @@ int main(int argc, char **argv)
             writeParticleData(outputPath, domainParticles, totalParticlesCount);
         }
     }
-    getRHS(rhs);
+    //getRHS(rhs);
     //writeVectorToFile("laplace_v.txt", rhs, gridInfo.totalNodes);
 
     diff = clock() - start;
     double timeStepsTime = diff /CLOCKS_PER_SEC;
     writeOutputData("laplace.vtk", grid, ElectricField, &gridInfo);
+    return 0;
 
     // TEMP - remove later
     resortParticles(domainParticles, totalParticlesCount);
