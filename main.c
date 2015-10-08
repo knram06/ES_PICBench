@@ -152,13 +152,28 @@ int main(int argc, char **argv)
     int i;
 
     // send to Solver
-    buildSolverMatCSRAndVec(mcsr.rowOffsets, mcsr.colIndices, mcsr.mat, rhs, mcsr.numRows);
+    //int numRows = 8;
+    //int rowOffsets[9] = {0, 4, 7, 9, 11, 12, 15, 17, 20};
+    //int colIndices[20] = {0, 2, 5, 6, 1, 2, 4, 2, 7, 3, 6, 1, 2, 5, 7, 1, 6, 2, 6, 7};
+    //double mat[20] = {7., 1., 2., 7., -4., 8., 2., 1., 5., 7., 9., -4., 7., 3., 8., 1., 11., -3., 2., 5.};
+
+    //double b[8] = {0, 1, 2, 3, 4, 5, 6, 7};
+    //double x[8];
+
+    int numRows = 9;
+    int rowOffsets[10] = {0, 1, 2, 3, 4, 9, 10, 11, 12, 13};
+    int colIndices[13] = {0, 1, 2, 3, 1, 3, 4, 5, 7, 5, 6, 7, 8};
+    double mat[13] = {1, 1, 1, 1, 1, 1, -4, 1, 1, 1, 1, 1, 1};
+
+    double b[9] = {1, 1, 1, 1, 0, 1, 1, 1, 1};
+    double x[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
+    buildSolverMatCSRAndVec(rowOffsets, colIndices, mat, b, numRows);
     checkMatAndVec();
     //writeSparseMatRowColForm("mat_A.txt", &mcsr, true);
 
     // initialize solver parameters
     initSolverParameters();
-    setSolutionVector(grid);
+    setSolutionVector(x);
 
     clock_t start, diff;
     start = clock();
@@ -166,6 +181,12 @@ int main(int argc, char **argv)
     diff = clock() - start;
     double solveTime = diff/CLOCKS_PER_SEC;
 
+    // print solution
+    for(i = 0; i < numRows; i++)
+        printf("%lf ", x[i]);
+    printf("\n");
+
+    return 0;
     // since rhs is the same size, just reuse that array
     //getSolution(grid);
 
@@ -296,7 +317,6 @@ int main(int argc, char **argv)
     diff = clock() - start;
     double timeStepsTime = diff /CLOCKS_PER_SEC;
     writeOutputData("laplace.vtk", grid, ElectricField, &gridInfo);
-    return 0;
 
     // TEMP - remove later
     resortParticles(domainParticles, totalParticlesCount);
