@@ -9,7 +9,7 @@
 #include <time.h>
 
 #define GRID_LENGTH (3e-4)
-#define NUM_NODES 11
+#define NUM_NODES 101
 
 /*Macro for 3D to 1D indexing */
 //#define GRID_1D(grid, i, j, k) ( grid[(k) + NUM_NODES*(j) + NUM_NODES*NUM_NODES*(i) ] )
@@ -160,33 +160,33 @@ int main(int argc, char **argv)
     //double b[8] = {0, 1, 2, 3, 4, 5, 6, 7};
     //double x[8];
 
-    int numRows = 9;
-    int rowOffsets[10] = {0, 1, 2, 3, 4, 9, 10, 11, 12, 13};
-    int colIndices[13] = {0, 1, 2, 3, 1, 3, 4, 5, 7, 5, 6, 7, 8};
-    double mat[13] = {1, 1, 1, 1, 1, 1, -4, 1, 1, 1, 1, 1, 1};
+    //int numRows = 9;
+    //int rowOffsets[10] = {0, 1, 2, 3, 4, 9, 10, 11, 12, 13};
+    //int colIndices[13] = {0, 1, 2, 3, 1, 3, 4, 5, 7, 5, 6, 7, 8};
+    //double mat[13] = {1, 1, 1, 1, 1, 1, -4, 1, 1, 1, 1, 1, 1};
 
-    double b[9] = {1, 1, 1, 1, 0, 1, 1, 1, 1};
-    double x[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
-    buildSolverMatCSRAndVec(rowOffsets, colIndices, mat, b, numRows);
+    //double b[9] = {1, 1, 1, 1, 0, 1, 1, 1, 1};
+    //double x[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
+    buildSolverMatCSRAndVec(mcsr.rowOffsets, mcsr.colIndices, mcsr.mat, rhs, mcsr.numRows);
     checkMatAndVec();
     //writeSparseMatRowColForm("mat_A.txt", &mcsr, true);
 
     // initialize solver parameters
     initSolverParameters();
-    setSolutionVector(x);
+    setSolutionVector(grid);
 
     clock_t start, diff;
     start = clock();
     SolverLinSolve();
     diff = clock() - start;
     double solveTime = diff/CLOCKS_PER_SEC;
+    printf("Time taken: %lf\n", solveTime);
 
     // print solution
-    for(i = 0; i < numRows; i++)
-        printf("%lf ", x[i]);
-    printf("\n");
+    //for(i = 0; i < numRows; i++)
+    //    printf("%lf ", x[i]);
+    //printf("\n");
 
-    return 0;
     // since rhs is the same size, just reuse that array
     //getSolution(grid);
 
@@ -318,6 +318,7 @@ int main(int argc, char **argv)
     double timeStepsTime = diff /CLOCKS_PER_SEC;
     writeOutputData("laplace.vtk", grid, ElectricField, &gridInfo);
 
+    return 0;
     // TEMP - remove later
     resortParticles(domainParticles, totalParticlesCount);
     /*********************************************/

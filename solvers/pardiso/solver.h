@@ -46,7 +46,7 @@ int      idum;              /* Integer dummy. */
 int SolverInitialize(int *argc, char ***argv)
 {
     mtype = 11;         // real unsymmetric matrix
-    solver = 1;         // use the recursive iterative solver
+    solver = 0;         // use the recursive iterative solver
     error = 0;
     nrhs = 1;           // number of right hand sides
 
@@ -133,7 +133,7 @@ void checkMatAndVec()
 
 int initSolverParameters()
 {
-    phase = 33;
+    phase = 13;
     iparm[3] = 61;
     return 0;
 }
