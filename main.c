@@ -9,7 +9,7 @@
 #include <time.h>
 
 #define GRID_LENGTH (3e-4)
-#define NUM_NODES 101
+#define NUM_NODES 5
 
 /*Macro for 3D to 1D indexing */
 //#define GRID_1D(grid, i, j, k) ( grid[(k) + NUM_NODES*(j) + NUM_NODES*NUM_NODES*(i) ] )
@@ -43,7 +43,7 @@
 #define PARTICLE_SIZE ((int)5e4)
 #define PARTICLE_SORT_INTERVAL (20)
 
-#define TIMESTEPS ((int)8000)
+#define TIMESTEPS ((int)0)
 #define ITER_INTERVAL (200)
 #define ITER_HEADER_INTERVAL (500)
 #define POST_WRITE_FILES (false)
@@ -153,8 +153,8 @@ int main(int argc, char **argv)
 
     // send to Solver
     buildSolverMatCSRAndVec(mcsr.rowOffsets, mcsr.colIndices, mcsr.mat, rhs, mcsr.numRows); 
-    //writeSparseMatRowColForm("mat_A.txt", &mcsr, true);
-    //writeVectorToFile("vect.txt", rhs, gridInfo.totalNodes);
+    writeSparseMatRowColForm("mat_A.txt", &mcsr, true);
+    writeVectorToFile("vect.txt", rhs, gridInfo.totalNodes);
 
     // initialize solver parameters
     initSolverParameters();
@@ -295,6 +295,7 @@ int main(int argc, char **argv)
     diff = clock() - start;
     double timeStepsTime = diff /CLOCKS_PER_SEC;
     writeOutputData("laplace.vtk", grid, ElectricField, &gridInfo);
+    return 0;
 
     // TEMP - remove later
     //resortParticles(domainParticles, totalParticlesCount);
