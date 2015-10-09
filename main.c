@@ -20,9 +20,9 @@
 // capillary centered on YZ face
 // origin at Corner of domain
 // --> Particle data MUST be corrected for new origin
-#define CAPILLARY_RADIUS (1.326e-5)
-#define EXTRACTOR_INNER_RADIUS (1e-4)
-#define EXTRACTOR_OUTER_RADIUS (1.4e-4)
+#define CAPILLARY_RADIUS (1.40625e-5)
+#define EXTRACTOR_INNER_RADIUS (9.375e-5)
+#define EXTRACTOR_OUTER_RADIUS (1.40625e-4)
 #define CAPILLARY_VOLTAGE 0.
 #define EXTRACTOR_VOLTAGE (-1350.)
 
@@ -43,14 +43,14 @@
 #define PARTICLE_SIZE ((int)5e4)
 #define PARTICLE_SORT_INTERVAL (20)
 
-#define TIMESTEPS ((int)2000)
+#define TIMESTEPS ((int)8000)
 #define ITER_INTERVAL (200)
 #define ITER_HEADER_INTERVAL (500)
 #define POST_WRITE_FILES (false)
 #define POST_INTERVAL (200)
 #define POST_WRITE_PATH ("output/")
 
-#define POISSON_TIMESTEPS ((int)1)
+#define POISSON_TIMESTEPS ((int)10)
 //#define TEST_FUNCTION (x*x - 2*y*y + z*z)
 #define TEST_FUNCTION 0.
 
@@ -92,8 +92,8 @@ typedef struct
 #include "numerics.h"
 #include "postprocess.h"
 
-//#include "solvers/petsc/solver.h"
-#include "solvers/pardiso/solver.h"
+#include "solvers/petsc/solver.h"
+//#include "solvers/pardiso/solver.h"
 
 void allocateEField(EField** grid, GridInfo* gInfo)
 {
@@ -153,8 +153,8 @@ int main(int argc, char **argv)
 
     // send to Solver
     buildSolverMatCSRAndVec(mcsr.rowOffsets, mcsr.colIndices, mcsr.mat, rhs, mcsr.numRows); 
-    return 0;
     //writeSparseMatRowColForm("mat_A.txt", &mcsr, true);
+    //writeVectorToFile("vect.txt", rhs, gridInfo.totalNodes);
 
     // initialize solver parameters
     initSolverParameters();
@@ -289,7 +289,7 @@ int main(int argc, char **argv)
             writeParticleData(outputPath, domainParticles, totalParticlesCount);
         }
     }
-    getRHS(rhs);
+    //getRHS(rhs);
     //writeVectorToFile("laplace_v.txt", rhs, gridInfo.totalNodes);
 
     diff = clock() - start;
@@ -297,7 +297,7 @@ int main(int argc, char **argv)
     writeOutputData("laplace.vtk", grid, ElectricField, &gridInfo);
 
     // TEMP - remove later
-    resortParticles(domainParticles, totalParticlesCount);
+    //resortParticles(domainParticles, totalParticlesCount);
     /*********************************************/
     /***********POISSON SOLVER********************/
     /*********************************************/
@@ -333,8 +333,8 @@ int main(int argc, char **argv)
         // improves locality and some searches
         // BUT don't do this every iteration, since we will use qsort
         // and QUICKSORT WORST CASE performance is when array is ALMOST SORTED - O(n^2)
-        if( !(i % PARTICLE_SORT_INTERVAL) )
-            resortParticles(domainParticles, totalParticlesCount);
+        //if( !(i % PARTICLE_SORT_INTERVAL) )
+        //    resortParticles(domainParticles, totalParticlesCount);
 
         // reset the rhs vector
         //memset(rhs, 0, sizeof(double) * gridInfo.totalNodes);
