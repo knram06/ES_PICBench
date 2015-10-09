@@ -85,10 +85,10 @@ void allocateGrid(double** grid, GridInfo* gInfo)
     int i;
 
     (*grid) = malloc(totalNodes * sizeof(double));
+    assert((*grid) != NULL);
+
     for(i = 0; i < totalNodes; i++)
         (*grid)[i] = 0.;
-
-    assert((*grid) != NULL);
 }
 
 void deallocGrid(double** grid)
