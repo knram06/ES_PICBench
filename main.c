@@ -9,7 +9,7 @@
 #include <time.h>
 
 #define GRID_LENGTH (3e-4)
-#define NUM_NODES 101
+#define NUM_NODES 11
 
 /*Macro for 3D to 1D indexing */
 //#define GRID_1D(grid, i, j, k) ( grid[(k) + NUM_NODES*(j) + NUM_NODES*NUM_NODES*(i) ] )
@@ -153,7 +153,7 @@ int main(int argc, char **argv)
 
     // send to Solver
     buildSolverMatCSRAndVec(mcsr.rowOffsets, mcsr.colIndices, mcsr.mat, rhs, mcsr.numRows); 
-    writeSparseMatRowColForm("mat_A.txt", &mcsr, true);
+    //writeSparseMatRowColForm("mat_A.txt", &mcsr, true);
     //writeVectorToFile("vect.txt", rhs, gridInfo.totalNodes);
 
     // initialize solver parameters
@@ -164,6 +164,7 @@ int main(int argc, char **argv)
     SolverLinSolve();
     diff = clock() - start;
     double solveTime = diff/CLOCKS_PER_SEC;
+    return 0;
 
     // since rhs is the same size, just reuse that array
     getSolution(grid);

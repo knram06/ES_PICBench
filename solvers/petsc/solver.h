@@ -2,14 +2,18 @@
 #define PETSC_SOLVER_H
 
 #include <petscksp.h>
+#include <petscdm.h>
+#include <petscdmda.h>
 #include <petscmat.h>
 #include <petscvec.h>
 
+#include <math.h>
+
 // store relevant data as global for easier access
-Mat A;
-MatNullSpace nullspace;
-Vec b, x;
+DM da;
+Vec x;
 KSP ksp;
+int numRows;
 
 // buffer pointers which need to freed AFTER destroying arrays
 PetscInt *rows, *cols;
@@ -21,28 +25,82 @@ PetscErrorCode SolverInitialize(int *argc, char ***argv)
 {
     PetscFunctionBegin;
     PetscInitialize(argc, argv, (char*)"petsc_opts.cfg", NULL);
-    MatCreate(PETSC_COMM_WORLD, &A);
-    VecCreate(PETSC_COMM_WORLD, &b);
+    //MatCreate(PETSC_COMM_WORLD, &A);
+    //VecCreate(PETSC_COMM_WORLD, &b);
     VecCreate(PETSC_COMM_WORLD, &x);
-
-    MatNullSpaceCreate(PETSC_COMM_WORLD, PETSC_TRUE, 0, NULL, &nullspace);
 
     KSPCreate(PETSC_COMM_WORLD, &ksp);
     PetscFunctionReturn(0);
 }
 
 #undef __FUNCT__
+#define __FUNCT__ "ComputeMatrix"
+PetscErrorCode ComputeMatrix(KSP ksp, Mat J, Mat A, void* ctx)
+{
+    PetscFunctionBeginUser;
+    PetscInt numRows = *(PetscInt*)ctx;
+    // build up the matrix
+    MatCreateSeqAIJWithArrays(PETSC_COMM_WORLD, numRows, numRows, rows, cols, values, &A);
+
+    MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY);
+
+    PetscFunctionReturn(0);
+
+} // end of ComputeMatrix
+
+#undef __FUNCT__
+#define __FUNCT__ "ComputeRHS"
+PetscErrorCode ComputeRHS(KSP ksp, Vec b, void* ctx)
+{
+    PetscFunctionBeginUser;
+    PetscInt numRows = *(PetscInt*)ctx;
+    PetscScalar *array;
+
+    VecCreateSeqWithArray(PETSC_COMM_WORLD, 1, numRows, rhsVals, &b);
+    VecAssemblyBegin(b);
+    VecAssemblyEnd(b);
+
+    // allocate the same storage for x
+    VecDuplicate(b, &x);
+    VecCopy(b, x);
+
+    PetscFunctionReturn(0);
+} // end of ComputeRHS
+
+#undef __FUNCT__
 #define __FUNCT__ "buildSolverMatCSRAndVec"
-PetscErrorCode buildSolverMatCSRAndVec(const int *rowOffsets, const int *colIndices, const double *vals, const double *rhs, const int numRows)
+PetscErrorCode buildSolverMatCSRAndVec(const int *rowOffsets, const int *colIndices, const double *vals, const double *rhs, const int numberOfRows)
 {
     PetscFunctionBegin;
+    numRows = numberOfRows;
+
+    // take the cube root to get the one side length
+    PetscInt nr = (PetscInt)round(pow(numRows, 1./3));
+
+    // create the DM object
+    DMDACreate3d(
+            PETSC_COMM_WORLD, DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DM_BOUNDARY_NONE,
+            DMDA_STENCIL_STAR,
+            nr, nr, nr,
+            PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE,
+            1, // dof
+            1, // stencil width
+            PETSC_NULL, PETSC_NULL, PETSC_NULL,
+            &da
+            );
+    DMDASetInterpolationType(da, DMDA_Q0);
+    KSPSetDM(ksp, da);
+
+    KSPSetComputeRHS(ksp, ComputeRHS, (void*)&numRows);
+    KSPSetComputeOperators(ksp, ComputeMatrix, (void*)&numRows);
 
     // the last entry in the rowOffsets will actually be the total nonzeros
     // so just use that
     const int totalNonZeros = rowOffsets[numRows]; // takes care of one off indexing
     const int numRowsOffset = numRows+1;
 
-    VecSetFromOptions(b);
+    //VecSetFromOptions(b);
 
     // declare solver specific stuff here
     rows = malloc(sizeof(PetscInt) * numRowsOffset);
@@ -61,27 +119,9 @@ PetscErrorCode buildSolverMatCSRAndVec(const int *rowOffsets, const int *colIndi
         values[i] = (PetscScalar)(vals[i]);
     }
 
-    // build up the matrix
-    MatCreateSeqAIJWithArrays(PETSC_COMM_WORLD, (PetscInt)numRows, (PetscInt)numRows, rows, cols, values, &A);
-
-    MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY);
-    MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY);
-
-    MatSetNearNullSpace(A, nullspace);
-
-    // fill in the b vector also
     for(i = 0; i < numRows; i++)
         rhsVals[i] = (PetscScalar)rhs[i];
 
-    VecCreateSeqWithArray(PETSC_COMM_WORLD, 1, numRows, rhsVals, &b);
-    VecAssemblyBegin(b);
-    VecAssemblyEnd(b);
-
-    // allocate the same storage for x
-    VecDuplicate(b, &x);
-    VecCopy(b, x);
-
-    //VecView(b, PETSC_VIEWER_STDOUT_WORLD);
     PetscFunctionReturn(0);
 } // end of buildSolverMatCSRAndVec
 
@@ -90,10 +130,7 @@ PetscErrorCode buildSolverMatCSRAndVec(const int *rowOffsets, const int *colIndi
 PetscErrorCode initSolverParameters()
 {
     PetscFunctionBegin;
-
-    KSPSetOperators(ksp, A, A);
     KSPSetFromOptions(ksp);
-
     PetscFunctionReturn(0);
 }
 
@@ -103,7 +140,7 @@ PetscInt SolverLinSolve()
 {
     PetscFunctionBegin;
     PetscInt it;
-    KSPSolve(ksp, b, x);
+    KSPSolve(ksp, NULL, NULL);
 
     KSPGetIterationNumber(ksp, &it);
     //VecView(x, PETSC_VIEWER_STDOUT_WORLD);
@@ -111,27 +148,27 @@ PetscInt SolverLinSolve()
 }
 
 
-// TODO: optimize these calls?
-// seems inefficient
-#undef __FUNCT__
-#define __FUNCT__ "updateRHS"
-PetscErrorCode updateRHS(const double *rhs, const int* indices, const int valCount)
-{
-    PetscFunctionBegin;
-
-    PetscInt i;
-    PetscInt ni = (PetscInt)(valCount);
-    PetscScalar *y;
-
-    VecGetArray(b, &y);
-
-    // modify array
-    for(i = 0; i < valCount; i++)
-        y[ indices[i] ] = (PetscScalar)rhs[i];
-
-    VecRestoreArray(b, &y);
-    PetscFunctionReturn(0);
-}
+//// TODO: optimize these calls?
+//// seems inefficient
+//#undef __FUNCT__
+//#define __FUNCT__ "updateRHS"
+//PetscErrorCode updateRHS(const double *rhs, const int* indices, const int valCount)
+//{
+//    PetscFunctionBegin;
+//
+//    PetscInt i;
+//    PetscInt ni = (PetscInt)(valCount);
+//    PetscScalar *y;
+//
+//    VecGetArray(b, &y);
+//
+//    // modify array
+//    for(i = 0; i < valCount; i++)
+//        y[ indices[i] ] = (PetscScalar)rhs[i];
+//
+//    VecRestoreArray(b, &y);
+//    PetscFunctionReturn(0);
+//}
 
 #undef __FUNCT__
 #define __FUNCT__ "getSolution"
@@ -152,24 +189,24 @@ PetscErrorCode getSolution(double *sol)
     PetscFunctionReturn(0);
 }
 
-#undef __FUNCT__
-#define __FUNCT__ "getRHS"
-PetscErrorCode getRHS(double *rhs)
-{
-    PetscFunctionBegin;
-
-    PetscInt i,sizeX;
-    VecGetLocalSize(b, &sizeX);
-
-    PetscScalar *s;
-    VecGetArray(b, &s);
-
-    for(i = 0; i < sizeX; i++)
-        rhs[i] = (double)s[i];
-
-    VecRestoreArray(b, &s);
-    PetscFunctionReturn(0);
-}
+//#undef __FUNCT__
+//#define __FUNCT__ "getRHS"
+//PetscErrorCode getRHS(double *rhs)
+//{
+//    PetscFunctionBegin;
+//
+//    PetscInt i,sizeX;
+//    VecGetLocalSize(b, &sizeX);
+//
+//    PetscScalar *s;
+//    VecGetArray(b, &s);
+//
+//    for(i = 0; i < sizeX; i++)
+//        rhs[i] = (double)s[i];
+//
+//    VecRestoreArray(b, &s);
+//    PetscFunctionReturn(0);
+//}
 
 #undef __FUNCT__
 #define __FUNCT__ "SolverFinalize"
@@ -178,11 +215,10 @@ PetscErrorCode SolverFinalize()
     PetscFunctionBegin;
 
     KSPDestroy(&ksp);
+    DMDestroy(&da);
     VecDestroy(&x);
-    VecDestroy(&b);
-    MatDestroy(&A);
-
-    MatNullSpaceDestroy(&nullspace);
+    //VecDestroy(&b);
+    //MatDestroy(&A);
 
     free(rhsVals);
     free(values); free(cols); free(rows);
