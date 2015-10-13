@@ -13,7 +13,7 @@
 DM da;
 Vec x;
 KSP ksp;
-int numRows;
+PetscInt numRows;
 
 // buffer pointers which need to freed AFTER destroying arrays
 PetscInt *rows, *cols;
@@ -38,12 +38,13 @@ PetscErrorCode SolverInitialize(int *argc, char ***argv)
 PetscErrorCode ComputeMatrix(KSP ksp, Mat J, Mat A, void* ctx)
 {
     PetscFunctionBeginUser;
-    PetscInt numRows = *(PetscInt*)ctx;
     // build up the matrix
     MatCreateSeqAIJWithArrays(PETSC_COMM_WORLD, numRows, numRows, rows, cols, values, &A);
 
     MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY);
     MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY);
+
+    //MatView(A, PETSC_VIEWER_STDOUT_SELF);
 
     PetscFunctionReturn(0);
 
@@ -54,12 +55,20 @@ PetscErrorCode ComputeMatrix(KSP ksp, Mat J, Mat A, void* ctx)
 PetscErrorCode ComputeRHS(KSP ksp, Vec b, void* ctx)
 {
     PetscFunctionBeginUser;
-    PetscInt numRows = *(PetscInt*)ctx;
     PetscScalar *array;
+    PetscInt i;
 
-    VecCreateSeqWithArray(PETSC_COMM_WORLD, 1, numRows, rhsVals, &b);
+    DMDAVecGetArray(da, b, &array);
+    for(i = 0; i < numRows; i++)
+        array[i] = rhsVals[i];
+
+    DMDAVecRestoreArray(da, b, &array);
+
+    //VecCreateSeqWithArray(PETSC_COMM_WORLD, 1, numRows, rhsVals, &b);
     VecAssemblyBegin(b);
     VecAssemblyEnd(b);
+
+    //VecView(b, PETSC_VIEWER_STDOUT_SELF);
 
     // allocate the same storage for x
     VecDuplicate(b, &x);
@@ -76,24 +85,23 @@ PetscErrorCode buildSolverMatCSRAndVec(const int *rowOffsets, const int *colIndi
     numRows = numberOfRows;
 
     // take the cube root to get the one side length
-    PetscInt nr = (PetscInt)round(pow(numRows, 1./3));
+    //PetscInt nr = (PetscInt)round(pow(numRows, 1./3));
 
     // create the DM object
-    DMDACreate3d(
-            PETSC_COMM_WORLD, DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DM_BOUNDARY_NONE,
-            DMDA_STENCIL_STAR,
-            nr, nr, nr,
-            PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE,
+    DMDACreate1d(
+            PETSC_COMM_WORLD,
+            DM_BOUNDARY_NONE,
+            numRows,
             1, // dof
             1, // stencil width
-            PETSC_NULL, PETSC_NULL, PETSC_NULL,
+            PETSC_NULL,
             &da
             );
-    DMDASetInterpolationType(da, DMDA_Q0);
+    DMDASetInterpolationType(da, DMDA_Q1);
     KSPSetDM(ksp, da);
 
-    KSPSetComputeRHS(ksp, ComputeRHS, (void*)&numRows);
-    KSPSetComputeOperators(ksp, ComputeMatrix, (void*)&numRows);
+    KSPSetComputeRHS(ksp, ComputeRHS, NULL);
+    KSPSetComputeOperators(ksp, ComputeMatrix, NULL);
 
     // the last entry in the rowOffsets will actually be the total nonzeros
     // so just use that
@@ -143,6 +151,7 @@ PetscInt SolverLinSolve()
     KSPSolve(ksp, NULL, NULL);
 
     KSPGetIterationNumber(ksp, &it);
+    KSPGetSolution(ksp, &x);
     //VecView(x, PETSC_VIEWER_STDOUT_WORLD);
     return it;
 }
