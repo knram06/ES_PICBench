@@ -43,14 +43,14 @@
 #define PARTICLE_SIZE ((int)5e4)
 #define PARTICLE_SORT_INTERVAL (20)
 
-#define TIMESTEPS ((int)8000)
+#define TIMESTEPS ((int)0)
 #define ITER_INTERVAL (200)
 #define ITER_HEADER_INTERVAL (500)
 #define POST_WRITE_FILES (false)
 #define POST_INTERVAL (200)
 #define POST_WRITE_PATH ("output/")
 
-#define POISSON_TIMESTEPS ((int)10)
+#define POISSON_TIMESTEPS ((int)0)
 //#define TEST_FUNCTION (x*x - 2*y*y + z*z)
 #define TEST_FUNCTION 0.
 
@@ -153,7 +153,7 @@ int main(int argc, char **argv)
 
     // send to Solver
     buildSolverMatCSRAndVec(mcsr.rowOffsets, mcsr.colIndices, mcsr.mat, rhs, mcsr.numRows); 
-    //writeSparseMatRowColForm("mat_A.txt", &mcsr, true);
+    writeSparseMatRowColForm("mat_A.txt", &mcsr, true);
     //writeVectorToFile("vect.txt", rhs, gridInfo.totalNodes);
 
     // initialize solver parameters

@@ -5,8 +5,9 @@
 #include <petscmat.h>
 #include <petscvec.h>
 
-// store relevant data as global for better access
+// store relevant data as global for easier access
 Mat A;
+MatNullSpace nullspace;
 Vec b, x;
 KSP ksp;
 
@@ -23,6 +24,8 @@ PetscErrorCode SolverInitialize(int *argc, char ***argv)
     MatCreate(PETSC_COMM_WORLD, &A);
     VecCreate(PETSC_COMM_WORLD, &b);
     VecCreate(PETSC_COMM_WORLD, &x);
+
+    MatNullSpaceCreate(PETSC_COMM_WORLD, PETSC_TRUE, 0, NULL, &nullspace);
 
     KSPCreate(PETSC_COMM_WORLD, &ksp);
     PetscFunctionReturn(0);
@@ -64,6 +67,8 @@ PetscErrorCode buildSolverMatCSRAndVec(const int *rowOffsets, const int *colIndi
     MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY);
     MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY);
 
+    MatSetNearNullSpace(A, nullspace);
+
     // fill in the b vector also
     for(i = 0; i < numRows; i++)
         rhsVals[i] = (PetscScalar)rhs[i];
@@ -86,7 +91,7 @@ PetscErrorCode initSolverParameters()
 {
     PetscFunctionBegin;
 
-    KSPSetOperators(ksp, A, A, DIFFERENT_NONZERO_PATTERN);
+    KSPSetOperators(ksp, A, A);
     KSPSetFromOptions(ksp);
 
     PetscFunctionReturn(0);
@@ -176,6 +181,8 @@ PetscErrorCode SolverFinalize()
     VecDestroy(&x);
     VecDestroy(&b);
     MatDestroy(&A);
+
+    MatNullSpaceDestroy(&nullspace);
 
     free(rhsVals);
     free(values); free(cols); free(rows);
