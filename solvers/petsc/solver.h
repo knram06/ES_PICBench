@@ -55,9 +55,25 @@ PetscErrorCode ComputeRHS(KSP ksp, Vec b, void* ctx)
 {
     PetscFunctionBeginUser;
     PetscInt numRows = *(PetscInt*)ctx;
-    PetscScalar *array;
+    PetscScalar ***array;
+    PetscInt i,j,k;
+    PetscInt xs, ys, zs, xm, ym, zm;
 
-    VecCreateSeqWithArray(PETSC_COMM_WORLD, 1, numRows, rhsVals, &b);
+    DMDAGetCorners(da, &xs, &ys, &zs, &xm, &ym, &zm);
+    DMDAVecGetArray(da, b, &array);
+    for(k = zs; k < zs+zm; k++)
+    {
+        for(j = ys; j < ys + ym; j++)
+        {
+            for(i = xs; i < xs+xm; i++)
+            {
+                array[k][j][i] = GRID_1D(rhsVals, i, j, k);
+            }
+        } // end of j loop
+    } // end of k loop
+    DMDAVecRestoreArray(da, b, &array);
+
+    //VecCreateSeqWithArray(PETSC_COMM_WORLD, 1, numRows, rhsVals, &b);
     VecAssemblyBegin(b);
     VecAssemblyEnd(b);
 
