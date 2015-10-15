@@ -41,12 +41,12 @@ PetscErrorCode ComputeMatrix(KSP ksp, Mat J, Mat A, void* ctx)
 
     // TODO: refine this approch later
     // Just use createseq to copy into local
-    //Mat temp;
+    Mat temp;
     // AVOID THIS! - repositions the array to a new location, not the previous location
-    //MatCreateSeqAIJWithArrays(PETSC_COMM_WORLD, numRows, numRows, rows, cols, values, &temp);
+    MatCreateSeqAIJWithArrays(PETSC_COMM_WORLD, numRows, numRows, rows, cols, values, &temp);
 
     // now copy this over into the relevant location
-    //MatDuplicate(temp, MAT_COPY_VALUES, &A);
+    //MatCopy(temp, A, DIFFERENT_NONZERO_PATTERN);
 
     // TODO: Use MatSetValue and set using the CSR format
     PetscInt i, j;
@@ -113,7 +113,7 @@ PetscErrorCode buildSolverMatCSRAndVec(const int *rowOffsets, const int *colIndi
             DM_BOUNDARY_NONE,
             numRows,
             1, // dof
-            7, // stencil width
+            1, // stencil width
             PETSC_NULL,
             &da
             );
@@ -173,7 +173,7 @@ PetscInt SolverLinSolve()
     //VecView(t, PETSC_VIEWER_STDOUT_SELF);
 
     KSPGetOperators(ksp, &m, NULL);
-    MatView(m, PETSC_VIEWER_STDOUT_SELF);
+    //MatView(m, PETSC_VIEWER_STDOUT_SELF);
 
     KSPGetIterationNumber(ksp, &it);
     KSPGetSolution(ksp, &x);
