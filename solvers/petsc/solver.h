@@ -38,13 +38,26 @@ PetscErrorCode SolverInitialize(int *argc, char ***argv)
 PetscErrorCode ComputeMatrix(KSP ksp, Mat J, Mat A, void* ctx)
 {
     PetscFunctionBeginUser;
-    // build up the matrix
-    MatCreateSeqAIJWithArrays(PETSC_COMM_WORLD, numRows, numRows, rows, cols, values, &A);
+
+    // TODO: refine this approch later
+    // Just use createseq to copy into local
+    //Mat temp;
+    // AVOID THIS! - repositions the array to a new location, not the previous location
+    //MatCreateSeqAIJWithArrays(PETSC_COMM_WORLD, numRows, numRows, rows, cols, values, &temp);
+
+    // now copy this over into the relevant location
+    //MatDuplicate(temp, MAT_COPY_VALUES, &A);
+
+    // TODO: Use MatSetValue and set using the CSR format
+    PetscInt i, j;
+    for(i = 0; i < numRows; i++)
+    {
+        for(j = rows[i]; j < rows[i+1]; j++)
+            MatSetValue(A, i, cols[j], values[j], INSERT_VALUES);
+    }
 
     MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY);
     MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY);
-
-    //MatView(A, PETSC_VIEWER_STDOUT_SELF);
 
     PetscFunctionReturn(0);
 
@@ -82,10 +95,17 @@ PetscErrorCode ComputeRHS(KSP ksp, Vec b, void* ctx)
 PetscErrorCode buildSolverMatCSRAndVec(const int *rowOffsets, const int *colIndices, const double *vals, const double *rhs, const int numberOfRows)
 {
     PetscFunctionBegin;
+
+    // update the global variable
     numRows = numberOfRows;
 
     // take the cube root to get the one side length
     //PetscInt nr = (PetscInt)round(pow(numRows, 1./3));
+
+    // the last entry in the rowOffsets will actually be the total nonzeros
+    // so just use that
+    const int totalNonZeros = rowOffsets[numRows]; // takes care of one off indexing
+    const int numRowsOffset = numRows+1;
 
     // create the DM object
     DMDACreate1d(
@@ -93,20 +113,15 @@ PetscErrorCode buildSolverMatCSRAndVec(const int *rowOffsets, const int *colIndi
             DM_BOUNDARY_NONE,
             numRows,
             1, // dof
-            1, // stencil width
+            7, // stencil width
             PETSC_NULL,
             &da
             );
-    DMDASetInterpolationType(da, DMDA_Q1);
+    //DMDASetInterpolationType(da, DMDA_Q1);
     KSPSetDM(ksp, da);
 
     KSPSetComputeRHS(ksp, ComputeRHS, NULL);
     KSPSetComputeOperators(ksp, ComputeMatrix, NULL);
-
-    // the last entry in the rowOffsets will actually be the total nonzeros
-    // so just use that
-    const int totalNonZeros = rowOffsets[numRows]; // takes care of one off indexing
-    const int numRowsOffset = numRows+1;
 
     //VecSetFromOptions(b);
 
@@ -147,8 +162,18 @@ PetscErrorCode initSolverParameters()
 PetscInt SolverLinSolve()
 {
     PetscFunctionBegin;
+
+    Vec t;
+    Mat m;
+
     PetscInt it;
     KSPSolve(ksp, NULL, NULL);
+
+    KSPGetRhs(ksp, &t);
+    //VecView(t, PETSC_VIEWER_STDOUT_SELF);
+
+    KSPGetOperators(ksp, &m, NULL);
+    MatView(m, PETSC_VIEWER_STDOUT_SELF);
 
     KSPGetIterationNumber(ksp, &it);
     KSPGetSolution(ksp, &x);
