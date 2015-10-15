@@ -38,9 +38,12 @@ PetscErrorCode SolverInitialize(int *argc, char ***argv)
 PetscErrorCode ComputeMatrix(KSP ksp, Mat J, Mat A, void* ctx)
 {
     PetscFunctionBeginUser;
-    PetscInt numRows = *(PetscInt*)ctx;
+
+    Mat temp;
     // build up the matrix
-    MatCreateSeqAIJWithArrays(PETSC_COMM_WORLD, numRows, numRows, rows, cols, values, &A);
+    MatCreateSeqAIJWithArrays(PETSC_COMM_WORLD, numRows, numRows, rows, cols, values, &temp);
+
+    MatCopy(temp, A, DIFFERENT_NONZERO_PATTERN); 
 
     MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY);
     MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY);
@@ -54,7 +57,6 @@ PetscErrorCode ComputeMatrix(KSP ksp, Mat J, Mat A, void* ctx)
 PetscErrorCode ComputeRHS(KSP ksp, Vec b, void* ctx)
 {
     PetscFunctionBeginUser;
-    PetscInt numRows = *(PetscInt*)ctx;
     PetscScalar ***array;
     PetscInt i,j,k;
     PetscInt xs, ys, zs, xm, ym, zm;
@@ -105,7 +107,7 @@ PetscErrorCode buildSolverMatCSRAndVec(const int *rowOffsets, const int *colIndi
             PETSC_NULL, PETSC_NULL, PETSC_NULL,
             &da
             );
-    DMDASetInterpolationType(da, DMDA_Q0);
+    //DMDASetInterpolationType(da, DMDA_Q0);
     KSPSetDM(ksp, da);
 
     KSPSetComputeRHS(ksp, ComputeRHS, (void*)&numRows);
@@ -157,6 +159,10 @@ PetscInt SolverLinSolve()
     PetscFunctionBegin;
     PetscInt it;
     KSPSolve(ksp, NULL, NULL);
+
+    Mat temp;
+    KSPGetOperators(ksp, &temp, NULL);
+    MatView(temp, PETSC_VIEWER_STDOUT_SELF);
 
     KSPGetIterationNumber(ksp, &it);
     //VecView(x, PETSC_VIEWER_STDOUT_WORLD);
