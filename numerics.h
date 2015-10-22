@@ -7,11 +7,11 @@ double single_step_solve(Node* grid, const int numNodes, const double sorOmega)
     double temp, norm = 0.;
 
     // iterate across all points
-    for (i = 1; i < numNodes - 1; i++)
+    for (k = 1; k < numNodes - 1; k++)
     {
         for(j = 1; j < numNodes - 1; j++)
         {
-            for(k = 1; k < numNodes - 1; k++)
+            for(i = 1; i < numNodes - 1; i++)
             {
                 temp = GRID_1D(grid, i, j, k).potential;
 
@@ -45,11 +45,11 @@ void calcElectricField(EField* ElectricField, double* grid, GridInfo* gInfo)
     const double multFactor = (-invSpacing / 2);
 
     // boundaries need to be handled separately
-    for(i = 0; i < numNodes; i++)
+    for(k = 0; k < numNodes; k++)
     {
-        bool isI_0 = (i == 0);
-        bool isI_LEN = (i == (numNodes - 1));
-        bool isI_0_OR_LEN = isI_0 || isI_LEN;
+        bool isK_0 =   (k == 0);
+        bool isK_LEN = (k == (numNodes - 1));
+        bool isK_0_OR_LEN = isK_0 || isK_LEN;
 
         for(j = 0; j < numNodes; j++)
         {
@@ -57,11 +57,11 @@ void calcElectricField(EField* ElectricField, double* grid, GridInfo* gInfo)
             bool isJ_LEN = (j == (numNodes - 1));
             bool isJ_0_OR_LEN = isJ_0 || isJ_LEN;
 
-            for(k = 0; k < numNodes; k++)
+            for(i = 0; i < numNodes; i++)
             {
-                bool isK_0 = (k == 0);
-                bool isK_LEN = (k == (numNodes - 1));
-                bool isK_0_OR_LEN = isK_0 || isK_LEN;
+                bool isI_0 =   (i == 0);
+                bool isI_LEN = (i == (numNodes - 1));
+                bool isI_0_OR_LEN = isI_0 || isI_LEN;
 
                 EField* elecField = &GRID_1D(ElectricField, i, j, k);
 

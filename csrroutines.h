@@ -76,11 +76,12 @@ void buildSparseMatAndRHSVec(int *rowOffsets, int *colIndices, double *vals,
     const int nonSelfCoeff = 1;
 
     int runningIndex = 0;
-    for(i = 0; i < numNodes; i++)
+    for(k = 0; k < numNodes; k++)
     {
-        bool isI_0 =   (i == 0);
-        bool isI_LEN = (i == (numNodes-1));
-        bool isI_0_OR_LEN = isI_0 || isI_LEN;
+        bool isK_0 =   (k == 0);
+        bool isK_LEN = (k == (numNodes-1));
+        bool isK_0_OR_LEN = isK_0 || isK_LEN;
+        const double z = k*spacing;
 
         for(j = 0; j < numNodes; j++)
         {
@@ -89,12 +90,11 @@ void buildSparseMatAndRHSVec(int *rowOffsets, int *colIndices, double *vals,
             bool isJ_0_OR_LEN = isJ_0 || isJ_LEN;
             const double y = j*spacing;
 
-            for(k = 0; k < numNodes; k++)
+            for(i = 0; i < numNodes; i++)
             {
-                bool isK_0 =   (k == 0);
-                bool isK_LEN = (k == (numNodes-1));
-                bool isK_0_OR_LEN = isK_0 || isK_LEN;
-                const double z = k*spacing;
+                bool isI_0 =   (i == 0);
+                bool isI_LEN = (i == (numNodes-1));
+                bool isI_0_OR_LEN = isI_0 || isI_LEN;
 
                 const int I = INDEX_1D(numNodes, i, j, k);
 

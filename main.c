@@ -13,7 +13,7 @@
 
 /*Macro for 3D to 1D indexing */
 //#define GRID_1D(grid, i, j, k) ( grid[(k) + NUM_NODES*(j) + NUM_NODES*NUM_NODES*(i) ] )
-#define INDEX_1D(n, i, j, k) ( (k) + (n)*(j) + (n)*(n)*(i) )
+#define INDEX_1D(n, i, j, k) ( (i) + (n)*(j) + (n)*(n)*(k) )
 #define GRID_1D(grid, i, j, k) (grid[ INDEX_1D(NUM_NODES, i, j, k) ] )
 
 /* geometry dimension */
@@ -23,7 +23,7 @@
 #define CAPILLARY_RADIUS (1.40625e-5)
 #define EXTRACTOR_INNER_RADIUS (9.375e-5)
 #define EXTRACTOR_OUTER_RADIUS (1.40625e-4)
-#define CAPILLARY_VOLTAGE 0.
+#define CAPILLARY_VOLTAGE -10.
 #define EXTRACTOR_VOLTAGE (-1350.)
 
 // timesteps info
@@ -164,7 +164,6 @@ int main(int argc, char **argv)
     SolverLinSolve();
     diff = clock() - start;
     double solveTime = diff/CLOCKS_PER_SEC;
-    return 0;
 
     // since rhs is the same size, just reuse that array
     getSolution(grid);
@@ -296,6 +295,7 @@ int main(int argc, char **argv)
     diff = clock() - start;
     double timeStepsTime = diff /CLOCKS_PER_SEC;
     writeOutputData("laplace.vtk", grid, ElectricField, &gridInfo);
+    return 0;
 
     // TEMP - remove later
     //resortParticles(domainParticles, totalParticlesCount);

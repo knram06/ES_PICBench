@@ -26,15 +26,15 @@ void writeOutputData(const char* fileName, const double *grid, const EField* ele
     //double* electricField   = malloc(3 * totalNodes * sizeof(double));
 
     int count = 0;
-    for(i = 0; i < numNodes; i++)
+    for(k = 0; k < numNodes; k++)
     {
-        double x = spacing * i;
+        double z = spacing * k;
         for(j = 0; j < numNodes; j++)
         {
             double y = spacing * j;
-            for(k = 0; k < numNodes; k++)
+            for(i = 0; i < numNodes; i++)
             {
-                double z = spacing * k;
+                double x = spacing * i;
                 fprintf(fileValues, "%10.8e %10.8e %10.8e\n", x, y, z);
             }
         }

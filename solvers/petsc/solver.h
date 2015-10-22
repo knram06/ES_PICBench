@@ -54,24 +54,24 @@ PetscErrorCode ComputeMatrix(KSP ksp, Mat jac, Mat A, MatStructure *stflg, void*
     {
         PetscInt tempI = I;
 
-        PetscInt ri = tempI / nrSq; tempI = tempI % nrSq;
+        PetscInt rk = tempI / nrSq; tempI = tempI % nrSq;
         PetscInt rj = tempI / nr;
-        PetscInt rk = tempI % nr;
+        PetscInt ri = tempI % nr;
 
-        row.i = rk; row.j = rj; row.k = ri;
+        row.i = ri; row.j = rj; row.k = rk;
 
         int count = 0;
         for(J = rows[I]; J < rows[I+1]; J++)
         {
             PetscInt tempJ = cols[J];
 
-            ri = tempJ / nrSq; tempJ = tempJ % nrSq;
+            rk = tempJ / nrSq; tempJ = tempJ % nrSq;
             rj = tempJ / nr;
-            rk = tempJ % nr;
+            ri = tempJ % nr;
 
-            col[count].i = rk;
+            col[count].i = ri;
             col[count].j = rj;
-            col[count].k = ri;
+            col[count].k = rk;
 
             v[count] = (PetscScalar)values[J];
             count++;
@@ -116,6 +116,8 @@ PetscErrorCode ComputeRHS(KSP ksp, Vec b, void* ctx)
     //VecCreateSeqWithArray(PETSC_COMM_WORLD, 1, numRows, rhsVals, &b);
     VecAssemblyBegin(b);
     VecAssemblyEnd(b);
+
+    //VecView(b, PETSC_VIEWER_STDOUT_SELF);
 
     // allocate the same storage for x
     VecDuplicate(b, &x);
