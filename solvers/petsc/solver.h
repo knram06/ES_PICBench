@@ -207,6 +207,7 @@ PetscInt SolverLinSolve()
     MatView(temp, PETSC_VIEWER_STDOUT_SELF);
 
     KSPGetIterationNumber(ksp, &it);
+    KSPGetSolution(ksp, &x);
     //VecView(x, PETSC_VIEWER_STDOUT_WORLD);
     return it;
 }
