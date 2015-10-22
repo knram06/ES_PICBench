@@ -120,66 +120,66 @@ void buildSparseMatAndRHSVec(int *rowOffsets, int *colIndices, double *vals,
                         if(isI_0)
                         {
                             // check if within capillary
-                            //if (rr <= capillaryRadius*capillaryRadius)
-                            //{
+                            if (rr <= capillaryRadius*capillaryRadius)
+                            {
                                 // if so impose Dirichlet
                                 cvals[elementsInserted].index = I;
                                 cvals[elementsInserted].val = 1;
                                 elementsInserted++;
 
                                 rhs[I] = CAPILLARY_VOLTAGE;
-                            //}
+                            }
                             // else impose Neumann
-                            //{
-                            //    // at point i,j,k
-                            //    cvals[elementsInserted].index = I;
-                            //    cvals[elementsInserted].val = 3;
-                            //    elementsInserted++;
+                            {
+                                // at point i,j,k
+                                cvals[elementsInserted].index = I;
+                                cvals[elementsInserted].val = 3;
+                                elementsInserted++;
 
-                            //    // at point i+1,j,k
-                            //    cvals[elementsInserted].index = INDEX_1D(numNodes, i+1, j, k);
-                            //    cvals[elementsInserted].val = -4;
-                            //    elementsInserted++;
+                                // at point i+1,j,k
+                                cvals[elementsInserted].index = INDEX_1D(numNodes, i+1, j, k);
+                                cvals[elementsInserted].val = -4;
+                                elementsInserted++;
 
-                            //    // at point i+2,j,k
-                            //    cvals[elementsInserted].index = INDEX_1D(numNodes, i+2, j, k);
-                            //    cvals[elementsInserted].val = 1;
-                            //    elementsInserted++;
-                            //}
+                                // at point i+2,j,k
+                                cvals[elementsInserted].index = INDEX_1D(numNodes, i+2, j, k);
+                                cvals[elementsInserted].val = 1;
+                                elementsInserted++;
+                            }
                         } // end of check for if X == 0 face
                         // else on Extractor face then
                         else
                         {
                             // if within Extractor
-                            //if((rr >= EXTRACTOR_INNER_RADIUS*EXTRACTOR_INNER_RADIUS)
-                            //                    &&
-                            //   (rr <= EXTRACTOR_OUTER_RADIUS*EXTRACTOR_OUTER_RADIUS))
-                            //{
+                            if((rr >= EXTRACTOR_INNER_RADIUS*EXTRACTOR_INNER_RADIUS)
+                                                &&
+                               (rr <= EXTRACTOR_OUTER_RADIUS*EXTRACTOR_OUTER_RADIUS))
+                            {
                                 // impose Dirichlet condition
                                 cvals[elementsInserted].index = I;
                                 cvals[elementsInserted].val = 1;
                                 elementsInserted++;
 
                                 rhs[I] = EXTRACTOR_VOLTAGE;
-                            //}
+                            }
                             // if outside the extractor
-                            //else
-                            //{
-                            //    // at point i-2,j,k
-                            //    cvals[elementsInserted].index = INDEX_1D(numNodes, i-2, j, k);
-                            //    cvals[elementsInserted].val = 1;
-                            //    elementsInserted++;
+                            else
+                            {
+                                // at point i-2,j,k
+                                cvals[elementsInserted].index = INDEX_1D(numNodes, i-2, j, k);
+                                cvals[elementsInserted].val = 1;
+                                elementsInserted++;
 
-                            //    // at point i-1,j,k
-                            //    cvals[elementsInserted].index = INDEX_1D(numNodes, i-1, j, k);
-                            //    cvals[elementsInserted].val = -4;
-                            //    elementsInserted++;
+                                // at point i-1,j,k
+                                cvals[elementsInserted].index = INDEX_1D(numNodes, i-1, j, k);
+                                cvals[elementsInserted].val = -4;
+                                elementsInserted++;
 
-                            //    // at point i,j,k
-                            //    cvals[elementsInserted].index = I;
-                            //    cvals[elementsInserted].val = 3;
-                            //    elementsInserted++;
-                            //}
+                                // at point i,j,k
+                                cvals[elementsInserted].index = I;
+                                cvals[elementsInserted].val = 3;
+                                elementsInserted++;
+                            }
                         } // end of else check - to check if on Extractor face
                     } // end of check, if on X-Faces
 

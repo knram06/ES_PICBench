@@ -147,7 +147,7 @@ PetscErrorCode buildSolverMatCSRAndVec(const int *rowOffsets, const int *colIndi
             PETSC_NULL, PETSC_NULL, PETSC_NULL,
             &da
             );
-    DMView(da, PETSC_VIEWER_STDOUT_SELF);
+    //DMView(da, PETSC_VIEWER_STDOUT_SELF);
     //DMDASetInterpolationType(da, DMDA_Q0);
     KSPSetDM(ksp, da);
 
@@ -202,9 +202,9 @@ PetscInt SolverLinSolve()
     PetscInt it;
     KSPSolve(ksp, NULL, NULL);
 
-    Mat temp;
-    KSPGetOperators(ksp, &temp, NULL, NULL);
-    MatView(temp, PETSC_VIEWER_STDOUT_SELF);
+    //Mat temp;
+    //KSPGetOperators(ksp, &temp, NULL, NULL);
+    //MatView(temp, PETSC_VIEWER_STDOUT_SELF);
 
     KSPGetIterationNumber(ksp, &it);
     KSPGetSolution(ksp, &x);
