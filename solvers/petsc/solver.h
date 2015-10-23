@@ -35,10 +35,10 @@ PetscErrorCode SolverInitialize(int *argc, char ***argv)
 
 #undef __FUNCT__
 #define __FUNCT__ "ComputeMatrix"
-PetscErrorCode ComputeMatrix(KSP ksp, Mat jac, Mat A, MatStructure *stflg, void* ctx)
+PetscErrorCode ComputeMatrix(KSP ksp, Mat jac, Mat A, void* ctx)
 {
     PetscFunctionBeginUser;
-    PetscInt I,J;
+    PetscInt i,j;
     PetscScalar v[7];
     MatStencil row, col[7];
 
@@ -50,9 +50,9 @@ PetscErrorCode ComputeMatrix(KSP ksp, Mat jac, Mat A, MatStructure *stflg, void*
     const int nr = (int)round(pow(numRows, 1./3));
     const int nrSq = nr*nr;
 
-    for(I = 0; I < numRows; I++)
+    for(i = 0; i < numRows; i++)
     {
-        PetscInt tempI = I;
+        PetscInt tempI = i;
 
         PetscInt rk = tempI / nrSq; tempI = tempI % nrSq;
         PetscInt rj = tempI / nr;
@@ -61,9 +61,9 @@ PetscErrorCode ComputeMatrix(KSP ksp, Mat jac, Mat A, MatStructure *stflg, void*
         row.i = ri; row.j = rj; row.k = rk;
 
         int count = 0;
-        for(J = rows[I]; J < rows[I+1]; J++)
+        for(j = rows[i]; j < rows[i+1]; j++)
         {
-            PetscInt tempJ = cols[J];
+            PetscInt tempJ = cols[j];
 
             rk = tempJ / nrSq; tempJ = tempJ % nrSq;
             rj = tempJ / nr;
@@ -73,7 +73,7 @@ PetscErrorCode ComputeMatrix(KSP ksp, Mat jac, Mat A, MatStructure *stflg, void*
             col[count].j = rj;
             col[count].k = rk;
 
-            v[count] = (PetscScalar)values[J];
+            v[count] = (PetscScalar)values[j];
             count++;
         } // end of J loop where rowwise non zeros are accumulated into v
 
@@ -82,7 +82,6 @@ PetscErrorCode ComputeMatrix(KSP ksp, Mat jac, Mat A, MatStructure *stflg, void*
 
     MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY);
     MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY);
-    *stflg = DIFFERENT_NONZERO_PATTERN;
 
     PetscFunctionReturn(0);
 
@@ -138,7 +137,7 @@ PetscErrorCode buildSolverMatCSRAndVec(const int *rowOffsets, const int *colIndi
 
     // create the DM object
     DMDACreate3d(
-            PETSC_COMM_WORLD, DMDA_BOUNDARY_NONE, DMDA_BOUNDARY_NONE, DMDA_BOUNDARY_NONE,
+            PETSC_COMM_WORLD, DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DM_BOUNDARY_NONE,
             DMDA_STENCIL_STAR,
             nr, nr, nr,
             PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE,
