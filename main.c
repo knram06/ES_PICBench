@@ -9,7 +9,7 @@
 #include <time.h>
 
 #define GRID_LENGTH (3e-4)
-#define NUM_NODES 41
+#define NUM_NODES 61
 
 /*Macro for 3D to 1D indexing */
 //#define GRID_1D(grid, i, j, k) ( grid[(k) + NUM_NODES*(j) + NUM_NODES*NUM_NODES*(i) ] )
@@ -23,7 +23,7 @@
 #define CAPILLARY_RADIUS (1.40625e-5)
 #define EXTRACTOR_INNER_RADIUS (9.375e-5)
 #define EXTRACTOR_OUTER_RADIUS (1.40625e-4)
-#define CAPILLARY_VOLTAGE -10.
+#define CAPILLARY_VOLTAGE 0.
 #define EXTRACTOR_VOLTAGE (-1350.)
 
 // timesteps info

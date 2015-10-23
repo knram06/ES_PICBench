@@ -144,6 +144,8 @@ int updateChargeFractions(
         int j;
         for(j = 0; j < 8; j++)
         {
+            const double wf = weightFactors[j];
+
             ti = indices[j][0];
             tj = indices[j][1];
             tk = indices[j][2];
@@ -167,7 +169,7 @@ int updateChargeFractions(
                     searchIndex = searchIndex % validNodesNumber;
                     if(chargeFractionIndices[searchIndex] == pos)
                     {
-                        chargeFractionList[searchIndex] += p->charge * multFactor;
+                        chargeFractionList[searchIndex] += wf * p->charge * multFactor;
                         break;
                     }
                     searchIndex++;
@@ -177,7 +179,7 @@ int updateChargeFractions(
                 if(k == validNodesNumber)
                 {
                     chargeFractionIndices[validNodesNumber] = pos;
-                    chargeFractionList[validNodesNumber] = p->charge * multFactor;
+                    chargeFractionList[validNodesNumber] = wf * p->charge * multFactor;
                     validNodesNumber++;
                 }
             } // end of if check for indices within valid limits

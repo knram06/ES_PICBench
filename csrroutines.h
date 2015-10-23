@@ -120,66 +120,66 @@ void buildSparseMatAndRHSVec(int *rowOffsets, int *colIndices, double *vals,
                         if(isI_0)
                         {
                             // check if within capillary
-                            if (rr <= capillaryRadius*capillaryRadius)
-                            {
+                            //if (rr <= capillaryRadius*capillaryRadius)
+                            //{
                                 // if so impose Dirichlet
                                 cvals[elementsInserted].index = I;
                                 cvals[elementsInserted].val = 1;
                                 elementsInserted++;
 
                                 rhs[I] = CAPILLARY_VOLTAGE;
-                            }
+                            //}
                             // else impose Neumann
-                            {
-                                // at point i,j,k
-                                cvals[elementsInserted].index = I;
-                                cvals[elementsInserted].val = 3;
-                                elementsInserted++;
+                            //{
+                            //    // at point i,j,k
+                            //    cvals[elementsInserted].index = I;
+                            //    cvals[elementsInserted].val = 1;
+                            //    elementsInserted++;
 
-                                // at point i+1,j,k
-                                cvals[elementsInserted].index = INDEX_1D(numNodes, i+1, j, k);
-                                cvals[elementsInserted].val = -4;
-                                elementsInserted++;
+                            //    // at point i+1,j,k
+                            //    cvals[elementsInserted].index = INDEX_1D(numNodes, i+1, j, k);
+                            //    cvals[elementsInserted].val = -1;
+                            //    elementsInserted++;
 
-                                // at point i+2,j,k
-                                cvals[elementsInserted].index = INDEX_1D(numNodes, i+2, j, k);
-                                cvals[elementsInserted].val = 1;
-                                elementsInserted++;
-                            }
+                            //    // at point i+2,j,k
+                            //    //cvals[elementsInserted].index = INDEX_1D(numNodes, i+2, j, k);
+                            //    //cvals[elementsInserted].val = 1;
+                            //    //elementsInserted++;
+                            //}
                         } // end of check for if X == 0 face
                         // else on Extractor face then
                         else
                         {
                             // if within Extractor
-                            if((rr >= EXTRACTOR_INNER_RADIUS*EXTRACTOR_INNER_RADIUS)
-                                                &&
-                               (rr <= EXTRACTOR_OUTER_RADIUS*EXTRACTOR_OUTER_RADIUS))
-                            {
+                            //if((rr >= EXTRACTOR_INNER_RADIUS*EXTRACTOR_INNER_RADIUS)
+                            //                    &&
+                            //   (rr <= EXTRACTOR_OUTER_RADIUS*EXTRACTOR_OUTER_RADIUS))
+                            //{
                                 // impose Dirichlet condition
                                 cvals[elementsInserted].index = I;
                                 cvals[elementsInserted].val = 1;
                                 elementsInserted++;
 
                                 rhs[I] = EXTRACTOR_VOLTAGE;
-                            }
+                            //}
                             // if outside the extractor
-                            else
-                            {
-                                // at point i-2,j,k
-                                cvals[elementsInserted].index = INDEX_1D(numNodes, i-2, j, k);
-                                cvals[elementsInserted].val = 1;
-                                elementsInserted++;
+                            //else
+                            //{
+                            //    // at point i-2,j,k
+                            //    //cvals[elementsInserted].index = INDEX_1D(numNodes, i-2, j, k);
+                            //    //cvals[elementsInserted].val = 1;
+                            //    //elementsInserted++;
 
-                                // at point i-1,j,k
-                                cvals[elementsInserted].index = INDEX_1D(numNodes, i-1, j, k);
-                                cvals[elementsInserted].val = -4;
-                                elementsInserted++;
+                            //    // at point i-1,j,k
+                            //    cvals[elementsInserted].index = INDEX_1D(numNodes, i-1, j, k);
+                            //    cvals[elementsInserted].val = -1;
+                            //    elementsInserted++;
 
-                                // at point i,j,k
-                                cvals[elementsInserted].index = I;
-                                cvals[elementsInserted].val = 3;
-                                elementsInserted++;
-                            }
+                            //    // at point i,j,k
+                            //    cvals[elementsInserted].index = I;
+                            //    cvals[elementsInserted].val = 1;
+                            //    elementsInserted++;
+                            //}
                         } // end of else check - to check if on Extractor face
                     } // end of check, if on X-Faces
 
@@ -194,71 +194,71 @@ void buildSparseMatAndRHSVec(int *rowOffsets, int *colIndices, double *vals,
                         {
                             // at point i,j,k
                             cvals[elementsInserted].index = I;
-                            cvals[elementsInserted].val = 3;
+                            cvals[elementsInserted].val = 1;
                             elementsInserted++;
 
                             // at point i,j+1,k
                             cvals[elementsInserted].index = INDEX_1D(numNodes, i, j+1, k);
-                            cvals[elementsInserted].val = -4;
+                            cvals[elementsInserted].val = -1;
                             elementsInserted++;
 
                             // at point i,j+2,k
-                            cvals[elementsInserted].index = INDEX_1D(numNodes, i, j+2, k);
-                            cvals[elementsInserted].val = 1;
-                            elementsInserted++;
+                            //cvals[elementsInserted].index = INDEX_1D(numNodes, i, j+2, k);
+                            //cvals[elementsInserted].val = 1;
+                            //elementsInserted++;
                         }
                         else if(isJ_LEN)
                         {
                             // at point i,j-2,k
-                            cvals[elementsInserted].index = INDEX_1D(numNodes, i, j-2, k);
-                            cvals[elementsInserted].val = 1;
-                            elementsInserted++;
+                            //cvals[elementsInserted].index = INDEX_1D(numNodes, i, j-2, k);
+                            //cvals[elementsInserted].val = 1;
+                            //elementsInserted++;
 
                             // at point i,j-1,k
                             cvals[elementsInserted].index = INDEX_1D(numNodes, i, j-1, k);
-                            cvals[elementsInserted].val = -4;
+                            cvals[elementsInserted].val = -1;
                             elementsInserted++;
 
                             // at point i,j,k
                             cvals[elementsInserted].index = I;
-                            cvals[elementsInserted].val = 3;
+                            cvals[elementsInserted].val = 1;
                             elementsInserted++;
                         }
+                        // if on K = 0 or K = LEN boundaries
                         if(isK_0)
                         {
                             // at point i,j,k
                             cvals[elementsInserted].index = I;
-                            cvals[elementsInserted].val = 3;
+                            cvals[elementsInserted].val = 1;
                             elementsInserted++;
 
                             // at point i,j,k+1
                             cvals[elementsInserted].index = INDEX_1D(numNodes, i, j, k+1);
-                            cvals[elementsInserted].val = -4;
+                            cvals[elementsInserted].val = -1;
                             elementsInserted++;
 
                             // at point i,j,k+2
-                            cvals[elementsInserted].index = INDEX_1D(numNodes, i, j, k+2);
-                            cvals[elementsInserted].val = 1;
-                            elementsInserted++;
+                            //cvals[elementsInserted].index = INDEX_1D(numNodes, i, j, k+2);
+                            //cvals[elementsInserted].val = 1;
+                            //elementsInserted++;
                         }
                         else if(isK_LEN)
                         {
                             // at point i,j,k-2
-                            cvals[elementsInserted].index = INDEX_1D(numNodes, i, j, k-2);
-                            cvals[elementsInserted].val = 1;
-                            elementsInserted++;
+                            //cvals[elementsInserted].index = INDEX_1D(numNodes, i, j, k-2);
+                            //cvals[elementsInserted].val = 1;
+                            //elementsInserted++;
 
                             // at point i,j,k-1
                             cvals[elementsInserted].index = INDEX_1D(numNodes, i, j, k-1);
-                            cvals[elementsInserted].val = -4;
+                            cvals[elementsInserted].val = -1;
                             elementsInserted++;
 
                             // at point i,j,k
                             cvals[elementsInserted].index = I;
-                            cvals[elementsInserted].val = 3;
+                            cvals[elementsInserted].val = 1;
                             elementsInserted++;
                         }
-                        // if on K = 0 or K = LEN boundaries
                     } // end of else check, i.e. if node is on Neumann boundaries
                 } // end of if check, i.e. if node is on any boundary
 

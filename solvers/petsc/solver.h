@@ -143,12 +143,13 @@ PetscErrorCode buildSolverMatCSRAndVec(const int *rowOffsets, const int *colIndi
             nr, nr, nr,
             PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE,
             1, // dof
-            2, // stencil width
+            1, // stencil width
             PETSC_NULL, PETSC_NULL, PETSC_NULL,
             &da
             );
+    DMDASetUniformCoordinates(da, 0, GRID_LENGTH, 0, GRID_LENGTH, 0, GRID_LENGTH);
     //DMView(da, PETSC_VIEWER_STDOUT_SELF);
-    //DMDASetInterpolationType(da, DMDA_Q0);
+    //DMDASetInterpolationType(da, DMDA_Q1);
     KSPSetDM(ksp, da);
 
     KSPSetComputeRHS(ksp, ComputeRHS, (void*)&numRows);
@@ -202,18 +203,25 @@ PetscInt SolverLinSolve()
     PetscInt it;
     KSPSolve(ksp, NULL, NULL);
 
+    //printf("Mat: \n");
     //Mat temp;
     //KSPGetOperators(ksp, &temp, NULL, NULL);
     //MatView(temp, PETSC_VIEWER_STDOUT_SELF);
 
     KSPGetIterationNumber(ksp, &it);
+    //printf("solution: \n");
     KSPGetSolution(ksp, &x);
     //VecView(x, PETSC_VIEWER_STDOUT_WORLD);
+
+    //Vec b;
+    //printf("rhs: \n");
+    //KSPGetRhs(ksp, &b);
+    //VecView(b, PETSC_VIEWER_STDOUT_WORLD);
     return it;
 }
 
 
-//// TODO: optimize these calls?
+//// TODO: optimize these calls? SEEMS wrong too!!
 //// seems inefficient
 //#undef __FUNCT__
 //#define __FUNCT__ "updateRHS"
