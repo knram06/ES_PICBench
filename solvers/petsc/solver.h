@@ -90,6 +90,8 @@ PetscErrorCode ComputeMatrix(KSP ksp, Mat J,Mat jac, void *ctx)
                         {
                             if( rr > capillaryRadius*capillaryRadius)
                             {
+                                //v[num]   = -HyHzdHx;
+                                //v[num]   = -Hx*Hy*Hz;
                                 v[num]   = -1;
                                 col[num].i = i+1;
                                 col[num].j = j;
@@ -104,6 +106,8 @@ PetscErrorCode ComputeMatrix(KSP ksp, Mat J,Mat jac, void *ctx)
                                     ||
                                     (rr > extractorOuter*extractorOuter))
                             {
+                                //v[num]   = -HyHzdHx;
+                                //v[num]   = -Hx*Hy*Hz;
                                 v[num]   = -1;
                                 col[num].i = i-1;
                                 col[num].j = j;
@@ -113,6 +117,8 @@ PetscErrorCode ComputeMatrix(KSP ksp, Mat J,Mat jac, void *ctx)
                             }
                         }
 
+                        //v[num] = HyHzdHx;
+                        //v[num] = Hx*Hy*Hz;
                         v[num] = 1;
                         col[num].i = i;
                         col[num].j = j;
@@ -125,6 +131,7 @@ PetscErrorCode ComputeMatrix(KSP ksp, Mat J,Mat jac, void *ctx)
                     else
                     {
                         if (k == mz-1) {
+                            //v[num]     = -HxHydHz;
                             v[num]     = -1;
                             col[num].i = i;
                             col[num].j = j;
@@ -132,6 +139,7 @@ PetscErrorCode ComputeMatrix(KSP ksp, Mat J,Mat jac, void *ctx)
                             num++; numk++;
                         }
                         else if (k == 0) {
+                            //v[num]     = -HxHydHz;
                             v[num]     = -1;
                             col[num].i = i;
                             col[num].j = j;
@@ -140,6 +148,7 @@ PetscErrorCode ComputeMatrix(KSP ksp, Mat J,Mat jac, void *ctx)
                         }
 
                         if (j == my-1) {
+                            //v[num]     = -HxHzdHy;
                             v[num]     = -1;
                             col[num].i = i;
                             col[num].j = j-1;
@@ -147,6 +156,7 @@ PetscErrorCode ComputeMatrix(KSP ksp, Mat J,Mat jac, void *ctx)
                             num++; numj++;
                         }
                         else if (j == 0) {
+                            //v[num]     = -HxHzdHy;
                             v[num]     = -1;
                             col[num].i = i;
                             col[num].j = j+1;
