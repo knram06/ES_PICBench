@@ -121,36 +121,37 @@ PetscErrorCode ComputeMatrix(KSP ksp, Mat J,Mat jac, void *ctx)
                         MatSetValuesStencil(jac, 1, &row, num, col, v, INSERT_VALUES);
                     } // end of if on X-Faces check
 
+                    // if on other boundary faces
                     else
                     {
-                        if (k!=0) {
+                        if (k == mz-1) {
                             v[num]     = -1;
                             col[num].i = i;
                             col[num].j = j;
                             col[num].k = k-1;
                             num++; numk++;
                         }
-                        if (j!=0) {
+                        else if (k == 0) {
+                            v[num]     = -1;
+                            col[num].i = i;
+                            col[num].j = j;
+                            col[num].k = k+1;
+                            num++; numk++;
+                        }
+
+                        if (j == my-1) {
                             v[num]     = -1;
                             col[num].i = i;
                             col[num].j = j-1;
                             col[num].k = k;
                             num++; numj++;
                         }
-
-                        if (j!=my-1) {
+                        else if (j == 0) {
                             v[num]     = -1;
                             col[num].i = i;
                             col[num].j = j+1;
                             col[num].k = k;
                             num++; numj++;
-                        }
-                        if (k!=mz-1) {
-                            v[num]     = -1;
-                            col[num].i = i;
-                            col[num].j = j;
-                            col[num].k = k+1;
-                            num++; numk++;
                         }
                         //v[num]     = (PetscReal)(numk)*HxHydHz + (PetscReal)(numj)*HxHzdHy + (PetscReal)(numi)*HyHzdHx;
                         v[num]     = (PetscReal)(numk) + (PetscReal)(numj) + (PetscReal)(numi);
@@ -316,22 +317,63 @@ PetscErrorCode ComputeRHS(KSP ksp, Vec b, void* ctx)
     PetscFunctionBeginUser;
     PetscScalar ***array;
     DM dm;
-    PetscInt i,j,k;
+    PetscInt i,j,k, mx, my, mz;
     PetscInt xs, ys, zs, xm, ym, zm;
+    PetscScalar Hx, Hy, Hz;
 
     KSPGetDM(ksp, &dm);
+    DMDAGetInfo(da,0,&mx,&my,&mz,0,0,0,0,0,0,0,0,0);
+    Hx      = GRID_LENGTH / (PetscReal)(mx-1);
+    Hy      = GRID_LENGTH / (PetscReal)(my-1);
+    Hz      = GRID_LENGTH / (PetscReal)(mz-1);
+
+    const double center[2]       = {GRID_LENGTH / 2., GRID_LENGTH / 2.};
+    const double capillaryRadius = CAPILLARY_RADIUS;
+
+    // extractor dimensions
+    const double extractorInner  = EXTRACTOR_INNER_RADIUS;
+    const double extractorOuter  = EXTRACTOR_OUTER_RADIUS;
+
     DMDAGetCorners(dm, &xs, &ys, &zs, &xm, &ym, &zm);
     DMDAVecGetArray(dm, b, &array);
-    for(k = zs; k < zs+zm; k++)
+
+    for (k=zs; k<zs+zm; k++)
     {
-        for(j = ys; j < ys + ym; j++)
+        PetscScalar z = k*Hz;
+        for (j=ys; j<ys+ym; j++)
         {
-            for(i = xs; i < xs+xm; i++)
+            PetscScalar y = j*Hy;
+            for (i=xs; i<xs+xm; i++)
             {
-                array[k][j][i] = GRID_1D(rhsVals, i, j, k);
-            }
+                // supply a default
+                array[k][j][i] = 0;
+
+                // if on boundary points
+                if( i == 0 || i == mx-1 )
+                {
+                    PetscScalar ty = y - center[0];
+                    PetscScalar tz = z - center[1];
+
+                    PetscScalar rr = ty*ty + tz*tz;
+
+                    if(i==0)
+                    {
+                        if( rr <= capillaryRadius*capillaryRadius)
+                            array[k][j][i] = CAPILLARY_VOLTAGE;
+                    }
+                    else if (i == mx-1)
+                    {
+                        if( (rr >= extractorInner*extractorInner)
+                                &&
+                            (rr <= extractorOuter*extractorOuter) )
+                            array[k][j][i] = EXTRACTOR_VOLTAGE;
+                    }
+
+                } // end of if on X-Faces check
+            } // end of i loop
         } // end of j loop
     } // end of k loop
+
     DMDAVecRestoreArray(dm, b, &array);
 
     //VecCreateSeqWithArray(PETSC_COMM_WORLD, 1, numRows, rhsVals, &b);
@@ -423,10 +465,10 @@ PetscInt SolverLinSolve()
     PetscInt it;
     KSPSolve(ksp, NULL, NULL);
 
-    printf("Mat: \n");
-    Mat temp;
-    KSPGetOperators(ksp, &temp, NULL);
-    MatView(temp, PETSC_VIEWER_STDOUT_SELF);
+    //printf("Mat: \n");
+    //Mat temp;
+    //KSPGetOperators(ksp, &temp, NULL);
+    //MatView(temp, PETSC_VIEWER_STDOUT_SELF);
 
     KSPGetIterationNumber(ksp, &it);
     //printf("solution: \n");
