@@ -164,6 +164,7 @@ int main(int argc, char **argv)
     SolverLinSolve();
     diff = clock() - start;
     double solveTime = diff/CLOCKS_PER_SEC;
+    printf("Solver time taken: %lf\n", solveTime);
 
     // since rhs is the same size, just reuse that array
     getSolution(grid);
