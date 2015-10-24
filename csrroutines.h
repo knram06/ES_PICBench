@@ -72,8 +72,8 @@ void buildSparseMatAndRHSVec(int *rowOffsets, int *colIndices, double *vals,
     // for convenient indexing
     int *rowPtr = &rowOffsets[1];
 
-    const int selfCoeff = -6;
-    const int nonSelfCoeff = 1;
+    const int selfCoeff = 6;
+    const int nonSelfCoeff = -1;
 
     int runningIndex = 0;
     for(k = 0; k < numNodes; k++)
