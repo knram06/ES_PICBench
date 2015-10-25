@@ -453,4 +453,15 @@ PetscErrorCode SolverFinalize()
     PetscFunctionReturn(0);
 }
 
+#undef __FUNCT__
+#define __FUNCT__
+PetscErrorCode SolverWriteVTK(const char* filename)
+{
+    PetscViewer viewer;
+    PetscViewerVTKOpen(PETSC_COMM_WORLD, filename, FILE_MODE_WRITE, &viewer);
+    VecView(x, viewer);
+    PetscViewerDestroy(&viewer);
+    PetscFunctionReturn(0);
+}
+
 #endif

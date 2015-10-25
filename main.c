@@ -9,7 +9,7 @@
 #include <time.h>
 
 #define GRID_LENGTH (3e-4)
-#define NUM_NODES 101
+#define NUM_NODES 3
 
 /*Macro for 3D to 1D indexing */
 //#define GRID_1D(grid, i, j, k) ( grid[(k) + NUM_NODES*(j) + NUM_NODES*NUM_NODES*(i) ] )
@@ -295,7 +295,8 @@ int main(int argc, char **argv)
 
     diff = clock() - start;
     double timeStepsTime = diff /CLOCKS_PER_SEC;
-    writeOutputData("laplace.vtk", grid, ElectricField, &gridInfo);
+    SolverWriteVTK("laplace.vts");
+    //writeOutputData("laplace.vtk", grid, ElectricField, &gridInfo);
     return 0;
 
     // TEMP - remove later
