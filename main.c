@@ -9,7 +9,7 @@
 #include <time.h>
 
 #define GRID_LENGTH (3e-4)
-#define NUM_NODES 101
+//#define NUM_NODES 101
 
 /*Macro for 3D to 1D indexing */
 //#define GRID_1D(grid, i, j, k) ( grid[(k) + NUM_NODES*(j) + NUM_NODES*NUM_NODES*(i) ] )
@@ -86,13 +86,13 @@ typedef struct
 } GridInfo;
 
 #include "utilities.h"
-#include "preprocess.h"
-#include "csrroutines.h"
-#include "particleFns.h"
-#include "numerics.h"
-#include "postprocess.h"
+//#include "preprocess.h"
+//#include "csrroutines.h"
+//#include "particleFns.h"
+//#include "numerics.h"
+//#include "postprocess.h"
 
-//#include "solvers/petsc/solver.h"
+#include "solvers/multigrid/mg_3d.h"
 
 void allocateEField(EField** grid, GridInfo* gInfo)
 {
@@ -118,13 +118,19 @@ int main(int argc, char **argv)
         return EXIT_FAILURE;
     }
 
-    //SolverInitialize(&argc, &argv);
+    SolverInitialize(argc, argv);
 
     // count the number of lines in the input file
     // so that we can preallocate later
     unsigned int particleCount = countLinesInFile(fp);
     printf("Number of lines read was %d.\n", particleCount);
 
+    // allocate the grid
+    double* grid = NULL;
+    int finestGridNum = SolverGetFineGridPointerAndNum(&grid);
+    return 0;
+
+    /*
     // fill in GridInfo data
     GridInfo gridInfo;
     gridInfo.numNodes = NUM_NODES;
@@ -135,24 +141,9 @@ int main(int argc, char **argv)
     // make sure we don't exceed int limits?
     assert(gridInfo.totalNodes < INT_MAX);
 
-    // allocate the grid
-    double* grid = NULL;
     allocateGrid(&grid, &gridInfo);
 
-    // build the sparse form for the matrices
-    //const int maxNonZerosPerRow = 7;
-    //MatCSR mcsr;
-    //allocCSRForm(&mcsr, gridInfo.totalNodes, maxNonZerosPerRow);
-
-    //// build the vector b
-    //buildSparseMatAndRHSVec(mcsr.rowOffsets, mcsr.colIndices, mcsr.mat, rhs, &gridInfo);
-
-
-    //// send to Solver
-    //buildSolverMatCSRAndVec(mcsr.rowOffsets, mcsr.colIndices, mcsr.mat, rhs, mcsr.numRows); 
-    ////writeSparseMatRowColForm("mat_A.txt", &mcsr, true);
-
-    //// initialize solver parameters
+    // initialize solver parameters
     //initSolverParameters();
 
     //clock_t start, diff;
@@ -234,11 +225,10 @@ int main(int argc, char **argv)
     Nrel = (int)(temp);
     runningNfrac = Nfrac;
 
-    /*! Array to keep track of lost particles
-     * The idea behind is that, particles may leave the domain and this is an index
-     * of such particles.
-     * Using this, new particles can be inserted into those locations appropriately.
-     */
+    // Array to keep track of lost particles
+    //The idea behind is that, particles may leave the domain and this is an index
+    //of such particles.
+    //Using this, new particles can be inserted into those locations appropriately.
     int* lostParticles = malloc( (Nrel + LOST_PARTICLES_MARGIN) * sizeof(int) );
     int lostParticleBound = -1;
 
@@ -294,11 +284,13 @@ int main(int argc, char **argv)
 
     // TEMP - remove later
     resortParticles(domainParticles, totalParticlesCount);
+    */
     /*********************************************/
     /***********POISSON SOLVER********************/
     /*********************************************/
     //double *rhs = malloc(sizeof(double) * 8 * totalParticlesCount);
     //int *rhsIndices = malloc(sizeof(int) * 8 * totalParticlesCount);
+    /*
     ColVal *indVals = malloc(sizeof(ColVal) * 8 * totalParticlesCount);
 
     //FILE *iterData = fopen("iter_data.txt", "w");
@@ -395,6 +387,7 @@ int main(int argc, char **argv)
     deallocEField(&ElectricField);
     deallocGrid(&grid);
     free(MD_data);
+    */
 
     return 0;
 }
