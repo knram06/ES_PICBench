@@ -86,7 +86,7 @@ typedef struct
 } GridInfo;
 
 #include "utilities.h"
-//#include "preprocess.h"
+#include "preprocess.h"
 //#include "csrroutines.h"
 //#include "particleFns.h"
 //#include "numerics.h"
@@ -127,33 +127,10 @@ int main(int argc, char **argv)
 
     // allocate the grid
     double* grid = NULL;
-    int finestGridNum = SolverGetFineGridPointerAndNum(&grid);
-    return 0;
+    double h;
+    int finestGridNum = SolverGetDetails(&grid, &h);
 
-    /*
-    // fill in GridInfo data
-    GridInfo gridInfo;
-    gridInfo.numNodes = NUM_NODES;
-    gridInfo.totalNodes = gridInfo.numNodes * gridInfo.numNodes * gridInfo.numNodes;
-    gridInfo.spacing = GRID_LENGTH / (NUM_NODES - 1);
-    gridInfo.invSpacing = 1./(gridInfo.spacing);        // just caching this to avoid divisions?
-
-    // make sure we don't exceed int limits?
-    assert(gridInfo.totalNodes < INT_MAX);
-
-    allocateGrid(&grid, &gridInfo);
-
-    // initialize solver parameters
-    //initSolverParameters();
-
-    //clock_t start, diff;
-    //start = clock();
-    //SolverLinSolve();
-    //diff = clock() - start;
-    //double solveTime = diff/CLOCKS_PER_SEC;
-
-    //// since rhs is the same size, just reuse that array
-    //getSolution(grid);
+    SolverSetupBoundaryConditions();
 
     // now preallocate the particles data array
     Particle* MD_data = malloc(particleCount * sizeof(Particle));
@@ -163,39 +140,30 @@ int main(int argc, char **argv)
     parseMDFileToParticles(MD_data, fp);
     fclose(fp);
 
+    // TODO: Uncomment and fix this
     EField* ElectricField = NULL;
-    allocateEField(&ElectricField, &gridInfo);
+    //allocateEField(&ElectricField, &gridInfo);
 
-    // preallocate NeumannBC nodes in terms of MAX possible
-    // i.e. num of sides of cube * num nodes per side
-    BoundaryNode *bNodes = malloc( 6 * (NUM_NODES)*(NUM_NODES) * sizeof(BoundaryNode) );
+    //// preallocate NeumannBC nodes in terms of MAX possible
+    //// i.e. num of sides of cube * num nodes per side
+    //BoundaryNode *bNodes = malloc( 6 * (NUM_NODES)*(NUM_NODES) * sizeof(BoundaryNode) );
 
-    // calculate the actual BoundaryNodes count and resize the array to that instead
-    // to avoid wastage
-    printf("Consolidating Neumann BC nodes into a different structure....");
-    // setup boundary conditions
-    int nodeCount = setupBoundaryConditions(grid, &gridInfo, bNodes);
+    //// calculate the actual BoundaryNodes count and resize the array to that instead
+    //// to avoid wastage
+    //printf("Consolidating Neumann BC nodes into a different structure....");
+    //// setup boundary conditions
+    //int nodeCount = setupBoundaryConditions(grid, &gridInfo, bNodes);
 
-    bNodes = realloc(bNodes, nodeCount * sizeof(BoundaryNode));
-    printf("done\n");
+    //bNodes = realloc(bNodes, nodeCount * sizeof(BoundaryNode));
+    //printf("done\n");
 
-    // enforce boundary conditions
-    // impose Neumann BCs
     // solve and at each step, impose Neumann BCs?
-    double tolerance = 1e-9, sorOmega = 1.9;
-    double norm = 100.;
+    double norm = 100., tolerance = 1e-6;
 
-    clock_t start, diff;
-    int iterCount = 1;
-    //while(norm >= tolerance)
-    start = clock();
-    for(iterCount = 1; norm >= tolerance; iterCount++)
+    int iterCount;
+    for(iterCount = 1; norm >= tolerance*tolerance; iterCount++)
     {
-        norm = sqrt(single_step_solve(grid, gridInfo.numNodes, sorOmega));
-
-        // TODO: norm should be updated with this calculation no?
-        // as it changes the values in the grid?
-        enforceNeumannBC(bNodes, nodeCount);
+        norm = SolverLinSolve();
 
         if(!(iterCount % ITER_HEADER_INTERVAL))
             printf("%10s %20s\n", "Iter_Count", "Norm");
@@ -204,9 +172,9 @@ int main(int argc, char **argv)
             printf("%10d %20.8e\n", iterCount, norm);
 
     }
-    diff = clock() - start;
-    double solveTime = diff /CLOCKS_PER_SEC;
+    return 0;
 
+    /*
     printf("\nCalculating Electric Field.....");
     calcElectricField(ElectricField, grid, &gridInfo);
     printf("done\n");
