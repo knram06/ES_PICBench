@@ -295,7 +295,7 @@ int main(int argc, char **argv)
 
     diff = clock() - start;
     double timeStepsTime = diff /CLOCKS_PER_SEC;
-    SolverWriteVTK("laplace.vts");
+    //SolverWriteVTK("laplace.vts");
     //writeOutputData("laplace.vtk", grid, ElectricField, &gridInfo);
     return 0;
 
