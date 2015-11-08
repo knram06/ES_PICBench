@@ -159,9 +159,11 @@ int main(int argc, char **argv)
 
     // solve and at each step, impose Neumann BCs?
     double norm = 100., tolerance = 1e-6;
+    double cmpNorm = SolverGetResidual() * tolerance*tolerance;
 
+    SolverResetTimingInfo();
     int iterCount;
-    for(iterCount = 1; norm >= tolerance*tolerance; iterCount++)
+    for(iterCount = 0; norm >= cmpNorm; iterCount++)
     {
         norm = SolverLinSolve();
 
@@ -170,8 +172,9 @@ int main(int argc, char **argv)
 
         if(!(iterCount % ITER_INTERVAL) )
             printf("%10d %20.8e\n", iterCount, norm);
-
     }
+    printf("%10d %20.8e\n", iterCount, norm);
+    SolverPrintTimingInfo();
     return 0;
 
     /*

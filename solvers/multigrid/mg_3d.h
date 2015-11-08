@@ -15,23 +15,6 @@ double **u, **d;
 double *A; // coarsest level matrix
 double spacing;  // spacing
 
-void SolverInitialize(int argc, char **argv)
-{
-    if(argc != 4)
-    {
-        printf("Usage: %s <coarse grid points on one side> <number of levels> <gauss seidel iterations>\n", argv[0]);
-        exit(1);
-    }
-
-    // parse the passed in options
-    coarseGridNum = atoi(argv[1]);
-    numLevels = atoi(argv[2]);
-    gsIterNum = atoi(argv[3]);
-
-    // allocate the timing object
-    allocTimingInfo(&tInfo, NUM_STAGES, numLevels);
-}
-
 void allocGridLevels(double ***u, const int numLevels, const int N)
 {
     *u = malloc(sizeof(double*) * numLevels);
@@ -50,6 +33,31 @@ void allocGridLevels(double ***u, const int numLevels, const int N)
         assert((*u)[i]);
 
     } // end of loop which sets up levels
+}
+
+void SolverInitialize(int argc, char **argv)
+{
+    if(argc != 4)
+    {
+        printf("Usage: %s <coarse grid points on one side> <number of levels> <gauss seidel iterations>\n", argv[0]);
+        exit(1);
+    }
+
+    // parse the passed in options
+    coarseGridNum = atoi(argv[1]);
+    numLevels = atoi(argv[2]);
+    gsIterNum = atoi(argv[3]);
+
+    // preallocate the arrays using max grid level
+    int multFactor = 1 << (numLevels-1);
+    finestOneSideNum = ((coarseGridNum-1) * multFactor)+1;
+
+    u = NULL; d = NULL;
+    allocGridLevels(&u, numLevels, coarseGridNum);
+    allocGridLevels(&d, numLevels, coarseGridNum);
+
+    // allocate the timing object
+    allocTimingInfo(&tInfo, numLevels);
 }
 
 // assume A has been preallocated
@@ -97,20 +105,12 @@ void constructCoarseMatrixA(double *A, int N)
 
 int SolverGetDetails(double **grid, double *h)
 {
-    // preallocate the arrays using max grid level
-    int multFactor = 1 << (numLevels-1);
-    finestOneSideNum = ((coarseGridNum-1) * multFactor)+1;
-
-    u = NULL; d = NULL;
-    allocGridLevels(&u, numLevels, coarseGridNum);
-    allocGridLevels(&d, numLevels, coarseGridNum);
-
     // set the user pointer to finest level
     (*grid) = u[numLevels-1];
 
     // preallocate and fill the coarse matrix A
     int matDim = coarseGridNum*coarseGridNum*coarseGridNum;
-    double *A = calloc(matDim*matDim, sizeof(double));
+    A = calloc(matDim*matDim, sizeof(double));
     constructCoarseMatrixA(A, coarseGridNum);
     convertToLU_InPlace(A, matDim);
 
@@ -871,6 +871,16 @@ double SolverLinSolve()
     return res;
 }
 
+double SolverGetResidual()
+{
+    return calculateResidual(u[numLevels-1], d[numLevels-1], finestOneSideNum, spacing, NULL);
+}
+
+void SolverResetTimingInfo()
+{ resetTimingInfo(tInfo, numLevels); }
+
+void SolverPrintTimingInfo()
+{ printTimingInfo(tInfo, numLevels); }
 
 /*
 int main(int argc, char** argv)

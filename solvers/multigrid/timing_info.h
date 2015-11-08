@@ -10,7 +10,7 @@ typedef struct __time_t
     double timeTaken;
 } TimingInfo;
 
-void allocTimingInfo(TimingInfo ***tInfo, const int stages, const int levels)
+void allocTimingInfo(TimingInfo ***tInfo, const int levels)
 {
     (*tInfo) = malloc(sizeof(TimingInfo*) * levels);
     assert((*tInfo));
@@ -18,7 +18,7 @@ void allocTimingInfo(TimingInfo ***tInfo, const int stages, const int levels)
     int i;
     for(i = 0; i < levels; i++)
     {
-        (*tInfo)[i] = malloc(sizeof(TimingInfo) * stages);
+        (*tInfo)[i] = malloc(sizeof(TimingInfo) * NUM_STAGES);
         assert((*tInfo)[i]);
 
         // initialize the object
@@ -27,13 +27,13 @@ void allocTimingInfo(TimingInfo ***tInfo, const int stages, const int levels)
     }
 }
 
-void resetTimingInfo(TimingInfo **tInfo, const int stages, const int levels)
+void resetTimingInfo(TimingInfo **tInfo, const int levels)
 {
     int l, s;
     for(l = 0; l < levels; l++)
     {
         TimingInfo *t = tInfo[l];
-        for(s = 0; s < stages; s++)
+        for(s = 0; s < NUM_STAGES; s++)
         {
             t[s].numCalls = 0;
             t[s].timeTaken = 0.;
@@ -41,7 +41,7 @@ void resetTimingInfo(TimingInfo **tInfo, const int stages, const int levels)
     } // end of levels loop
 }
 
-void printTimingInfo(TimingInfo **tInfo, const int stages, const int levels)
+void printTimingInfo(TimingInfo **tInfo, const int levels)
 {
     int l, s;
     const double cycleTime = 1./CLOCKS_PER_SEC;
@@ -55,7 +55,7 @@ void printTimingInfo(TimingInfo **tInfo, const int stages, const int levels)
         printf("LEVEL %d\n", l);
         printf("%20s %20s %20s\n", "", "numCalls", "timeTaken");
 
-        for(s = 0; s < stages; s++)
+        for(s = 0; s < NUM_STAGES; s++)
             printf("%20.20s %20d %20lf\n", stageNames[s], t[s].numCalls, t[s].timeTaken*cycleTime);
     }
 }
