@@ -89,7 +89,7 @@ typedef struct
 #include "preprocess.h"
 //#include "csrroutines.h"
 //#include "particleFns.h"
-//#include "numerics.h"
+#include "numerics.h"
 //#include "postprocess.h"
 
 #include "solvers/multigrid/mg_3d.h"
@@ -130,6 +130,13 @@ int main(int argc, char **argv)
     double h;
     int finestGridNum = SolverGetDetails(&grid, &h);
 
+    // fill in GridInfo data
+    GridInfo gridInfo;
+    gridInfo.numNodes = finestGridNum;
+    gridInfo.totalNodes = finestGridNum*finestGridNum*finestGridNum;
+    gridInfo.spacing = h;
+    gridInfo.invSpacing = 1./h;
+
     SolverSetupBoundaryConditions();
 
     // now preallocate the particles data array
@@ -142,7 +149,7 @@ int main(int argc, char **argv)
 
     // TODO: Uncomment and fix this
     EField* ElectricField = NULL;
-    //allocateEField(&ElectricField, &gridInfo);
+    allocateEField(&ElectricField, &gridInfo);
 
     //// preallocate NeumannBC nodes in terms of MAX possible
     //// i.e. num of sides of cube * num nodes per side
@@ -175,13 +182,13 @@ int main(int argc, char **argv)
     }
     printf("%10d %20.8e\n", iterCount, norm);
     SolverPrintTimingInfo();
-    return 0;
 
-    /*
     printf("\nCalculating Electric Field.....");
     calcElectricField(ElectricField, grid, &gridInfo);
     printf("done\n");
+    return 0;
 
+    /*
     // allocate for particles
     Particle* domainParticles = malloc(PARTICLE_SIZE * sizeof(Particle));
     int totalParticlesCount = 0;
