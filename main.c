@@ -43,7 +43,7 @@
 #define PARTICLE_SIZE ((int)5e4)
 #define PARTICLE_SORT_INTERVAL (20)
 
-#define TIMESTEPS ((int)1000)
+#define TIMESTEPS ((int)0)
 #define ITER_INTERVAL (200)
 #define ITER_HEADER_INTERVAL (1500)
 #define POST_WRITE_FILES (false)
@@ -166,7 +166,7 @@ int main(int argc, char **argv)
 
     // solve and at each step, impose Neumann BCs?
     double norm = 100., tolerance = 1e-6;
-    double cmpNorm = SolverGetResidual() * tolerance*tolerance;
+    double cmpNorm = SolverGetResidual() * tolerance;
 
     SolverResetTimingInfo();
     int iterCount;

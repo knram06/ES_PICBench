@@ -251,7 +251,7 @@ double calculateResidual(const double* __restrict__ v, const double* __restrict_
             }
         } // end of j loop
     } // end of i loop
-    return ret;
+    return sqrt(ret);
 }
 
 void restrictResidual(const double* __restrict__ r, const int Nf, double* __restrict__ d, const int Nc)
