@@ -43,7 +43,7 @@
 #define PARTICLE_SIZE ((int)5e4)
 #define PARTICLE_SORT_INTERVAL (20)
 
-#define TIMESTEPS ((int)2000)
+#define TIMESTEPS ((int)0)
 #define ITER_INTERVAL (200)
 #define ITER_HEADER_INTERVAL (1500)
 #define POST_WRITE_FILES (false)
@@ -87,10 +87,10 @@ typedef struct
 
 #include "utilities.h"
 #include "preprocess.h"
-//#include "csrroutines.h"
-//#include "particleFns.h"
+#include "csrroutines.h"
+#include "particleFns.h"
 #include "numerics.h"
-//#include "postprocess.h"
+#include "postprocess.h"
 
 #include "solvers/multigrid/mg_3d.h"
 
@@ -182,13 +182,12 @@ int main(int argc, char **argv)
     }
     printf("%10d %20.8e\n", iterCount, norm);
     SolverPrintTimingInfo();
+    SolverSmoothenEdgeValues();
 
     printf("\nCalculating Electric Field.....");
     calcElectricField(ElectricField, grid, &gridInfo);
     printf("done\n");
-    return 0;
 
-    /*
     // allocate for particles
     Particle* domainParticles = malloc(PARTICLE_SIZE * sizeof(Particle));
     int totalParticlesCount = 0;
@@ -210,7 +209,7 @@ int main(int argc, char **argv)
     int* lostParticles = malloc( (Nrel + LOST_PARTICLES_MARGIN) * sizeof(int) );
     int lostParticleBound = -1;
 
-    start = clock();
+    clock_t start = clock(), diff;
     // for required number of timesteps
     int i;
     int lostParticleCount = 0;
@@ -262,7 +261,7 @@ int main(int argc, char **argv)
 
     // TEMP - remove later
     resortParticles(domainParticles, totalParticlesCount);
-    */
+
     /*********************************************/
     /***********POISSON SOLVER********************/
     /*********************************************/

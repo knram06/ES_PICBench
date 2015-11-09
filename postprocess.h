@@ -114,7 +114,7 @@ void writeParticleData(const char* fileName, const Particle* particleData, int p
 void writeSparseMatRowColForm(const char *filename, MatCSR *mcsr, bool useOneBasedIndex)
 {
     const int numRows = mcsr->numRows;
-    const int numRowsOffset = numRows + 1;
+    //const int numRowsOffset = numRows + 1;
 
     short int offset = useOneBasedIndex ? 1 : 0;
 

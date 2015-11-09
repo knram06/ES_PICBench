@@ -276,6 +276,7 @@ int moveParticlesInField(Particle* domainParticles, int domainParticleBound,
 {
     const double invSpacing = gInfo->invSpacing;
     const double halfTimeStep = 0.5 * T_PIC;
+    const int N = gInfo->numNodes;
 
     // FOR NOW
     // Approximate each particle to nearest node
@@ -294,7 +295,7 @@ int moveParticlesInField(Particle* domainParticles, int domainParticleBound,
         int kPos = (int)(round( (p->z)*invSpacing) );
 
         // now store the ElectricField value
-        EField* elecField = &GRID_1D(ElectricField, iPos, jPos, kPos);
+        EField* elecField = &ElectricField[N*N*iPos + N*jPos + kPos];
 
         // TODO: generalize as a loop through the number of components?
         const double multFactor = (p->charge * ELECTRONIC_CHARGE * T_PIC/ p->mass);

@@ -871,6 +871,9 @@ double SolverLinSolve()
     return res;
 }
 
+void SolverSmoothenEdgeValues()
+{ return updateEdgeValues(u[numLevels-1], finestOneSideNum); }
+
 double SolverGetResidual()
 {
     return calculateResidual(u[numLevels-1], d[numLevels-1], finestOneSideNum, spacing, NULL);
