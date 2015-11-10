@@ -155,6 +155,8 @@ void GaussSeidelSmoother(double* __restrict__ v, const double* __restrict__ d, c
                 for(k = 1; k < N-1; k++)
                 {
                     int p = pos+k; // effectively nni+nj+k
+
+                    // RKN: More Level 1 Data Misses here
                     v[p] = invMultFact*(
                             v[p - NN] + v[p + NN] // u[i-1] + u[i+1]
                           + v[p - N]  + v[p + N]  // u[j-1] + u[j+1]
@@ -238,6 +240,8 @@ double calculateResidual(const double* __restrict__ v, const double* __restrict_
             {
                 // effectively (nni+nj+k)
                 int p = pos + k;
+
+                // RKN: More Level 1 Data Misses here
                 double diff = hSq*d[p]
                               - (v[p-NN] + v[p+NN] +
                                  v[p-N]  + v[p+N]  +

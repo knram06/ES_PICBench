@@ -1,0 +1,63 @@
+==21536== Cachegrind, a cache and branch-prediction profiler
+==21536== Copyright (C) 2002-2013, and GNU GPL'd, by Nicholas Nethercote et al.
+==21536== Using Valgrind-3.10.0 and LibVEX; rerun with -h for copyright info
+==21536== Command: ./a.out 5 3 3
+==21536== 
+Number of lines read was 629.
+Iter_Count                 Norm
+0       2.29999065e+03
+200       3.00733031e+01
+400       1.58722181e+00
+600       8.37710800e-02
+730       1.25625717e-02
+LEVEL 0
+                                numCalls            timeTaken
+Smoother1                             0             0.000000
+CalcResidual1                         0             0.000000
+Restrict Residual                     0             0.000000
+Recurse, Direct Solv                730             0.520000
+Prolongate&Correct                    0             0.000000
+Smoother2                             0             0.000000
+CalcResidual2                         0             0.000000
+
+LEVEL 1
+                                numCalls            timeTaken
+Smoother1                           730             0.200000
+CalcResidual1                       730             0.060000
+Restrict Residual                   730             0.000000
+Recurse, Direct Solv                730             0.530000
+Prolongate&Correct                  730             0.260000
+Smoother2                           730             0.180000
+CalcResidual2                       730             0.060000
+
+LEVEL 2
+                                numCalls            timeTaken
+Smoother1                           730             1.650000
+CalcResidual1                       730             0.370000
+Restrict Residual                   730             0.430000
+Recurse, Direct Solv                730             1.300000
+Prolongate&Correct                  730             1.510000
+Smoother2                           730             1.810000
+CalcResidual2                       730             0.380000
+
+Calculating Electric Field.....done
+==21536== 
+==21536== I   refs:      1,208,157,160
+==21536== I1  misses:            1,883
+==21536== LLi misses:            1,530
+==21536== I1  miss rate:          0.00%
+==21536== LLi miss rate:          0.00%
+    ==21536== 
+    ==21536== D   refs:        386,608,487  (303,481,038 rd   + 83,127,449 wr)
+    ==21536== D1  misses:       10,203,376  (  9,211,938 rd   +    991,438 wr)
+    ==21536== LLd misses:           14,139  (      4,388 rd   +      9,751 wr)
+    ==21536== D1  miss rate:           2.6% (        3.0%     +        1.1%  )
+==21536== LLd miss rate:           0.0% (        0.0%     +        0.0%  )
+    ==21536== 
+    ==21536== LL refs:          10,205,259  (  9,213,821 rd   +    991,438 wr)
+    ==21536== LL misses:            15,669  (      5,918 rd   +      9,751 wr)
+==21536== LL miss rate:            0.0% (        0.0%     +        0.0%  )
+    ==21536== 
+    ==21536== Branches:        194,650,402  (194,170,320 cond +    480,082 ind)
+    ==21536== Mispredicts:       5,256,166  (  5,250,022 cond +      6,144 ind)
+==21536== Mispred rate:            2.7% (        2.7%     +        1.2%   )

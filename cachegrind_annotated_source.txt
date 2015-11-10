@@ -1,0 +1,997 @@
+--------------------------------------------------------------------------------
+I1 cache:         32768 B, 64 B, 8-way associative
+D1 cache:         32768 B, 64 B, 8-way associative
+LL cache:         6291456 B, 64 B, 24-way associative
+Command:          ./a.out 5 3 3
+Data file:        cachegrind.out.21536
+Events recorded:  Ir I1mr ILmr Dr D1mr DLmr Dw D1mw DLmw Bc Bcm Bi Bim
+Events shown:     Ir I1mr ILmr Dr D1mr DLmr Dw D1mw DLmw Bc Bcm Bi Bim
+Event sort order: Ir I1mr ILmr Dr D1mr DLmr Dw D1mw DLmw Bc Bcm Bi Bim
+Thresholds:       0.1 100 100 100 100 100 100 100 100 100 100 100 100
+Include dirs:     
+User annotated:   
+Auto-annotation:  on
+
+--------------------------------------------------------------------------------
+           Ir  I1mr  ILmr          Dr      D1mr  DLmr         Dw    D1mw  DLmw          Bc       Bcm      Bi   Bim 
+--------------------------------------------------------------------------------
+1,208,157,160 1,883 1,530 303,481,038 9,211,938 4,388 83,127,449 991,438 9,751 194,170,320 5,250,022 480,082 6,144  PROGRAM TOTALS
+
+--------------------------------------------------------------------------------
+         Ir I1mr ILmr          Dr      D1mr  DLmr         Dw    D1mw  DLmw          Bc       Bcm      Bi   Bim  file:function
+--------------------------------------------------------------------------------
+539,230,560   14   14 132,057,000 4,921,674     0 23,459,280       0     0 114,829,000 2,208,419       0     0  /storage/home/rkn115/work/progs/PICC_Code/solvers/multigrid/mg_3d.h:GaussSeidelSmoother
+302,558,720   22   18  61,943,420   534,360     0 37,555,580       0     0  28,722,580   795,801       0     0  /storage/home/rkn115/work/progs/PICC_Code/solvers/multigrid/mg_3d.h:prolongateAndCorrectError
+116,416,207    9    7  44,534,218 1,599,795     1  2,781,327 355,510     0  11,301,552   443,407       0     0  /storage/home/rkn115/work/progs/PICC_Code/solvers/multigrid/mg_3d.h:calculateResidual
+ 71,190,330    5    4  22,907,400 1,544,680     0    185,420  11,680     0  11,680,000   183,263       0     0  /storage/home/rkn115/work/progs/PICC_Code/solvers/multigrid/gauss_elim.h:solveWithLU
+ 65,767,160   14   13  15,724,200   444,570     3    798,620  86,138     0  11,421,580 1,207,641       0     0  /storage/home/rkn115/work/progs/PICC_Code/solvers/multigrid/mg_3d.h:restrictResidual
+ 37,064,495  162  111   7,949,918        55     4  5,468,849   7,782 3,864   6,431,433   234,826       0     0  ???:__printf_fp
+ 13,319,470    9    7   4,552,944         0     0  2,087,170       0     0   1,588,124    29,323       0     0  ???:hack_digit.15672
+  9,793,056  133   73   2,079,483       105    10  1,975,115      73     0   1,296,105    10,080 152,724    99  ???:vfprintf
+  9,114,382   13    7   2,636,076         0     0  2,263,352       6     1     925,806    27,220       0     0  ???:__mpn_divrem
+  6,369,315    4    2     845,947         4     4    447,686       3     0     447,686        61       0     0  ???:__mpn_mul_1
+  5,233,259    4    4   1,294,382    77,746 1,151    651,006       0     0     651,249     7,916       0     0  /storage/home/rkn115/work/progs/PICC_Code/solvers/multigrid/gauss_elim.h:convertToLU_InPlace
+  3,949,532    4    4   1,822,858     1,582 1,582    506,350       0     0     911,430         8       0     0  ???:getc
+  3,544,485    3    3   1,316,523         3     0    303,813       0     0     810,168         6       0     0  ???:feof
+  3,153,270   10    8       5,868     5,125     4  2,068,442 515,282 2,702     263,872     1,489   2,934 1,468  ???:__GI_memset
+  2,821,678   14   12     487,536        12     2    367,143     494   230     296,490       596      37     1  ???:_IO_file_xsputn@@GLIBC_2.2.5
+  2,445,992   67   67     417,796        11     8    226,109       0     0     419,469    41,099       0     0  ???:____strtod_l_internal
+  1,759,430    9    9     452,405         4     0    452,409       9     2     201,084        21       0     0  ???:__mpn_mul
+  1,408,246    2    2     168,993         0     0    112,676       0     0     112,676        34       0     0  ???:__mpn_rshift
+  1,384,710   15   12     185,068         6     2    125,894      19    17     413,889     1,982       0     0  ???:memcpy
+
+--------------------------------------------------------------------------------
+-- Auto-annotated source: /storage/home/rkn115/work/progs/PICC_Code/solvers/multigrid/mg_3d.h
+--------------------------------------------------------------------------------
+        Ir I1mr ILmr         Dr      D1mr DLmr         Dw    D1mw DLmw         Bc       Bcm Bi Bim 
+
+-- line 11 ----------------------------------------
+         .    .    .          .         .    .          .       .    .          .         .  .   .  int gsIterNum;
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .  // MG-level data
+         .    .    .          .         .    .          .       .    .          .         .  .   .  double **u, **d;
+         .    .    .          .         .    .          .       .    .          .         .  .   .  double *A; // coarsest level matrix
+         .    .    .          .         .    .          .       .    .          .         .  .   .  double spacing;  // spacing
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .  void allocGridLevels(double ***u, const int numLevels, const int N)
+        16    1    1          0         0    0         10       0    0          0         0  0   0  {
+         8    0    0          0         0    0          4       0    0          0         0  0   0      *u = malloc(sizeof(double*) * numLevels);
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .      // (*u) is IMPORTANT here
+         .    .    .          .         .    .          .       .    .          .         .  .   .      // else seemed to overwrite top level stack parameters?
+         4    0    0          0         0    0          0       0    0          2         0  0   0      assert(*u);
+         .    .    .          .         .    .          .       .    .          .         .  .   .      int i;
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+        28    1    1          0         0    0          0       0    0          8         5  0   0      for(i = 0; i < numLevels; i++)
+         .    .    .          .         .    .          .       .    .          .         .  .   .      {
+        24    0    0          0         0    0          0       0    0          0         0  0   0          int numNodes = ((N-1)*(1 << i) + 1);
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .          // let's say we do i,j,k order - so contiguous in k
+        42    0    0          0         0    0         12       2    0          0         0  0   0          (*u)[i] = calloc(numNodes*numNodes*numNodes, sizeof(double));
+        24    1    1         12         2    0          0       0    0          6         0  0   0          assert((*u)[i]);
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .      } // end of loop which sets up levels
+        12    0    0         12         0    0          0       0    0          0         0  0   0  }
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .  void SolverInitialize(int argc, char **argv)
+         2    0    0          0         0    0          1       0    0          0         0  0   0  {
+         2    1    1          0         0    0          0       0    0          1         0  0   0      if(argc != 4)
+         .    .    .          .         .    .          .       .    .          .         .  .   .      {
+         .    .    .          .         .    .          .       .    .          .         .  .   .          printf("Usage: %s <coarse grid points on one side> <number of levels> <gauss seidel iterations>\n", argv[0]);
+         .    .    .          .         .    .          .       .    .          .         .  .   .          exit(1);
+         .    .    .          .         .    .          .       .    .          .         .  .   .      }
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .      // parse the passed in options
+         .    .    .          .         .    .          .       .    .          .         .  .   .      coarseGridNum = atoi(argv[1]);
+         .    .    .          .         .    .          .       .    .          .         .  .   .      numLevels = atoi(argv[2]);
+         .    .    .          .         .    .          .       .    .          .         .  .   .      gsIterNum = atoi(argv[3]);
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .      // preallocate the arrays using max grid level
+         4    0    0          1         0    0          0       0    0          0         0  0   0      int multFactor = 1 << (numLevels-1);
+         5    0    0          1         0    0          1       0    0          0         0  0   0      finestOneSideNum = ((coarseGridNum-1) * multFactor)+1;
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         2    1    1          0         0    0          2       0    0          0         0  0   0      u = NULL; d = NULL;
+         2    0    0          0         0    0          1       0    0          0         0  0   0      allocGridLevels(&u, numLevels, coarseGridNum);
+         4    0    0          2         1    0          1       0    0          0         0  0   0      allocGridLevels(&d, numLevels, coarseGridNum);
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .      // allocate the timing object
+         3    1    1          1         0    0          0       0    0          0         0  0   0      allocTimingInfo(&tInfo, numLevels);
+         1    0    0          1         1    0          0       0    0          0         0  0   0  }
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .  // assume A has been preallocated
+         .    .    .          .         .    .          .       .    .          .         .  .   .  void constructCoarseMatrixA(double *A, int N)
+         7    0    0          0         0    0          6       0    0          0         0  0   0  {
+         .    .    .          .         .    .          .       .    .          .         .  .   .      int i, j, k;
+         2    0    0          0         0    0          0       0    0          0         0  0   0      const int NN = N*N;
+         2    1    1          0         0    0          0       0    0          0         0  0   0      const int totalNodes = NN*N;
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .      // just in case
+         4    0    0          0         0    0          0       0    0          1         0  0   0      assert(totalNodes*totalNodes < INT_MAX);
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+        44    1    1          0         0    0          0       0    0          6         3  0   0      for(i = 0; i < N; i++)
+         .    .    .          .         .    .          .       .    .          .         .  .   .      {
+         .    .    .          .         .    .          .       .    .          .         .  .   .          const int nni = NN*i;
+       135    1    1          0         0    0          0       0    0         25         9  0   0          for(j = 0; j < N; j++)
+         .    .    .          .         .    .          .       .    .          .         .  .   .          {
+         .    .    .          .         .    .          .       .    .          .         .  .   .              const int nj = N*j;
+       550    1    1          0         0    0          0       0    0        125        20  0   0              for(k = 0; k < N; k++)
+         .    .    .          .         .    .          .       .    .          .         .  .   .              {
+         .    .    .          .         .    .          .       .    .          .         .  .   .                  int pos = nni + nj + k;
+         .    .    .          .         .    .          .       .    .          .         .  .   .                  int mat1DIndex = (totalNodes+1)*pos;
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .                  // if on boundary points
+       455    0    0          0         0    0          0       0    0        225        34  0   0                  if(k == 0 || k == N-1
+       270    0    0          0         0    0          0       0    0        135        18  0   0                  || j == 0 || j == N-1
+       207    0    0          0         0    0          0       0    0         81        10  0   0                  || i == 0 || i == N-1)
+       294    1    1         98         1    1         98      73   62          0         0  0   0                      A[mat1DIndex] = 1.;
+         .    .    .          .         .    .          .       .    .          .         .  .   .                  else
+         .    .    .          .         .    .          .       .    .          .         .  .   .                  {
+         .    .    .          .         .    .          .       .    .          .         .  .   .                      // i-1               , i+1
+        81    0    0         27         0    0         54      40   40          0         0  0   0                      A[mat1DIndex-NN] = 1.; A[mat1DIndex+NN] = 1.;
+         .    .    .          .         .    .          .       .    .          .         .  .   .                      // j-1               , j+1
+        54    0    0          0         0    0         54      40   40          0         0  0   0                      A[mat1DIndex-N]  = 1.; A[mat1DIndex+N]  = 1.;
+         .    .    .          .         .    .          .       .    .          .         .  .   .                      // k-1               , k+1
+        54    0    0          0         0    0         54       6    6          0         0  0   0                      A[mat1DIndex-1]  = 1.; A[mat1DIndex+1]  = 1.;
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .                      // node (i,j,k)
+        54    0    0         27         1    1         27       0    0          0         0  0   0                      A[mat1DIndex] = -6;
+         .    .    .          .         .    .          .       .    .          .         .  .   .                  }
+         .    .    .          .         .    .          .       .    .          .         .  .   .              }
+         .    .    .          .         .    .          .       .    .          .         .  .   .          } // end of j loop
+         .    .    .          .         .    .          .       .    .          .         .  .   .      } // end of i loop
+         8    0    0          7         0    0          0       0    0          0         0  0   0  }
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .  int SolverGetDetails(double **grid, double *h)
+         4    1    1          0         0    0          3       0    0          0         0  0   0  {
+         .    .    .          .         .    .          .       .    .          .         .  .   .      // set the user pointer to finest level
+         4    0    0          3         3    0          1       0    0          0         0  0   0      (*grid) = u[numLevels-1];
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .      // preallocate and fill the coarse matrix A
+         4    0    0          1         0    0          0       0    0          0         0  0   0      int matDim = coarseGridNum*coarseGridNum*coarseGridNum;
+         6    0    0          0         0    0          2       1    0          0         0  0   0      A = calloc(matDim*matDim, sizeof(double));
+         3    1    1          0         0    0          1       0    0          0         0  0   0      constructCoarseMatrixA(A, coarseGridNum);
+         3    0    0          1         0    0          1       0    0          0         0  0   0      convertToLU_InPlace(A, matDim);
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .      // fill in the details at the finest level
+         6    0    0          2         2    0          1       0    0          0         0  0   0      spacing = GRID_LENGTH/(finestOneSideNum-1);
+         1    1    1          0         0    0          1       1    0          0         0  0   0      *h = spacing;
+         .    .    .          .         .    .          .       .    .          .         .  .   .      return finestOneSideNum;
+         4    0    0          4         0    0          0       0    0          0         0  0   0  }
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .  void deAllocGridLevels(double ***u, const int numLevels)
+         .    .    .          .         .    .          .       .    .          .         .  .   .  {
+         .    .    .          .         .    .          .       .    .          .         .  .   .      int i;
+         .    .    .          .         .    .          .       .    .          .         .  .   .      for(i = 0; i < numLevels; i++)
+         .    .    .          .         .    .          .       .    .          .         .  .   .          free((*u)[i]);
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .      free(*u);
+         .    .    .          .         .    .          .       .    .          .         .  .   .  }
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .  // smoother function
+         .    .    .          .         .    .          .       .    .          .         .  .   .  void GaussSeidelSmoother(double* __restrict__ v, const double* __restrict__ d, const int N, const double h, const int smootherIter)
+    26,280    2    2          0         0    0     23,360       0    0          0         0  0   0  {
+         .    .    .          .         .    .          .       .    .          .         .  .   .      int s;
+         .    .    .          .         .    .          .       .    .          .         .  .   .      int i, j, k;
+     5,840    0    0          0         0    0          0       0    0          0         0  0   0      const double hSq = h*h;
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .      const double invMultFact = 1./6;
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .      double center[2] = {GRID_LENGTH/2., GRID_LENGTH/2.};
+     5,840    0    0          0         0    0          0       0    0          0         0  0   0      const int NN = N*N;
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .      // do pre-smoother first
+         .    .    .          .         .    .          .       .    .          .         .  .   .      // PERF: tile here?
+    61,320    0    0     26,280     4,380    0      5,840       0    0     11,680     2,923  0   0      for(s = 0; s < smootherIter; s++)
+         .    .    .          .         .    .          .       .    .          .         .  .   .      {
+ 5,001,960    4    4  3,591,600     5,110    0    411,720       0    0    105,120     8,768  0   0          for(i = 1; i < N-1; i++)
+         .    .    .          .         .    .          .       .    .          .         .  .   .          {
+         .    .    .          .         .    .          .       .    .          .         .  .   .              const int nni = NN*i;
+16,898,040    1    1  7,200,720         0    0          0       0    0  1,200,120        14  0   0              for(j = 1; j < N-1; j++)
+         .    .    .          .         .    .          .       .    .          .         .  .   .              {
+         .    .    .          .         .    .          .       .    .          .         .  .   .                  const int nj = N*j;
+         .    .    .          .         .    .          .       .    .          .         .  .   .                  int pos = nni + nj;
+88,624,920    0    0  1,200,120         0    0          0       0    0 16,284,840        46  0   0                  for(k = 1; k < N-1; k++)
+         .    .    .          .         .    .          .       .    .          .         .  .   .                  {
+         .    .    .          .         .    .          .       .    .          .         .  .   .                      int p = pos+k; // effectively nni+nj+k
+32,569,680    0    0          0         0    0 16,284,840       0    0          0         0  0   0                      v[p] = invMultFact*(
+32,569,680    1    1 32,569,680 2,327,240    0          0       0    0          0         0  0   0                              v[p - NN] + v[p + NN] // u[i-1] + u[i+1]
+32,569,680    1    1 32,569,680   377,410    0          0       0    0          0         0  0   0                            + v[p - N]  + v[p + N]  // u[j-1] + u[j+1]
+32,569,680    0    0 32,569,680    15,330    0          0       0    0          0         0  0   0                            + v[p - 1]  + v[p + 1]  // u[k-1] + u[k+1]
+48,854,520    0    0 16,284,840 2,184,905    0          0       0    0          0         0  0   0                            - hSq*d[p]              // hSq*f
+         .    .    .          .         .    .          .       .    .          .         .  .   .                              );
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .                      // enforce Neumann bc (order?)
+         .    .    .          .         .    .          .       .    .          .         .  .   .                      // if on the inner node adjacent to boundary
+         .    .    .          .         .    .          .       .    .          .         .  .   .                      // copy to boundary node - this way we ensure residual
+         .    .    .          .         .    .          .       .    .          .         .  .   .                      // is zero on boundary node
+66,339,480    0    0  1,200,120         0    0          0       0    0 31,369,560    96,411  0   0                      if(i == 1 || i == N-2)
+         .    .    .          .         .    .          .       .    .          .         .  .   .                      {
+ 7,227,000    1    1      2,920     2,919    0      8,760       0    0          0         0  0   0                          double ty = j*h - center[0];
+ 7,200,720    0    0          0         0    0          0       0    0          0         0  0   0                          double tz = k*h - center[1];
+ 7,200,720    1    1          0         0    0          0       0    0          0         0  0   0                          double rr = ty*ty + tz*tz;
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .                          if(i == 1)
+         .    .    .          .         .    .          .       .    .          .         .  .   .                          {
+         .    .    .          .         .    .          .       .    .          .         .  .   .                              // outside capillary radius
+ 2,417,760    1    1      2,920         0    0      5,840       0    0  1,200,120     8,760  0   0                              if (rr > CAPILLARY_RADIUS*CAPILLARY_RADIUS)
+         .    .    .          .         .    .          .       .    .          .         .  .   .                              {
+         .    .    .          .         .    .          .       .    .          .         .  .   .                                  // copy (i,j,k) to (i-1,j,k)
+ 1,191,360    0    0          0         0    0  1,191,360       0    0          0         0  0   0                                  v[p-NN] = v[p];
+         .    .    .          .         .    .          .       .    .          .         .  .   .                              }
+         .    .    .          .         .    .          .       .    .          .         .  .   .                          } // end of if i==1
+         .    .    .          .         .    .          .       .    .          .         .  .   .                          // if i==N-2
+         .    .    .          .         .    .          .       .    .          .         .  .   .                          else
+         .    .    .          .         .    .          .       .    .          .         .  .   .                          {
+         .    .    .          .         .    .          .       .    .          .         .  .   .                              // outside annular ring
+ 2,409,000    0    0      8,760     4,380    0          0       0    0  1,200,120   237,980  0   0                              if(rr <= (EXTRACTOR_INNER_RADIUS*EXTRACTOR_INNER_RADIUS)
+ 1,480,440    0    0      8,760         0    0     17,520       0    0    718,320   181,770  0   0                                      ||
+         .    .    .          .         .    .          .       .    .          .         .  .   .                                 rr >= (EXTRACTOR_OUTER_RADIUS*EXTRACTOR_OUTER_RADIUS))
+         .    .    .          .         .    .          .       .    .          .         .  .   .                              {
+         .    .    .          .         .    .          .       .    .          .         .  .   .                                  // copy (i,j,k) to (i+1,j,k)
+ 1,419,120    0    0          0         0    0    709,560       0    0          0         0  0   0                                  v[p+NN] = v[p];
+         .    .    .          .         .    .          .       .    .          .         .  .   .                              }
+         .    .    .          .         .    .          .       .    .          .         .  .   .                          } // end of else, i.e. i == N-2
+         .    .    .          .         .    .          .       .    .          .         .  .   .                      } // end of if on X faces
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .                      // if on Y-Faces
+32,569,680    0    0          0         0    0          0       0    0 16,284,840        26  0   0                      if(j == 1)
+         .    .    .          .         .    .          .       .    .          .         .  .   .                      {
+         .    .    .          .         .    .          .       .    .          .         .  .   .                          // copy (i,j,k) to (i,j-1,k)
+ 2,400,240    0    0  1,200,120         0    0  1,200,120       0    0          0         0  0   0                          v[p-N] = v[p];
+         .    .    .          .         .    .          .       .    .          .         .  .   .                      }
+30,169,440    0    0          0         0    0          0       0    0 15,084,720   324,848  0   0                      else if(j == N-2)
+         .    .    .          .         .    .          .       .    .          .         .  .   .                      {
+         .    .    .          .         .    .          .       .    .          .         .  .   .                          // (i,j,k) to (i,j+1,k)
+ 3,600,360    0    0  1,200,120         0    0  1,200,120       0    0          0         0  0   0                          v[p+N] = v[p];
+         .    .    .          .         .    .          .       .    .          .         .  .   .                      }
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .                      // if on Z-Faces
+47,654,400    0    0          0         0    0          0       0    0 16,284,840   146,752  0   0                      if(k == 1)
+ 2,400,240    1    1  1,200,120         0    0  1,200,120       0    0          0         0  0   0                          v[p-1] = v[p];
+30,169,440    0    0          0         0    0          0       0    0 15,084,720 1,200,121  0   0                      else if(k == N-2)
+ 3,600,360    1    1  1,200,120         0    0  1,200,120       0    0          0         0  0   0                          v[p+1] = v[p];
+         .    .    .          .         .    .          .       .    .          .         .  .   .                  }
+         .    .    .          .         .    .          .       .    .          .         .  .   .              } // end of j loop
+         .    .    .          .         .    .          .       .    .          .         .  .   .          } // end of i loop
+         .    .    .          .         .    .          .       .    .          .         .  .   .      } // end of smootherIter loop
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+    23,360    0    0     20,440         0    0          0       0    0          0         0  0   0  } // end of GaussSeidelSmoother
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .  double calculateResidual(const double* __restrict__ v, const double* __restrict__ d, const int N, const double h, double *res)
+    20,447    1    1          0         0    0     17,526       0    0          0         0  0   0  {
+         .    .    .          .         .    .          .       .    .          .         .  .   .      int i, j, k;
+     2,921    0    0          0         0    0          0       0    0          0         0  0   0      const double hSq = h*h;
+     5,842    0    0          0         0    0          0       0    0          0         0  0   0      const int NN = N*N;
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .      // adjust for different boundary condition types?
+    32,131    0    0      2,921     1,461    1      2,921       0    0          0         0  0   0      double ret = 0.;
+ 1,308,840    5    3    657,345         0    0     46,740       0    0     35,056     5,115  0   0      for(i = 1; i < N-1; i++)
+         .    .    .          .         .    .          .       .    .          .         .  .   .      {
+         .    .    .          .         .    .          .       .    .          .         .  .   .          const int nni = NN*i;
+ 3,666,655    0    0    400,265         0    0          0       0    0    400,265    32,139  0   0          for(j = 1; j < N-1; j++)
+         .    .    .          .         .    .          .       .    .          .         .  .   .          {
+         .    .    .          .         .    .          .       .    .          .         .  .   .              const int nj = N*j;
+         .    .    .          .         .    .          .       .    .          .         .  .   .              int pos = nni + nj;
+10,863,310    0    0          0         0    0          0       0    0  5,431,655   400,294  0   0              for(k = 1; k < N-1; k++)
+         .    .    .          .         .    .          .       .    .          .         .  .   .              {
+         .    .    .          .         .    .          .       .    .          .         .  .   .                  // effectively (nni+nj+k)
+         .    .    .          .         .    .          .       .    .          .         .  .   .                  int p = pos + k;
+16,294,965    1    1  5,431,655   711,507    0          0       0    0          0         0  0   0                  double diff = hSq*d[p]
+16,294,965    0    0 16,294,965   790,401    0          0       0    0          0         0  0   0                                - (v[p-NN] + v[p+NN] +
+10,863,310    0    0 10,863,310    92,043    0          0       0    0          0         0  0   0                                   v[p-N]  + v[p+N]  +
+21,726,620    0    0 10,863,310     2,922    0          0       0    0          0         0  0   0                                   v[p-1]  + v[p+1]  - 6*v[p]);
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .                  // fill in array if it exists
+10,863,310    0    0          0         0    0          0       0    0  5,431,655     5,859  0   0                  if(res)
+ 2,714,140    0    0          0         0    0  2,714,140 355,510    0          0         0  0   0                      res[p] = diff;
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+21,726,620    1    1          0         0    0          0       0    0          0         0  0   0                  ret += diff*diff;
+         .    .    .          .         .    .          .       .    .          .         .  .   .              }
+         .    .    .          .         .    .          .       .    .          .         .  .   .          } // end of j loop
+         .    .    .          .         .    .          .       .    .          .         .  .   .      } // end of i loop
+     8,763    0    0          0         0    0          0       0    0      2,921         0  0   0      return sqrt(ret);
+    23,368    1    1     20,447     1,461    0          0       0    0          0         0  0   0  }
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .  void restrictResidual(const double* __restrict__ r, const int Nf, double* __restrict__ d, const int Nc)
+    14,600    1    1          0         0    0      8,760       0    0          0         0  0   0  {
+         .    .    .          .         .    .          .       .    .          .         .  .   .      int i, j, k;
+     2,920    0    0          0         0    0          0       0    0          0         0  0   0      const int NCNC = Nc*Nc;
+     4,380    0    0          0         0    0      1,460   1,459    0          0         0  0   0      const int NFNF = Nf*Nf;
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .      // explicitly store nodal weights
+    46,720    0    0     39,420     5,840    3     39,420   1,459    0     39,420     2,924  0   0      const double nodalWeights[3][3][3] = {
+         .    .    .          .         .    .          .       .    .          .         .  .   .          // (x,y)=(0,0) line
+         .    .    .          .         .    .          .       .    .          .         .  .   .          {
+         .    .    .          .         .    .          .       .    .          .         .  .   .              // k varies from 0 to 2
+         .    .    .          .         .    .          .       .    .          .         .  .   .              {0.015625, 0.03125, 0.015625},  // (1/64, 1/32, 1/64)
+         .    .    .          .         .    .          .       .    .          .         .  .   .              { 0.03125,  0.0625,  0.03125},  // (1/32, 1/16, 1/32)
+         .    .    .          .         .    .          .       .    .          .         .  .   .              {0.015625, 0.03125, 0.015625}   // (1/64, 1/32, 1/64)
+         .    .    .          .         .    .          .       .    .          .         .  .   .          },
+         .    .    .          .         .    .          .       .    .          .         .  .   .          // (x,y)=(1,0) line
+-- line 272 ----------------------------------------
+-- line 287 ----------------------------------------
+         .    .    .          .         .    .          .       .    .          .         .  .   .      // for boundary faces
+         .    .    .          .         .    .          .       .    .          .         .  .   .      // simply copy over coarse to fine nodal points
+         .    .    .          .         .    .          .       .    .          .         .  .   .      int nnic, njc;
+         .    .    .          .         .    .          .       .    .          .         .  .   .      int nnif, njf;
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .      /**********************************************/
+         .    .    .          .         .    .          .       .    .          .         .  .   .      // X faces
+         .    .    .          .         .    .          .       .    .          .         .  .   .      i = 0;
+    84,680    1    1     20,440         0    0      4,380     730    0     11,680     1,466  0   0      for(j = 0; j < Nc; j++)
+         .    .    .          .         .    .          .       .    .          .         .  .   .      {
+         .    .    .          .         .    .          .       .    .          .         .  .   .          njc = j*Nc;
+         .    .    .          .         .    .          .       .    .          .         .  .   .          njf = 2*j*Nf;
+   154,760    0    0          0         0    0          0       0    0     77,380    10,240  0   0          for(k = 0; k < Nc; k++)
+   232,140    1    1     77,380    19,710    0     77,380  10,220    0          0         0  0   0              d[njc + k] = r[njf + 2*k];
+         .    .    .          .         .    .          .       .    .          .         .  .   .      }
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .      i = Nc-1;
+     5,840    1    1          0         0    0          0       0    0          0         0  0   0      nnic = NCNC*i;
+     8,760    0    0      1,460         0    0          0       0    0          0         0  0   0      nnif = NFNF*2*i;
+    86,140    1    1     20,440         0    0      2,920       0    0     10,220     1,466  0   0      for(j = 0; j < Nc; j++)
+         .    .    .          .         .    .          .       .    .          .         .  .   .      {
+         .    .    .          .         .    .          .       .    .          .         .  .   .          njc = j*Nc;
+         .    .    .          .         .    .          .       .    .          .         .  .   .          njf = 2*j*Nf;
+   154,760    0    0          0         0    0          0       0    0     77,380    10,243  0   0          for(k = 0; k < Nc; k++)
+   232,140    0    0     77,380    19,710    0     77,380  10,950    0          0         0  0   0              d[nnic + njc + k] = r[nnif + njf + 2*k];
+         .    .    .          .         .    .          .       .    .          .         .  .   .      }
+         .    .    .          .         .    .          .       .    .          .         .  .   .      /**********************************************/
+         .    .    .          .         .    .          .       .    .          .         .  .   .      /**********************************************/
+         .    .    .          .         .    .          .       .    .          .         .  .   .      // Y faces
+         .    .    .          .         .    .          .       .    .          .         .  .   .      j = 0;
+         .    .    .          .         .    .          .       .    .          .         .  .   .      njc = j*Nc;
+         .    .    .          .         .    .          .       .    .          .         .  .   .      njf = 2*j*Nf;
+    51,100    0    0     20,440         0    0          0       0    0     10,220     1,466  0   0      for(i = 0; i < Nc; i++)
+         .    .    .          .         .    .          .       .    .          .         .  .   .      {
+         .    .    .          .         .    .          .       .    .          .         .  .   .          nnic = NCNC*i;
+         .    .    .          .         .    .          .       .    .          .         .  .   .          nnif = NFNF*2*i;
+   154,760    0    0          0         0    0          0       0    0     77,380    10,247  0   0          for(k = 0; k < Nc; k++)
+   232,140    0    0     77,380    14,600    0     77,380  13,140    0          0         0  0   0              d[nnic + njc + k] = r[nnif + njf + 2*k];
+         .    .    .          .         .    .          .       .    .          .         .  .   .      }
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .      j = Nc-1;
+     5,840    0    0          0         0    0          0       0    0          0         0  0   0      njc = j*Nc;
+     7,300    1    1          0         0    0      1,460       0    0          0         0  0   0      njf = 2*j*Nf;
+    87,600    2    1     20,440         0    0          0       0    0     10,220     1,466  0   0      for(i = 0; i < Nc; i++)
+         .    .    .          .         .    .          .       .    .          .         .  .   .      {
+         .    .    .          .         .    .          .       .    .          .         .  .   .          nnic = NCNC*i;
+         .    .    .          .         .    .          .       .    .          .         .  .   .          nnif = NFNF*2*i;
+   154,760    0    0          0         0    0          0       0    0     77,380    11,701  0   0          for(k = 0; k < Nc; k++)
+   232,140    0    0     77,380    14,600    0     77,380   6,570    0          0         0  0   0              d[nnic + njc + k] = r[nnif + njf + 2*k];
+         .    .    .          .         .    .          .       .    .          .         .  .   .      }
+         .    .    .          .         .    .          .       .    .          .         .  .   .      /**********************************************/
+         .    .    .          .         .    .          .       .    .          .         .  .   .      /**********************************************/
+         .    .    .          .         .    .          .       .    .          .         .  .   .      // Z faces
+         .    .    .          .         .    .          .       .    .          .         .  .   .      k = 0;
+    78,840    1    1     23,360         0    0          0       0    0     10,220     1,466  0   0      for(i = 0; i < Nc; i++)
+         .    .    .          .         .    .          .       .    .          .         .  .   .      {
+         .    .    .          .         .    .          .       .    .          .         .  .   .          nnic = NCNC*i;
+         .    .    .          .         .    .          .       .    .          .         .  .   .          nnif = NFNF*2*i;
+   319,740    0    0     77,380         0    0          0       0    0     77,380    10,243  0   0          for(j = 0; j < Nc; j++)
+         .    .    .          .         .    .          .       .    .          .         .  .   .          {
+         .    .    .          .         .    .          .       .    .          .         .  .   .              njc = Nc*j;
+         .    .    .          .         .    .          .       .    .          .         .  .   .              njf = Nf*2*j;
+   232,140    0    0    154,760    32,120    0     77,380  33,580    0          0         0  0   0              d[nnic + njc + k] = r[nnif + njf + 2*k];
+         .    .    .          .         .    .          .       .    .          .         .  .   .          }
+         .    .    .          .         .    .          .       .    .          .         .  .   .      }
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .      k = Nc-1;
+    51,100    1    1     20,440         0    0          0       0    0     10,220     1,466  0   0      for(i = 0; i < Nc; i++)
+         .    .    .          .         .    .          .       .    .          .         .  .   .      {
+         .    .    .          .         .    .          .       .    .          .         .  .   .          nnic = NCNC*i;
+         .    .    .          .         .    .          .       .    .          .         .  .   .          nnif = NFNF*2*i;
+   319,740    0    0     77,380         0    0          0       0    0     77,380    10,245  0   0          for(j = 0; j < Nc; j++)
+         .    .    .          .         .    .          .       .    .          .         .  .   .          {
+         .    .    .          .         .    .          .       .    .          .         .  .   .              njc = Nc*j;
+         .    .    .          .         .    .          .       .    .          .         .  .   .              njf = Nf*2*j;
+   232,140    0    0    154,760    35,040    0     77,380   4,380    0          0         0  0   0              d[nnic + njc + k] = r[nnif + njf + 2*k];
+         .    .    .          .         .    .          .       .    .          .         .  .   .          }
+         .    .    .          .         .    .          .       .    .          .         .  .   .      }
+         .    .    .          .         .    .          .       .    .          .         .  .   .      /**********************************************/
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .      // now do interpolation for inner nodes
+    96,360    2    2     61,320         0    0      5,840       0    0      8,760     1,462  0   0      for(i = 1; i < Nc-1; i++)
+         .    .    .          .         .    .          .       .    .          .         .  .   .      {
+         .    .    .          .         .    .          .       .    .          .         .  .   .          nnic = NCNC*i;
+         .    .    .          .         .    .          .       .    .          .         .  .   .          nnif = NFNF*2*i;
+ 1,426,420    1    1    127,020         0    0          0       0    0     42,340     7,302  0   0          for(j = 1; j < Nc-1; j++)
+         .    .    .          .         .    .          .       .    .          .         .  .   .          {
+         .    .    .          .         .    .          .       .    .          .         .  .   .              njc = Nc*j;
+         .    .    .          .         .    .          .       .    .          .         .  .   .              njf = Nf*2*j;
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+   540,200    0    0          0         0    0          0       0    0    270,100    42,342  0   0              for(k = 1; k < Nc-1; k++)
+         .    .    .          .         .    .          .       .    .          .         .  .   .              {
+ 3,784,320    0    0          0         0    0          0       0    0          0         0  0   0                  double val = 0.;
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .                  // now we are at point (2*ic,2*jc,2*kc)
+         .    .    .          .         .    .          .       .    .          .         .  .   .                  // lower corner of cube will be (if-1,jf-1,kf-1) (on fine grid)
+         .    .    .          .         .    .          .       .    .          .         .  .   .                  int newPos = (nnif-NFNF) + (njf-Nf) + (2*k-1);
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .                  int ti, tj, tk;
+ 1,890,700    0    0          0         0    0          0       0    0    810,300   270,103  0   0                  for(ti = 0; ti < 3; ti++)
+         .    .    .          .         .    .          .       .    .          .         .  .   .                  {
+         .    .    .          .         .    .          .       .    .          .         .  .   .                      int nntif = NFNF*ti;
+ 5,672,100    0    0          0         0    0          0       0    0  2,430,900   810,306  0   0                      for(tj = 0; tj < 3; tj++)
+         .    .    .          .         .    .          .       .    .          .         .  .   .                      {
+         .    .    .          .         .    .          .       .    .          .         .  .   .                          int nntjf = Nf*tj;
+19,447,200    1    1          0         0    0          0       0    0  7,292,700     1,487  0   0                          for(tk = 0; tk < 3; tk++)
+29,170,800    0    0 14,585,400   302,220    0          0       0    0          0         0  0   0                              val += r[newPos + nntif + nntjf + tk] * nodalWeights[ti][tj][tk];
+         .    .    .          .         .    .          .       .    .          .         .  .   .                      }
+         .    .    .          .         .    .          .       .    .          .         .  .   .                  } // end of ti loop
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+   540,200    0    0          0         0    0    270,100   3,650    0          0         0  0   0                  d[nnic + njc + k] = val;
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .              } // end of k loop
+         .    .    .          .         .    .          .       .    .          .         .  .   .          } // end of j loop
+         .    .    .          .         .    .          .       .    .          .         .  .   .      } // end of i loop
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+    11,680    0    0     10,220       730    0          0       0    0          0         0  0   0  } // restrictResidual
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .  void prolongateAndCorrectError(const double* __restrict__ ec, const int Nc, double* __restrict__ ef, const int Nf)
+    11,680    0    0          0         0    0      8,760       0    0          0         0  0   0  {
+         .    .    .          .         .    .          .       .    .          .         .  .   .      int i, j, k;
+     2,920    0    0          0         0    0          0       0    0          0         0  0   0      const int NCNC = Nc*Nc;
+     2,920    1    1          0         0    0          0       0    0          0         0  0   0      const int NFNF = Nf*Nf;
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+    81,760    0    0     37,960         0    0          0       0    0     20,440     1,464  0   0      for(i = 0; i < Nf; i++)
+         .    .    .          .         .    .          .       .    .          .         .  .   .      {
+         .    .    .          .         .    .          .       .    .          .         .  .   .          const int nnif = i*NFNF;
+   848,260    0    0    578,160         0    0          0       0    0    270,100    18,988  0   0          for(j = 0; j < Nf; j++)
+         .    .    .          .         .    .          .       .    .          .         .  .   .          {
+         .    .    .          .         .    .          .       .    .          .         .  .   .              const int njf = j*Nf;
+16,204,540    1    1  4,118,660         0    0          0       0    0  4,118,660   270,100  0   0              for(k = 0; k < Nf; k++)
+         .    .    .          .         .    .          .       .    .          .         .  .   .              {
+20,593,300    0    0          0         0    0          0       0    0          0         0  0   0                  int isNotOnCoarseEdge[3] = {i%2, j%2, k%2};
+ 4,118,660    0    0          0         0    0          0       0    0          0         0  0   0                  const int val = isNotOnCoarseEdge[0] + isNotOnCoarseEdge[1] + isNotOnCoarseEdge[2];
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+17,096,600    1    1 10,304,680         0    0     37,960       0    0          0         0  0   0                  double retVal = 0.;
+         .    .    .          .         .    .          .       .    .          .         .  .   .                  int p;
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .                  // if all are 1
+         .    .    .          .         .    .          .       .    .          .         .  .   .                  // => none of them are on coarse edge - so it is on center of coarse cube
+ 8,237,320    1    1          0         0    0          0       0    0  4,118,660        33  0   0                  if(val == 3)
+         .    .    .          .         .    .          .       .    .          .         .  .   .                  {
+ 3,918,640    0    0    270,100         0    0    270,100       0    0          0         0  0   0                      int lowCoarseCorner[3] = {(i-1)/2, (j-1)/2, (k-1)/2};
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .                      // form the relevant coarse cube corners
+12,193,920    2    2          0         0    0 10,091,520       0    0          0         0  0   0                      int relevantCorners[8][3] = {
+         .    .    .          .         .    .          .       .    .          .         .  .   .                          // 4 corners on X-Face
+         .    .    .          .         .    .          .       .    .          .         .  .   .                          {lowCoarseCorner[0],   lowCoarseCorner[1],   lowCoarseCorner[2]},
+   420,480    0    0          0         0    0          0       0    0          0         0  0   0                          {lowCoarseCorner[0],   lowCoarseCorner[1],   lowCoarseCorner[2]+1},
+   270,100    0    0          0         0    0          0       0    0          0         0  0   0                          {lowCoarseCorner[0],   lowCoarseCorner[1]+1, lowCoarseCorner[2]},
+         .    .    .          .         .    .          .       .    .          .         .  .   .                          {lowCoarseCorner[0],   lowCoarseCorner[1]+1, lowCoarseCorner[2]+1},
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .                          // 4 other corners on i+1
+    18,980    0    0          0         0    0          0       0    0          0         0  0   0                          {lowCoarseCorner[0]+1, lowCoarseCorner[1],   lowCoarseCorner[2]},
+         .    .    .          .         .    .          .       .    .          .         .  .   .                          {lowCoarseCorner[0]+1, lowCoarseCorner[1],   lowCoarseCorner[2]+1},
+         .    .    .          .         .    .          .       .    .          .         .  .   .                          {lowCoarseCorner[0]+1, lowCoarseCorner[1]+1, lowCoarseCorner[2]},
+         .    .    .          .         .    .          .       .    .          .         .  .   .                          {lowCoarseCorner[0]+1, lowCoarseCorner[1]+1, lowCoarseCorner[2]+1},
+         .    .    .          .         .    .          .       .    .          .         .  .   .                      };
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .                      // average of all eight corners
+ 6,727,680    0    0          0         0    0          0       0    0  3,363,840        12  0   0                      for(p = 0; p < 8; p++)
+         .    .    .          .         .    .          .       .    .          .         .  .   .                      {
+13,455,360    0    0          0         0    0          0       0    0          0         0  0   0                          int pos = NCNC*relevantCorners[p][0] + Nc*relevantCorners[p][1] + relevantCorners[p][2];
+ 6,727,680    0    0  3,363,840    14,600    0          0       0    0          0         0  0   0                          retVal += ec[pos];
+         .    .    .          .         .    .          .       .    .          .         .  .   .                      }
+ 1,111,060    0    0    270,100         0    0          0       0    0          0         0  0   0                      retVal *= 0.125;
+         .    .    .          .         .    .          .       .    .          .         .  .   .                  } // end of if val==3 check
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .                  // it is not on the coarse edge for two of the axes
+         .    .    .          .         .    .          .       .    .          .         .  .   .                  // i.e. it is on a coarse face?
+ 7,396,360    0    0          0         0    0          0       0    0  3,698,180        11  0   0                  else if(val == 2)
+         .    .    .          .         .    .          .       .    .          .         .  .   .                  {
+         .    .    .          .         .    .          .       .    .          .         .  .   .                      int coarseFaceCorners[4][3] = {};
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .                      // so simply check which face it is on and choose corners accordingly
+         .    .    .          .         .    .          .       .    .          .         .  .   .                      // if on X-Face
+ 4,309,920    1    1  1,436,640         0    0          0       0    0  1,436,640         5  0   0                      if(isNotOnCoarseEdge[0] == 0)
+         .    .    .          .         .    .          .       .    .          .         .  .   .                      {
+ 2,010,420    0    0     18,980         0    0     18,980       0    0          0         0  0   0                          int lowCornerFace[3] = {i/2, (j-1)/2, (k-1)/2};
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .                          // then fill in the corners
+ 1,915,520    1    1    478,880         0    0  1,436,640       0    0          0         0  0   0                          coarseFaceCorners[0][0] = lowCornerFace[0];   coarseFaceCorners[0][1] = lowCornerFace[1];       coarseFaceCorners[0][2] = lowCornerFace[2];
+ 1,436,640    0    0          0         0    0  1,436,640       0    0          0         0  0   0                          coarseFaceCorners[1][0] = lowCornerFace[0];   coarseFaceCorners[1][1] = lowCornerFace[1]+1;     coarseFaceCorners[1][2] = lowCornerFace[2];
+ 1,915,520    0    0          0         0    0  1,436,640       0    0          0         0  0   0                          coarseFaceCorners[2][0] = lowCornerFace[0];   coarseFaceCorners[2][1] = lowCornerFace[1];       coarseFaceCorners[2][2] = lowCornerFace[2]+1;
+ 3,352,160    0    0          0         0    0  1,436,640       0    0          0         0  0   0                          coarseFaceCorners[3][0] = lowCornerFace[0];   coarseFaceCorners[3][1] = lowCornerFace[1]+1;     coarseFaceCorners[3][2] = lowCornerFace[2]+1;
+         .    .    .          .         .    .          .       .    .          .         .  .   .                      }
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+ 2,873,280    0    0    957,760         0    0          0       0    0    957,760         0  0   0                      else if (isNotOnCoarseEdge[1] == 0)
+         .    .    .          .         .    .          .       .    .          .         .  .   .                      {
+ 2,455,720    0    0    270,100         0    0    270,100       0    0          0         0  0   0                          int lowCornerFace[3] = {(i-1)/2, j/2, (k-1)/2};
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .                          // then fill in the corners
+ 1,915,520    1    1    478,880         0    0  1,436,640       0    0          0         0  0   0                          coarseFaceCorners[0][0] = lowCornerFace[0];   coarseFaceCorners[0][1] = lowCornerFace[1];     coarseFaceCorners[0][2] = lowCornerFace[2];
+ 1,436,640    0    0          0         0    0  1,436,640       0    0          0         0  0   0                          coarseFaceCorners[1][0] = lowCornerFace[0]+1; coarseFaceCorners[1][1] = lowCornerFace[1];     coarseFaceCorners[1][2] = lowCornerFace[2];
+ 1,915,520    0    0          0         0    0  1,436,640       0    0          0         0  0   0                          coarseFaceCorners[2][0] = lowCornerFace[0];   coarseFaceCorners[2][1] = lowCornerFace[1];     coarseFaceCorners[2][2] = lowCornerFace[2]+1;
+ 2,934,600    1    1    540,200         0    0  1,436,640       0    0          0         0  0   0                          coarseFaceCorners[3][0] = lowCornerFace[0]+1; coarseFaceCorners[3][1] = lowCornerFace[1];     coarseFaceCorners[3][2] = lowCornerFace[2]+1;
+         .    .    .          .         .    .          .       .    .          .         .  .   .                      }
+         .    .    .          .         .    .          .       .    .          .         .  .   .                      else
+         .    .    .          .         .    .          .       .    .          .         .  .   .                      {
+ 1,915,520    1    1          0         0    0          0       0    0          0         0  0   0                          int lowCornerFace[3] = {(i-1)/2, (j-1)/2, k/2};
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .                          // then fill in the corners
+ 1,436,640    0    0          0         0    0  1,436,640       0    0          0         0  0   0                          coarseFaceCorners[0][0] = lowCornerFace[0];   coarseFaceCorners[0][1] = lowCornerFace[1];     coarseFaceCorners[0][2] = lowCornerFace[2];
+ 1,436,640    0    0          0         0    0  1,436,640       0    0          0         0  0   0                          coarseFaceCorners[1][0] = lowCornerFace[0];   coarseFaceCorners[1][1] = lowCornerFace[1]+1;   coarseFaceCorners[1][2] = lowCornerFace[2];
+ 1,436,640    0    0          0         0    0  1,436,640       0    0          0         0  0   0                          coarseFaceCorners[2][0] = lowCornerFace[0]+1; coarseFaceCorners[2][1] = lowCornerFace[1];     coarseFaceCorners[2][2] = lowCornerFace[2];
+ 2,873,280    0    0          0         0    0  1,436,640       0    0          0         0  0   0                          coarseFaceCorners[3][0] = lowCornerFace[0]+1; coarseFaceCorners[3][1] = lowCornerFace[1]+1;   coarseFaceCorners[3][2] = lowCornerFace[2];
+         .    .    .          .         .    .          .       .    .          .         .  .   .                      }
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+33,042,720    0    0 12,929,760         0    0          0       0    0  5,746,560         8  0   0                      for(p = 0; p < 4; p++)
+         .    .    .          .         .    .          .       .    .          .         .  .   .                      {
+22,986,240    0    0          0         0    0          0       0    0          0         0  0   0                          int pos = NCNC*coarseFaceCorners[p][0] + Nc*coarseFaceCorners[p][1] + coarseFaceCorners[p][2];
+11,493,120    0    0  5,746,560     2,920    0          0       0    0          0         0  0   0                          retVal += ec[pos];
+         .    .    .          .         .    .          .       .    .          .         .  .   .                      }
+ 2,876,200    0    0      1,460       730    0      1,460       0    0          0         0  0   0                      retVal *= 0.25;
+         .    .    .          .         .    .          .       .    .          .         .  .   .                  } // end of if val == 2 check
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .                  // it is not on the edge for only one axes
+         .    .    .          .         .    .          .       .    .          .         .  .   .                  // so it is on the edge connecting two axes planes
+ 4,523,080    0    0          0         0    0          0       0    0  2,261,540   470,130  0   0                  else if (val == 1)
+         .    .    .          .         .    .          .       .    .          .         .  .   .                  {
+         .    .    .          .         .    .          .       .    .          .         .  .   .                      int coarseEdgeCorners[2][3] = {};
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .                      // check for 1 instead of 0
+ 3,276,240    1    1  1,638,120         0    0          0       0    0  1,638,120    35,046  0   0                      if(isNotOnCoarseEdge[0] == 1)
+         .    .    .          .         .    .          .       .    .          .         .  .   .                      {
+ 2,730,200    5    1          0         0    0          0       0    0          0         0  0   0                          int lowCornerEdge[3] = {(i-1)/2, j/2, k/2};
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .                          coarseEdgeCorners[0][0] = lowCornerEdge[0];   coarseEdgeCorners[0][1] = lowCornerEdge[1];   coarseEdgeCorners[0][2] = lowCornerEdge[2];
+ 2,730,200    0    0    546,040         0    0  1,638,120       0    0          0         0  0   0                          coarseEdgeCorners[1][0] = lowCornerEdge[0]+1; coarseEdgeCorners[1][1] = lowCornerEdge[1];   coarseEdgeCorners[1][2] = lowCornerEdge[2];
+         .    .    .          .         .    .          .       .    .          .         .  .   .                      }
+ 2,184,160    1    1  1,092,080         0    0          0       0    0  1,092,080         4  0   0                      else if(isNotOnCoarseEdge[1] == 1)
+         .    .    .          .         .    .          .       .    .          .         .  .   .                      {
+ 2,730,200    0    0          0         0    0          0       0    0          0         0  0   0                          int lowCornerEdge[3] = {i/2, (j-1)/2, k/2};
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .                          coarseEdgeCorners[0][0] = lowCornerEdge[0];   coarseEdgeCorners[0][1] = lowCornerEdge[1];   coarseEdgeCorners[0][2] = lowCornerEdge[2];
+ 2,730,200    0    0    546,040         0    0  1,638,120       0    0          0         0  0   0                          coarseEdgeCorners[1][0] = lowCornerEdge[0];   coarseEdgeCorners[1][1] = lowCornerEdge[1]+1; coarseEdgeCorners[1][2] = lowCornerEdge[2];
+         .    .    .          .         .    .          .       .    .          .         .  .   .                      }
+         .    .    .          .         .    .          .       .    .          .         .  .   .                      else
+         .    .    .          .         .    .          .       .    .          .         .  .   .                      {
+ 2,184,160    0    0          0         0    0          0       0    0          0         0  0   0                          int lowCornerEdge[3] = {i/2, j/2, (k-1)/2};
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .                          coarseEdgeCorners[0][0] = lowCornerEdge[0];   coarseEdgeCorners[0][1] = lowCornerEdge[1];   coarseEdgeCorners[0][2] = lowCornerEdge[2];
+ 3,822,280    0    0  1,092,080         0    0  1,638,120       0    0          0         0  0   0                          coarseEdgeCorners[1][0] = lowCornerEdge[0];   coarseEdgeCorners[1][1] = lowCornerEdge[1];   coarseEdgeCorners[1][2] = lowCornerEdge[2]+1;
+         .    .    .          .         .    .          .       .    .          .         .  .   .                      }
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .                      for(p = 0; p < 2; p++)
+         .    .    .          .         .    .          .       .    .          .         .  .   .                      {
+16,381,200    1    1  4,914,360         0    0          0       0    0          0         0  0   0                          int pos = NCNC*coarseEdgeCorners[p][0] + Nc*coarseEdgeCorners[p][1] + coarseEdgeCorners[p][2];
+ 8,200,820    0    0  3,276,240         0    0      1,460       0    0          0         0  0   0                          retVal += ec[pos];
+         .    .    .          .         .    .          .       .    .          .         .  .   .                      }
+ 3,283,540    1    1      1,460       730    0      4,380       0    0          0         0  0   0                      retVal *= 0.5;
+         .    .    .          .         .    .          .       .    .          .         .  .   .                  }
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .                  // it exactly matches the coarse grid point
+         .    .    .          .         .    .          .       .    .          .         .  .   .                  else
+ 8,008,100    2    2  2,905,400         0    0    578,160       0    0          0         0  0   0                      retVal = ec[NCNC*(i/2) + Nc*(j/2) + (k/2)];
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .                  // finally update the fine grid nodal point
+12,355,980    0    0  4,118,660   514,650    0  4,118,660       0    0          0         0  0   0                  ef[nnif + njf + k] += retVal;
+         .    .    .          .         .    .          .       .    .          .         .  .   .              }
+         .    .    .          .         .    .          .       .    .          .         .  .   .          } // end of j loop
+         .    .    .          .         .    .          .       .    .          .         .  .   .      } // end of i loop
+    11,680    0    0     10,220       730    0          0       0    0          0         0  0   0  }
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .  // return current l2-norm squared of residual
+         .    .    .          .         .    .          .       .    .          .         .  .   .  double multigrid_method(double **u, double **f, int q, const int smootherIter, int N, double *LU)
+    24,090    2    2          0         0    0     15,330       0    0          0         0  0   0  {
+     7,300    0    0      1,460     1,460    0      1,460       0    0          0         0  0   0      double h = GRID_LENGTH/(N-1);
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .      double timingTemp;
+     4,380    0    0          0         0    0          0       0    0      2,190       730  0   0      if(q == 0)
+         .    .    .          .         .    .          .       .    .          .         .  .   .      {
+     2,190    0    0          0         0    0        730       0    0          0         0  0   0          timingTemp = clock();
+         .    .    .          .         .    .          .       .    .          .         .  .   .          // prepare A matrix to send for gaussian elimination
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+     1,460    0    0          0         0    0          0       0    0          0         0  0   0          const int NN = N*N;
+       730    1    1          0         0    0          0       0    0          0         0  0   0          const int totalNodes = NN*N;
+     3,650    0    0      2,190         0    0        730       0    0          0         0  0   0          solveWithLU(LU, totalNodes, f[q], u[q]);
+     6,570    1    1      2,920     2,190    0      2,190       0    0          0         0  0   0          tInfo[q][3].timeTaken += (clock() - timingTemp);
+     2,190    0    0      2,190         0    0          0       0    0          0         0  0   0          tInfo[q][3].numCalls++;
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+       730    0    0          0         0    0          0       0    0          0         0  0   0          return 0.;
+         .    .    .          .         .    .          .       .    .          .         .  .   .      }
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+     8,760    0    0      1,460     1,460    0      4,380       0    0          0         0  0   0      double *v = u[q];
+     2,920    1    1      1,460     1,460    0          0       0    0          0         0  0   0      double *d = f[q];
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+     5,840    0    0      1,460         0    0      2,920       1    0          0         0  0   0      timingTemp = clock();
+    10,220    0    0      2,920         0    0      2,920       0    0          0         0  0   0      GaussSeidelSmoother(v, d, N, h, smootherIter);
+    13,140    2    2      5,840     3,650    0      4,380     730    0          0         0  0   0      tInfo[q][0].timeTaken += (clock() - timingTemp);
+     4,380    0    0      4,380         0    0          0       0    0          0         0  0   0      tInfo[q][0].numCalls++;
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .      // allocate the residual vector
+    10,220    0    0          0         0    0      1,460       0    0          0         0  0   0      double *r = calloc(N*N*N, sizeof(double));
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+     5,840    0    0      1,460         0    0      2,920       0    0          0         0  0   0      timingTemp = clock();
+    10,220    0    0      2,920       730    0      2,920       0    0          0         0  0   0      calculateResidual(v, d, N, h, r);
+    13,140    4    2      5,840     2,190    0      4,380     730    0          0         0  0   0      tInfo[q][1].timeTaken += (clock() - timingTemp);
+     4,380    0    0      4,380         0    0          0       0    0          0         0  0   0      tInfo[q][1].numCalls++;
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .      // update N for next coarser level
+     8,760    0    0          0         0    0          0       0    0          0         0  0   0      int N_coarse = (N+1)/2;
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .      // now restrict this onto the next level
+     4,380    0    0      2,920       730    0      1,460       0    0          0         0  0   0      double *d1 = f[q-1];
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+     5,840    1    1      1,460         0    0      2,920       0    0          0         0  0   0      timingTemp = clock();
+     7,300    1    1      2,920         0    0      1,460       0    0          0         0  0   0      restrictResidual(r, N, d1, N_coarse);
+    16,060    0    0      7,300     2,190    0      5,840     730    0          0         0  0   0      tInfo[q][2].timeTaken += (clock() - timingTemp);
+     4,380    0    0      4,380         0    0          0       0    0          0         0  0   0      tInfo[q][2].numCalls++;
+         .    .    .          .         .    .          .       .    .          .         .  .   .      // free the residual memory used
+     2,920    0    0      1,460         0    0      1,460       0    0          0         0  0   0      free(r);
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .      // do recursive call now
+     5,840    1    1      1,460         0    0      2,920       0    0          0         0  0   0      timingTemp = clock();
+    11,680    0    0      4,380       730    0      1,460       0    0          0         0  0   0      multigrid_method(u, f, q-1, smootherIter, N_coarse, LU);
+    13,140    2    1      5,840     2,190    0      4,380   1,460    0          0         0  0   0      tInfo[q][3].timeTaken += (clock() - timingTemp);
+     4,380    0    0      4,380         0    0          0       0    0          0         0  0   0      tInfo[q][3].numCalls++;
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .      // now do prolongation to the fine grid
+     2,920    0    0      2,920         0    0          0       0    0          0         0  0   0      double *v1 = u[q-1];
+         .    .    .          .         .    .          .       .    .          .         .  .   .      // PARALLELIZABLE
+     4,380    0    0          0         0    0      1,460       0    0          0         0  0   0      timingTemp = clock();
+     7,300    0    0          0         0    0      1,460       0    0          0         0  0   0      prolongateAndCorrectError(v1, N_coarse, v, N);
+    13,140    1    1      5,840     2,190    0      4,380     730    0          0         0  0   0      tInfo[q][4].timeTaken += (clock() - timingTemp);
+     4,380    0    0      4,380         0    0          0       0    0          0         0  0   0      tInfo[q][4].numCalls++;
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+     4,380    0    0          0         0    0      1,460       0    0          0         0  0   0      timingTemp = clock();
+    10,220    1    1      4,380         0    0      1,460       0    0          0         0  0   0      GaussSeidelSmoother(v, d, N, h, smootherIter);
+    13,140    1    1      5,840     2,190    0      4,380     730    0          0         0  0   0      tInfo[q][5].timeTaken += (clock() - timingTemp);
+     4,380    0    0      4,380         0    0          0       0    0          0         0  0   0      tInfo[q][5].numCalls++;
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+     4,380    0    0          0         0    0      1,460       0    0          0         0  0   0      timingTemp = clock();
+    10,220    0    0      1,460         0    0      2,920     730    0          0         0  0   0      double res = calculateResidual(v, d, N, h, NULL);
+    13,140    1    1      5,840     2,190    0      4,380       0    0          0         0  0   0      tInfo[q][6].timeTaken += (clock() - timingTemp);
+     4,380    0    0      4,380         0    0          0       0    0          0         0  0   0      tInfo[q][6].numCalls++;
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+     1,460    0    0      1,460         0    0          0       0    0          0         0  0   0      return res;
+    18,250    3    1     15,330     3,650    0        730       0    0          0         0  0   0  }
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .  void updateEdgeValues(double *u, const int N)
+         6    0    0          0         0    0          6       0    0          0         0  0   0  {
+         2    0    0          0         0    0          0       0    0          0         0  0   0      const int NN = N*N;
+         .    .    .          .         .    .          .       .    .          .         .  .   .      int i, j, k;
+         .    .    .          .         .    .          .       .    .          .         .  .   .      int pos;
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .      // update the 8 corner point values first
+         .    .    .          .         .    .          .       .    .          .         .  .   .      // 4 points on X = 0 face
+         .    .    .          .         .    .          .       .    .          .         .  .   .      i = 0;
+         .    .    .          .         .    .          .       .    .          .         .  .   .      j = 0; k = 0;
+         .    .    .          .         .    .          .       .    .          .         .  .   .      pos = NN*i + N*j + k;
+        13    2    2          4         4    0          2       0    0          0         0  0   0      u[pos] = (1./3) * (u[pos+1] + u[pos+N] + u[pos+NN]);
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         1    0    0          0         0    0          0       0    0          0         0  0   0      j = 0; k = N-1;
+         .    .    .          .         .    .          .       .    .          .         .  .   .      pos = NN*i + N*j + k;
+        11    0    0          3         2    0          2       0    0          0         0  0   0      u[pos] = (1./3) * (u[pos-1] + u[pos+N] + u[pos+NN]);
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .      j = N-1; k = 0;
+         2    0    0          0         0    0          0       0    0          0         0  0   0      pos = NN*i + N*j + k;
+        16    2    2          3         3    0          4       0    0          0         0  0   0      u[pos] = (1./3) * (u[pos+1] + u[pos-N] + u[pos+NN]);
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .      j = N-1; k = N-1;
+         1    0    0          0         0    0          0       0    0          0         0  0   0      pos = NN*i + N*j + k;
+        11    0    0          3         1    0          1       0    0          0         0  0   0      u[pos] = (1./3) * (u[pos-1] + u[pos-N] + u[pos+NN]);
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .      // 4 points on X=N-1 face
+         .    .    .          .         .    .          .       .    .          .         .  .   .      i = N-1;
+         .    .    .          .         .    .          .       .    .          .         .  .   .      j = 0; k = 0;
+         2    0    0          0         0    0          0       0    0          0         0  0   0      pos = NN*i + N*j + k;
+        16    1    1          3         1    0          4       0    0          0         0  0   0      u[pos] = (1./3) * (u[pos+1] + u[pos+N] + u[pos-NN]);
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .      j = 0; k = N-1;
+         1    0    0          0         0    0          0       0    0          0         0  0   0      pos = NN*i + N*j + k;
+        10    1    1          3         0    0          1       0    0          0         0  0   0      u[pos] = (1./3) * (u[pos-1] + u[pos+N] + u[pos-NN]);
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .      j = N-1; k = 0;
+         3    0    0          0         0    0          1       0    0          0         0  0   0      pos = NN*i + N*j + k;
+        14    1    1          3         0    0          2       0    0          0         0  0   0      u[pos] = (1./3) * (u[pos+1] + u[pos-N] + u[pos-NN]);
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .      j = N-1; k = N-1;
+         2    0    0          0         0    0          0       0    0          0         0  0   0      pos = NN*i + N*j + k;
+        12    1    1          4         1    0          1       0    0          0         0  0   0      u[pos] = (1./3) * (u[pos+1] + u[pos-N] + u[pos-NN]);
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .      // update the 12 edges
+         .    .    .          .         .    .          .       .    .          .         .  .   .      // X = 0 face
+         .    .    .          .         .    .          .       .    .          .         .  .   .      i = 0; k = 0;
+        59    1    1          0         0    0          0       0    0         16         8  0   0      for(j = 1; j < N-1; j++)
+         .    .    .          .         .    .          .       .    .          .         .  .   .      {
+         .    .    .          .         .    .          .       .    .          .         .  .   .          pos = NN*i + N*j + k;
+        75    0    0         30        29    0         15       1    0          0         0  0   0          u[pos] = 0.5 * (u[pos+1] + u[pos+NN]);
+         .    .    .          .         .    .          .       .    .          .         .  .   .      }
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .      i = 0; k = N-1;
+        50    0    0          0         0    0          0       0    0         15        10  0   0      for(j = 1; j < N-1; j++)
+         .    .    .          .         .    .          .       .    .          .         .  .   .      {
+         .    .    .          .         .    .          .       .    .          .         .  .   .          pos = NN*i + N*j + k;
+        75    1    1         30         4    0         15       0    0          0         0  0   0          u[pos] = 0.5 * (u[pos-1] + u[pos+NN]);
+         .    .    .          .         .    .          .       .    .          .         .  .   .      }
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .      i = 0; j = 0;
+        45    1    1          1         0    0          1       0    0         15        10  0   0      for(k = 1; k < N-1; k++)
+         .    .    .          .         .    .          .       .    .          .         .  .   .      {
+         .    .    .          .         .    .          .       .    .          .         .  .   .          pos = NN*i + N*j + k;
+        75    0    0         30         1    0         15       1    0          0         0  0   0          u[pos] = 0.5 * (u[pos+N] + u[pos+NN]);
+         .    .    .          .         .    .          .       .    .          .         .  .   .      }
+         .    .    .          .         .    .          .       .    .          .         .  .   .      i = 0; j = N-1;
+        39    0    0          2         0    0          0       0    0         15         7  0   0      for(k = 1; k < N-1; k++)
+         .    .    .          .         .    .          .       .    .          .         .  .   .      {
+         .    .    .          .         .    .          .       .    .          .         .  .   .          pos = NN*i + N*j + k;
+        75    1    1         30         2    0         15       1    0          0         0  0   0          u[pos] = 0.5 * (u[pos-N] + u[pos+NN]);
+         .    .    .          .         .    .          .       .    .          .         .  .   .      }
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .      // X = N-1 face
+         .    .    .          .         .    .          .       .    .          .         .  .   .      i = N-1; k = 0;
+        56    0    0          2         0    0          0       0    0         15        10  0   0      for(j = 1; j < N-1; j++)
+         .    .    .          .         .    .          .       .    .          .         .  .   .      {
+         .    .    .          .         .    .          .       .    .          .         .  .   .          pos = NN*i + N*j + k;
+        75    1    1         30         0    0         15       0    0          0         0  0   0          u[pos] = 0.5 * (u[pos+1] + u[pos-NN]);
+         .    .    .          .         .    .          .       .    .          .         .  .   .      }
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .      i = N-1; k = N-1;
+        62    1    1          1         0    0          0       0    0         15        10  0   0      for(j = 1; j < N-1; j++)
+         .    .    .          .         .    .          .       .    .          .         .  .   .      {
+         .    .    .          .         .    .          .       .    .          .         .  .   .          pos = NN*i + N*j + k;
+        75    1    1         30         0    0         15       0    0          0         0  0   0          u[pos] = 0.5 * (u[pos-1] + u[pos-NN]);
+         .    .    .          .         .    .          .       .    .          .         .  .   .      }
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .      i = N-1; j = 0;
+        45    1    1          3         0    0          0       0    0         15        10  0   0      for(k = 1; k < N-1; k++)
+         .    .    .          .         .    .          .       .    .          .         .  .   .      {
+         .    .    .          .         .    .          .       .    .          .         .  .   .          pos = NN*i + N*j + k;
+        90    0    0         30         0    0         15       1    0          0         0  0   0          u[pos] = 0.5 * (u[pos+N] + u[pos-NN]);
+         .    .    .          .         .    .          .       .    .          .         .  .   .      }
+         .    .    .          .         .    .          .       .    .          .         .  .   .      i = N-1; j = N-1;
+        33    1    1          1         0    0          0       0    0         15        10  0   0      for(k = 1; k < N-1; k++)
+         .    .    .          .         .    .          .       .    .          .         .  .   .      {
+         .    .    .          .         .    .          .       .    .          .         .  .   .          pos = NN*i + N*j + k;
+        75    0    0         30         0    0         15       1    0          0         0  0   0          u[pos] = 0.5 * (u[pos-N] + u[pos-NN]);
+         .    .    .          .         .    .          .       .    .          .         .  .   .      }
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .      // Y = 0 face
+         .    .    .          .         .    .          .       .    .          .         .  .   .      j = 0; k = 0;
+        53    1    1          1         0    0          0       0    0         15         9  0   0      for(i = 1; i < N-1; i++)
+         .    .    .          .         .    .          .       .    .          .         .  .   .      {
+         .    .    .          .         .    .          .       .    .          .         .  .   .          pos = NN*i + N*j + k;
+        75    0    0         30        18    0         15       1    0          0         0  0   0          u[pos] = 0.5 * (u[pos+N] + u[pos+1]);
+         .    .    .          .         .    .          .       .    .          .         .  .   .      }
+         .    .    .          .         .    .          .       .    .          .         .  .   .      j = 0; k = N-1;
+        54    1    1          2         0    0          0       0    0         15         8  0   0      for(i = 1; i < N-1; i++)
+         .    .    .          .         .    .          .       .    .          .         .  .   .      {
+         .    .    .          .         .    .          .       .    .          .         .  .   .          pos = NN*i + N*j + k;
+        75    0    0         30        12    0         15       0    0          0         0  0   0          u[pos] = 0.5 * (u[pos+N] + u[pos-1]);
+         .    .    .          .         .    .          .       .    .          .         .  .   .      }
+         .    .    .          .         .    .          .       .    .          .         .  .   .      // Y = N-1 face
+         .    .    .          .         .    .          .       .    .          .         .  .   .      j = N-1; k = 0;
+        56    1    1          2         0    0          0       0    0         15         8  0   0      for(i = 1; i < N-1; i++)
+         .    .    .          .         .    .          .       .    .          .         .  .   .      {
+         .    .    .          .         .    .          .       .    .          .         .  .   .          pos = NN*i + N*j + k;
+        75    0    0         30        18    0         15       1    0          0         0  0   0          u[pos] = 0.5 * (u[pos-N] + u[pos+1]);
+         .    .    .          .         .    .          .       .    .          .         .  .   .      }
+         .    .    .          .         .    .          .       .    .          .         .  .   .      j = N-1; k = N-1;
+        45    0    0          0         0    0          0       0    0         15        10  0   0      for(i = 1; i < N-1; i++)
+         .    .    .          .         .    .          .       .    .          .         .  .   .      {
+         .    .    .          .         .    .          .       .    .          .         .  .   .          pos = NN*i + N*j + k;
+        75    0    0         30         5    0         15       0    0          0         0  0   0          u[pos] = 0.5 * (u[pos-N] + u[pos-1]);
+         .    .    .          .         .    .          .       .    .          .         .  .   .      }
+         7    0    0          7         0    0          0       0    0          0         0  0   0  }
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .  /*
+         .    .    .          .         .    .          .       .    .          .         .  .   .   * Understand storage and strided access patterns
+         .    .    .          .         .    .          .       .    .          .         .  .   .   * And areas for parallelism
+         .    .    .          .         .    .          .       .    .          .         .  .   .   */
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .  //double func(double x, double y, double z)
+-- line 763 ----------------------------------------
+-- line 774 ----------------------------------------
+         .    .    .          .         .    .          .       .    .          .         .  .   .  //{ return 1.;}
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .  // TODO: Improve this to take in a user function pointer?
+         .    .    .          .         .    .          .       .    .          .         .  .   .  void SolverSetupBoundaryConditions()
+         .    .    .          .         .    .          .       .    .          .         .  .   .  {
+         .    .    .          .         .    .          .       .    .          .         .  .   .      int i, j, k;
+         .    .    .          .         .    .          .       .    .          .         .  .   .      int nni, nj;
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         3    1    1          3         2    0          0       0    0          0         0  0   0      double *v = u[numLevels-1];
+         .    .    .          .         .    .          .       .    .          .         .  .   .      double center[2] = {GRID_LENGTH/2., GRID_LENGTH/2.};
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .      /***********************************/
+         .    .    .          .         .    .          .       .    .          .         .  .   .      // X = 0 and END faces
+         .    .    .          .         .    .          .       .    .          .         .  .   .      i = 0;
+         .    .    .          .         .    .          .       .    .          .         .  .   .      nni = finestOneSideNum*finestOneSideNum*i;
+        79    1    1          4         0    0          0       0    0         18         3  0   0      for(j = 0; j < finestOneSideNum; j++)
+         .    .    .          .         .    .          .       .    .          .         .  .   .      {
+         .    .    .          .         .    .          .       .    .          .         .  .   .          nj = finestOneSideNum*j;
+       102    0    0          0         0    0          0       0    0          0         0  0   0          double ty = j*spacing-center[0];
+       578    0    0          0         0    0          0       0    0        289        29  0   0          for(k = 0; k < finestOneSideNum; k++)
+         .    .    .          .         .    .          .       .    .          .         .  .   .          {
+       867    0    0          0         0    0          0       0    0          0         0  0   0              double tz = k*spacing-center[1];
+       578    0    0          0         0    0          0       0    0          0         0  0   0              double rr = ty*ty + tz*tz;
+       578    0    0          0         0    0          0       0    0        289        13  0   0              if(rr <= CAPILLARY_RADIUS*CAPILLARY_RADIUS)
+       291    1    1          1         0    0          1       1    0          0         0  0   0                  v[nni + nj + k] = CAPILLARY_VOLTAGE;
+         .    .    .          .         .    .          .       .    .          .         .  .   .          }
+         .    .    .          .         .    .          .       .    .          .         .  .   .      }
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         1    0    0          0         0    0          0       0    0          0         0  0   0      i = finestOneSideNum-1;
+         8    1    1          1         0    0          0       0    0          0         0  0   0      nni = finestOneSideNum*finestOneSideNum*i;
+       140    1    1         16         0    0          0       0    0         17         1  0   0      for(j = 0; j < finestOneSideNum; j++)
+         .    .    .          .         .    .          .       .    .          .         .  .   .      {
+         .    .    .          .         .    .          .       .    .          .         .  .   .          nj = finestOneSideNum*j;
+       374    0    0        272         0    0          0       0    0          0         0  0   0          double ty = j*spacing-center[0];
+       578    0    0          0         0    0          0       0    0        289        44  0   0          for(k = 0; k < finestOneSideNum; k++)
+         .    .    .          .         .    .          .       .    .          .         .  .   .          {
+       867    0    0          0         0    0          0       0    0          0         0  0   0              double tz = k*spacing-center[1];
+       578    1    1          0         0    0          0       0    0          0         0  0   0              double rr = ty*ty + tz*tz;
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+       578    0    0          0         0    0          0       0    0        289        27  0   0              if(rr > (EXTRACTOR_INNER_RADIUS*EXTRACTOR_INNER_RADIUS)
+       401    0    0          1         0    0          0       0    0        200        39  0   0                      &&
+         .    .    .          .         .    .          .       .    .          .         .  .   .                 rr < (EXTRACTOR_OUTER_RADIUS*EXTRACTOR_OUTER_RADIUS))
+       465    0    0         88         0    0         88      28    0          0         0  0   0              v[nni + nj + k] = EXTRACTOR_VOLTAGE;
+         .    .    .          .         .    .          .       .    .          .         .  .   .          }
+         .    .    .          .         .    .          .       .    .          .         .  .   .      }
+         .    .    .          .         .    .          .       .    .          .         .  .   .      /***********************************/
+         .    .    .          .         .    .          .       .    .          .         .  .   .      /***********************************/
+         .    .    .          .         .    .          .       .    .          .         .  .   .      // Y = 0 and END faces
+         .    .    .          .         .    .          .       .    .          .         .  .   .      j = 0;
+         .    .    .          .         .    .          .       .    .          .         .  .   .      nj = finestOneSideNum * j;
+        68    0    0          0         0    0          0       0    0         17         3  0   0      for(i = 0; i < finestOneSideNum; i++)
+         .    .    .          .         .    .          .       .    .          .         .  .   .      {
+         .    .    .          .         .    .          .       .    .          .         .  .   .          nni = finestOneSideNum*finestOneSideNum*i;
+       578    0    0          0         0    0          0       0    0        289        35  0   0          for(k = 0; k < finestOneSideNum; k++)
+       578    0    0          0         0    0        289      51    0          0         0  0   0              v[nni + nj + k] = 0;
+         .    .    .          .         .    .          .       .    .          .         .  .   .      }
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .      j = finestOneSideNum-1;
+         5    1    1          0         0    0          0       0    0          0         0  0   0      nj = finestOneSideNum * j;
+       123    0    0          0         0    0          0       0    0         17         3  0   0      for(i = 0; i < finestOneSideNum; i++)
+         .    .    .          .         .    .          .       .    .          .         .  .   .      {
+         .    .    .          .         .    .          .       .    .          .         .  .   .          nni = finestOneSideNum*finestOneSideNum*i;
+       578    0    0          0         0    0          0       0    0        289        36  0   0          for(k = 0; k < finestOneSideNum; k++)
+       578    0    0          0         0    0        289      37    0          0         0  0   0              v[nni + nj + k] = 0;
+         .    .    .          .         .    .          .       .    .          .         .  .   .      }
+         .    .    .          .         .    .          .       .    .          .         .  .   .      /***********************************/
+         .    .    .          .         .    .          .       .    .          .         .  .   .      /***********************************/
+         .    .    .          .         .    .          .       .    .          .         .  .   .      // Z = 0 and END faces
+         .    .    .          .         .    .          .       .    .          .         .  .   .      k = 0;
+        88    0    0          0         0    0          0       0    0         17         3  0   0      for(i = 0; i < finestOneSideNum; i++)
+         .    .    .          .         .    .          .       .    .          .         .  .   .      {
+         .    .    .          .         .    .          .       .    .          .         .  .   .          nni = finestOneSideNum*finestOneSideNum*i;
+       901    1    1          0         0    0          0       0    0        289        24  0   0          for(j = 0; j < finestOneSideNum; j++)
+         .    .    .          .         .    .          .       .    .          .         .  .   .          {
+         .    .    .          .         .    .          .       .    .          .         .  .   .              nj = finestOneSideNum*j;
+       578    0    0          0         0    0        289     226    0          0         0  0   0              v[nni + nj + k] = 0;
+         .    .    .          .         .    .          .       .    .          .         .  .   .          }
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .      }
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .      k = finestOneSideNum-1;
+        69    0    0          1         0    0          0       0    0         17         2  0   0      for(i = 0; i < finestOneSideNum; i++)
+         .    .    .          .         .    .          .       .    .          .         .  .   .      {
+         .    .    .          .         .    .          .       .    .          .         .  .   .          nni = finestOneSideNum*finestOneSideNum*i;
+       901    1    1          0         0    0          0       0    0        289        37  0   0          for(j = 0; j < finestOneSideNum; j++)
+         .    .    .          .         .    .          .       .    .          .         .  .   .          {
+         .    .    .          .         .    .          .       .    .          .         .  .   .              nj = finestOneSideNum*j;
+       578    0    0          0         0    0        289      30    0          0         0  0   0              v[nni + nj + k] = 0;
+         .    .    .          .         .    .          .       .    .          .         .  .   .          }
+         .    .    .          .         .    .          .       .    .          .         .  .   .      }
+         .    .    .          .         .    .          .       .    .          .         .  .   .      /***********************************/
+         .    .    .          .         .    .          .       .    .          .         .  .   .      /***********************************/
+         .    .    .          .         .    .          .       .    .          .         .  .   .  } // end of SolverSetupBoundaryConditions
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .  double SolverLinSolve()
+         .    .    .          .         .    .          .       .    .          .         .  .   .  {
+     5,840    0    0      4,380       730    0          0       0    0          0         0  0   0      double res = multigrid_method(u, d, numLevels-1, gsIterNum, finestOneSideNum, A);
+         .    .    .          .         .    .          .       .    .          .         .  .   .      return res;
+         .    .    .          .         .    .          .       .    .          .         .  .   .  }
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .  void SolverSmoothenEdgeValues()
+         5    0    0          4         2    0          0       0    0          0         0  0   0  { return updateEdgeValues(u[numLevels-1], finestOneSideNum); }
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .  double SolverGetResidual()
+         .    .    .          .         .    .          .       .    .          .         .  .   .  {
+        10    2    2          7         3    0          0       0    0          0         0  0   0      return calculateResidual(u[numLevels-1], d[numLevels-1], finestOneSideNum, spacing, NULL);
+         .    .    .          .         .    .          .       .    .          .         .  .   .  }
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .  void SolverResetTimingInfo()
+         2    0    0          2         1    0          0       0    0          0         0  0   0  { resetTimingInfo(tInfo, numLevels); }
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .  void SolverPrintTimingInfo()
+         3    1    1          2         0    0          1       0    0          0         0  0   0  { printTimingInfo(tInfo, numLevels); }
+         .    .    .          .         .    .          .       .    .          .         .  .   .  
+         .    .    .          .         .    .          .       .    .          .         .  .   .  /*
+         .    .    .          .         .    .          .       .    .          .         .  .   .  int main(int argc, char** argv)
+         .    .    .          .         .    .          .       .    .          .         .  .   .  {
+         .    .    .          .         .    .          .       .    .          .         .  .   .      if(argc != 4)
+         .    .    .          .         .    .          .       .    .          .         .  .   .      {
+         .    .    .          .         .    .          .       .    .          .         .  .   .          printf("Usage: %s <coarse grid points on one side> <number of levels> <gauss seidel iterations>\n", argv[0]);
+         .    .    .          .         .    .          .       .    .          .         .  .   .          exit(1);
+-- line 894 ----------------------------------------
+
+--------------------------------------------------------------------------------
+-- Auto-annotated source: /storage/home/rkn115/work/progs/PICC_Code/solvers/multigrid/gauss_elim.h
+--------------------------------------------------------------------------------
+        Ir I1mr ILmr         Dr    D1mr  DLmr      Dw   D1mw DLmw        Bc    Bcm Bi Bim 
+
+-- line 2 ----------------------------------------
+         .    .    .          .       .     .       .      .    .         .      .  .   .  #define GAUSS_ELIM_H
+         .    .    .          .       .     .       .      .    .         .      .  .   .  
+         .    .    .          .       .     .       .      .    .         .      .  .   .  #include <stdio.h>
+         .    .    .          .       .     .       .      .    .         .      .  .   .  //#define NUM (3)
+         .    .    .          .       .     .       .      .    .         .      .  .   .  
+         .    .    .          .       .     .       .      .    .         .      .  .   .  // converts a given square matrix of size n
+         .    .    .          .       .     .       .      .    .         .      .  .   .  // to its LU form, reusing storage
+         .    .    .          .       .     .       .      .    .         .      .  .   .  void convertToLU_InPlace(double *a, int n)
+        14    2    2          0       0     0       6      0    0         0      0  0   0  {
+         .    .    .          .       .     .       .      .    .         .      .  .   .      int i, j, k;
+         .    .    .          .       .     .       .      .    .         .      .  .   .  
+         .    .    .          .       .     .       .      .    .         .      .  .   .      // loop across rows
+       375    1    1          0       0     0       0      0    0       125      5  0   0      for(i = 0; i < n-1; i++)
+         .    .    .          .       .     .       .      .    .         .      .  .   .      {
+         .    .    .          .       .     .       .      .    .         .      .  .   .          const int ni = n*i;
+       249    0    0        125      68     0       0      0    0         0      0  0   0          const double aii_inv = 1./a[ni+i];
+         .    .    .          .       .     .       .      .    .         .      .  .   .  
+    47,864    0    0          0       0     0       0      0    0     7,874    131  0   0          for(k = i+1; k < n; k++)
+         .    .    .          .       .     .       .      .    .         .      .  .   .          {
+         .    .    .          .       .     .       .      .    .         .      .  .   .              const int nk = n*k;
+    15,500    0    0      7,750   5,491    10       0      0    0         0      0  0   0              const double z = a[nk + i]*aii_inv;
+    23,250    1    1          0       0     0   7,750      0    0         0      0  0   0              a[nk + i] = z;
+         .    .    .          .       .     .       .      .    .         .      .  .   .  
+         .    .    .          .       .     .       .      .    .         .      .  .   .              // update b
+         .    .    .          .       .     .       .      .    .         .      .  .   .              //b[k] -= z*b[i];
+         .    .    .          .       .     .       .      .    .         .      .  .   .  
+ 1,286,500    0    0          0       0     0       0      0    0   643,250  7,780  0   0              for(j = i+1; j < n; j++)
+ 3,859,500    0    0  1,286,500  72,185 1,141 643,250      0    0         0      0  0   0                  a[nk + j] -= z*a[ni + j];
+         .    .    .          .       .     .       .      .    .         .      .  .   .          }
+         .    .    .          .       .     .       .      .    .         .      .  .   .      } // end of i loop
+         7    0    0          7       2     0       0      0    0         0      0  0   0  }
+         .    .    .          .       .     .       .      .    .         .      .  .   .  
+         .    .    .          .       .     .       .      .    .         .      .  .   .  void solveWithLU(double *LU, const int n, double *b, double *x)
+     2,920    1    0          0       0     0   2,920      0    0         0      0  0   0  {
+         .    .    .          .       .     .       .      .    .         .      .  .   .      int i, j;
+         .    .    .          .       .     .       .      .    .         .      .  .   .  
+         .    .    .          .       .     .       .      .    .         .      .  .   .      // solve Lz=b system - FORWARD Substitution
+         .    .    .          .       .     .       .      .    .         .      .  .   .      // reuse x vector as z
+   277,400    1    1          0       0     0       0      0    0    91,980    730  0   0      for(i = 0; i < n; i++)
+         .    .    .          .       .     .       .      .    .         .      .  .   .      {
+         .    .    .          .       .     .       .      .    .         .      .  .   .          const int ni = n*i;
+    94,170    0    0          0       0     0       0      0    0         0      0  0   0          double sum = 0.;
+11,858,120    1    1          0       0     0       0      0    0 5,748,020 90,536  0   0          for(j = 0; j < i; j++)
+22,630,000    0    0 11,315,000 779,640     0       0      0    0         0      0  0   0              sum += LU[ni + j]*x[j];
+         .    .    .          .       .     .       .      .    .         .      .  .   .  
+         .    .    .          .       .     .       .      .    .         .      .  .   .          // implicitly L is unit lower triangular
+         .    .    .          .       .     .       .      .    .         .      .  .   .          // so no need to divide
+   273,750    0    0     91,250   3,650     0  91,250 11,680    0         0      0  0   0          x[i] = b[i] - sum;
+         .    .    .          .       .     .       .      .    .         .      .  .   .      }
+         .    .    .          .       .     .       .      .    .         .      .  .   .  
+         .    .    .          .       .     .       .      .    .         .      .  .   .      // now solve Ux = z system - backward substitution
+         .    .    .          .       .     .       .      .    .         .      .  .   .      // reuse x
+   275,940    0    0          0       0     0       0      0    0    91,980    731  0   0      for(i = n-1; i >= 0; i--)
+         .    .    .          .       .     .       .      .    .         .      .  .   .      {
+    97,820    0    0          0       0     0       0      0    0         0      0  0   0          const int ni = n*i;
+   188,340    2    2          0       0     0       0      0    0         0      0  0   0          double sum = 0.;
+12,310,720    0    0          0       0     0       0      0    0 5,748,020 91,266  0   0          for(j = n-1; j > i; j--)
+22,630,000    0    0 11,315,000 755,550     0       0      0    0         0      0  0   0              sum += LU[ni + j] * x[j];
+         .    .    .          .       .     .       .      .    .         .      .  .   .  
+   547,500    0    0    182,500   4,380     0  91,250      0    0         0      0  0   0          x[i] = (x[i]-sum)/LU[ni+i];
+         .    .    .          .       .     .       .      .    .         .      .  .   .      }
+     3,650    0    0      3,650   1,460     0       0      0    0         0      0  0   0  }
+         .    .    .          .       .     .       .      .    .         .      .  .   .  
+         .    .    .          .       .     .       .      .    .         .      .  .   .  // simple Gaussian elimination function
+         .    .    .          .       .     .       .      .    .         .      .  .   .  // not handling zero pivots and the like
+         .    .    .          .       .     .       .      .    .         .      .  .   .  // Laplacian equation when filled in the right order will not give 0 diagonals
+         .    .    .          .       .     .       .      .    .         .      .  .   .  void gaussianElimination(double *a, int n, double *b, double *res)
+         .    .    .          .       .     .       .      .    .         .      .  .   .  {
+         .    .    .          .       .     .       .      .    .         .      .  .   .      int i, k;
+         .    .    .          .       .     .       .      .    .         .      .  .   .  
+-- line 71 ----------------------------------------
+
+--------------------------------------------------------------------------------
+Ir I1mr ILmr Dr D1mr DLmr Dw D1mw DLmw Bc Bcm Bi Bim 
+--------------------------------------------------------------------------------
+91    7    8 92   99   26 79   46    2 92  92  0   0  percentage of events annotated
+
