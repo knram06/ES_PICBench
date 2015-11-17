@@ -137,9 +137,6 @@ int main(int argc, char **argv)
     gridInfo.spacing = h;
     gridInfo.invSpacing = 1./h;
 
-    // FMG Initialization
-    //SolverFMGInitialize();
-
     // now preallocate the particles data array
     Particle* MD_data = malloc(particleCount * sizeof(Particle));
 
@@ -165,11 +162,16 @@ int main(int argc, char **argv)
     //bNodes = realloc(bNodes, nodeCount * sizeof(BoundaryNode));
     //printf("done\n");
 
+    SolverSetupBoundaryConditions();
     // solve and at each step, impose Neumann BCs?
     double norm = 100., tolerance = 1e-6;
     double cmpNorm = SolverGetResidual() * tolerance;
 
-    SolverSetupBoundaryConditions();
+    // FMG Initialization
+    printf("Carrying out FMG Initialization.... ");
+    SolverFMGInitialize();
+    printf("done\n");
+
     SolverResetTimingInfo();
     int iterCount;
     for(iterCount = 0; norm >= cmpNorm; iterCount++)

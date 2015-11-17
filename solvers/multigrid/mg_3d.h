@@ -36,6 +36,11 @@ void allocGridLevels(double ***u, const int numLevels, const int N)
     } // end of loop which sets up levels
 }
 
+// taken from
+// http://stackoverflow.com/questions/600293/how-to-check-if-a-number-is-a-power-of-2
+bool isPowerOfTwo(int x)
+{ return (x & (x-1)) == 0;}
+
 void SolverInitialize(int argc, char **argv)
 {
     if(argc != 4)
@@ -48,6 +53,11 @@ void SolverInitialize(int argc, char **argv)
     coarseGridNum = atoi(argv[1]);
     numLevels = atoi(argv[2]);
     gsIterNum = atoi(argv[3]);
+
+    // assert that (coarseGridNum-1) is a power of 2
+    // this ensures that coarsest grid can capture the capillary
+    // But this breaks generality?!
+    assert( isPowerOfTwo(coarseGridNum-1) );
 
     // preallocate the arrays using max grid level
     int multFactor = 1 << (numLevels-1);
