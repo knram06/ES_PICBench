@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 
 #include "gauss_elim.h"
 //#include "postprocess.h"
@@ -549,8 +550,40 @@ void prolongateAndCorrectError(const double* __restrict__ ec, const int Nc, doub
     } // end of i loop
 }
 
+void fmgInit(double **u, double **f, const int numLevels, const int smootherIter,
+             int coarseNumPoints, double h, double *LU)
+{
+    // solve on the coarsest grid
+    int N = coarseNumPoints;
+    const int NN = N*N;
+    const int totalNodes = NN*N;
+    solveWithLU(LU, totalNodes, f[0], u[0]);
+
+    // for loop
+    int l, Nc;
+    for(l = 1; l < numLevels; l++)
+    {
+        Nc = N;         // previous coarse num count
+        N = 2*N-1;      // finer grid count
+        h = h*0.5;      // halved spacing
+
+        // Interpolate previous level soln
+        // IMPORTANT: u[l] must have been ZEROED out at this point
+        prolongateAndCorrectError(u[l-1], Nc, u[l], N);
+
+        // setupBoundaryConditions on this level
+        setupBoundaryConditions(u, N, h, l);
+
+        // set previous level soln to zero?
+        memset(u[l], 0, sizeof(double)*N*N*N);
+
+        // do vcycles
+        vcycle(u, f, l, smootherIter, N, LU);
+    }
+}
+
 // return current l2-norm squared of residual
-double multigrid_method(double **u, double **f, int q, const int smootherIter, int N, double *LU)
+double vcycle(double **u, double **f, int q, const int smootherIter, int N, double *LU)
 {
     double h = GRID_LENGTH/(N-1);
 
@@ -600,7 +633,7 @@ double multigrid_method(double **u, double **f, int q, const int smootherIter, i
 
     // do recursive call now
     timingTemp = clock();
-    multigrid_method(u, f, q-1, smootherIter, N_coarse, LU);
+    vcycle(u, f, q-1, smootherIter, N_coarse, LU);
     tInfo[q][3].timeTaken += (clock() - timingTemp);
     tInfo[q][3].numCalls++;
 
@@ -774,23 +807,23 @@ void updateEdgeValues(double *u, const int N)
 //{ return 1.;}
 
 // TODO: Improve this to take in a user function pointer?
-void SolverSetupBoundaryConditions()
+void setupBoundaryConditions(double *u, int levelN, double spacing, int numLevel)
 {
     int i, j, k;
     int nni, nj;
 
-    double *v = u[numLevels-1];
+    double *v = u[numLevel];
     double center[2] = {GRID_LENGTH/2., GRID_LENGTH/2.};
 
     /***********************************/
     // X = 0 and END faces
     i = 0;
-    nni = finestOneSideNum*finestOneSideNum*i;
-    for(j = 0; j < finestOneSideNum; j++)
+    nni = levelN*levelN*i;
+    for(j = 0; j < levelN; j++)
     {
-        nj = finestOneSideNum*j;
+        nj = levelN*j;
         double ty = j*spacing-center[0];
-        for(k = 0; k < finestOneSideNum; k++)
+        for(k = 0; k < levelN; k++)
         {
             double tz = k*spacing-center[1];
             double rr = ty*ty + tz*tz;
@@ -799,13 +832,13 @@ void SolverSetupBoundaryConditions()
         }
     }
 
-    i = finestOneSideNum-1;
-    nni = finestOneSideNum*finestOneSideNum*i;
-    for(j = 0; j < finestOneSideNum; j++)
+    i = levelN-1;
+    nni = levelN*levelN*i;
+    for(j = 0; j < levelN; j++)
     {
-        nj = finestOneSideNum*j;
+        nj = levelN*j;
         double ty = j*spacing-center[0];
-        for(k = 0; k < finestOneSideNum; k++)
+        for(k = 0; k < levelN; k++)
         {
             double tz = k*spacing-center[1];
             double rr = ty*ty + tz*tz;
@@ -820,54 +853,54 @@ void SolverSetupBoundaryConditions()
     /***********************************/
     // Y = 0 and END faces
     j = 0;
-    nj = finestOneSideNum * j;
-    for(i = 0; i < finestOneSideNum; i++)
+    nj = levelN * j;
+    for(i = 0; i < levelN; i++)
     {
-        nni = finestOneSideNum*finestOneSideNum*i;
-        for(k = 0; k < finestOneSideNum; k++)
+        nni = levelN*levelN*i;
+        for(k = 0; k < levelN; k++)
             v[nni + nj + k] = 0;
     }
 
-    j = finestOneSideNum-1;
-    nj = finestOneSideNum * j;
-    for(i = 0; i < finestOneSideNum; i++)
+    j = levelN-1;
+    nj = levelN * j;
+    for(i = 0; i < levelN; i++)
     {
-        nni = finestOneSideNum*finestOneSideNum*i;
-        for(k = 0; k < finestOneSideNum; k++)
+        nni = levelN*levelN*i;
+        for(k = 0; k < levelN; k++)
             v[nni + nj + k] = 0;
     }
     /***********************************/
     /***********************************/
     // Z = 0 and END faces
     k = 0;
-    for(i = 0; i < finestOneSideNum; i++)
+    for(i = 0; i < levelN; i++)
     {
-        nni = finestOneSideNum*finestOneSideNum*i;
-        for(j = 0; j < finestOneSideNum; j++)
+        nni = levelN*levelN*i;
+        for(j = 0; j < levelN; j++)
         {
-            nj = finestOneSideNum*j;
+            nj = levelN*j;
             v[nni + nj + k] = 0;
         }
 
     }
 
-    k = finestOneSideNum-1;
-    for(i = 0; i < finestOneSideNum; i++)
+    k = levelN-1;
+    for(i = 0; i < levelN; i++)
     {
-        nni = finestOneSideNum*finestOneSideNum*i;
-        for(j = 0; j < finestOneSideNum; j++)
+        nni = levelN*levelN*i;
+        for(j = 0; j < levelN; j++)
         {
-            nj = finestOneSideNum*j;
+            nj = levelN*j;
             v[nni + nj + k] = 0;
         }
     }
     /***********************************/
     /***********************************/
-} // end of SolverSetupBoundaryConditions
+} // end of setupBoundaryConditions
 
 double SolverLinSolve()
 {
-    double res = multigrid_method(u, d, numLevels-1, gsIterNum, finestOneSideNum, A);
+    double res = vcycle(u, d, numLevels-1, gsIterNum, finestOneSideNum, A);
     return res;
 }
 
@@ -933,7 +966,7 @@ int main(int argc, char** argv)
     int iterCount = 1;
     while(norm >= cmpNorm)
     {
-        norm = multigrid_method(u, d, numLevels-1, gsIterNum, finestOneSideNum, A);
+        norm = vcycle(u, d, numLevels-1, gsIterNum, finestOneSideNum, A);
         //norm = calculateResidual(u[numLevels-1], d[numLevels-1], finestOneSideNum, h);
         printf("%5d    Residual Norm:%20g\n", iterCount, norm);
         iterCount++;
