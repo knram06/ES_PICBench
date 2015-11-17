@@ -168,9 +168,9 @@ int main(int argc, char **argv)
     double cmpNorm = SolverGetResidual() * tolerance;
 
     // FMG Initialization
-    printf("Carrying out FMG Initialization.... ");
-    SolverFMGInitialize();
-    printf("done\n");
+    //printf("Carrying out FMG Initialization.... ");
+    //SolverFMGInitialize();
+    //printf("done\n");
 
     SolverResetTimingInfo();
     int iterCount;
