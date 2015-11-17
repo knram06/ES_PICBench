@@ -59,6 +59,9 @@ void SolverInitialize(int argc, char **argv)
 
     // allocate the timing object
     allocTimingInfo(&tInfo, numLevels);
+
+    // fill in the details at the finest level
+    spacing = GRID_LENGTH/(finestOneSideNum-1);
 }
 
 // assume A has been preallocated
@@ -115,8 +118,6 @@ int SolverGetDetails(double **grid, double *h)
     constructCoarseMatrixA(A, coarseGridNum);
     convertToLU_InPlace(A, matDim);
 
-    // fill in the details at the finest level
-    spacing = GRID_LENGTH/(finestOneSideNum-1);
     *h = spacing;
     return finestOneSideNum;
 }
@@ -550,37 +551,97 @@ void prolongateAndCorrectError(const double* __restrict__ ec, const int Nc, doub
     } // end of i loop
 }
 
-void fmgInit(double **u, double **f, const int numLevels, const int smootherIter,
-             int coarseNumPoints, double h, double *LU)
+// TODO: Improve this to take in a user function pointer?
+void setupBoundaryConditions(double **u, int levelN, double spacing, int numLevel)
 {
-    // solve on the coarsest grid
-    int N = coarseNumPoints;
-    const int NN = N*N;
-    const int totalNodes = NN*N;
-    solveWithLU(LU, totalNodes, f[0], u[0]);
+    int i, j, k;
+    int nni, nj;
 
-    // for loop
-    int l, Nc;
-    for(l = 1; l < numLevels; l++)
+    double *v = u[numLevel];
+    double center[2] = {GRID_LENGTH/2., GRID_LENGTH/2.};
+
+    /***********************************/
+    // X = 0 and END faces
+    i = 0;
+    nni = levelN*levelN*i;
+    for(j = 0; j < levelN; j++)
     {
-        Nc = N;         // previous coarse num count
-        N = 2*N-1;      // finer grid count
-        h = h*0.5;      // halved spacing
-
-        // Interpolate previous level soln
-        // IMPORTANT: u[l] must have been ZEROED out at this point
-        prolongateAndCorrectError(u[l-1], Nc, u[l], N);
-
-        // setupBoundaryConditions on this level
-        setupBoundaryConditions(u, N, h, l);
-
-        // set previous level soln to zero?
-        memset(u[l], 0, sizeof(double)*N*N*N);
-
-        // do vcycles
-        vcycle(u, f, l, smootherIter, N, LU);
+        nj = levelN*j;
+        double ty = j*spacing-center[0];
+        for(k = 0; k < levelN; k++)
+        {
+            double tz = k*spacing-center[1];
+            double rr = ty*ty + tz*tz;
+            if(rr <= CAPILLARY_RADIUS*CAPILLARY_RADIUS)
+                v[nni + nj + k] = CAPILLARY_VOLTAGE;
+        }
     }
-}
+
+    i = levelN-1;
+    nni = levelN*levelN*i;
+    for(j = 0; j < levelN; j++)
+    {
+        nj = levelN*j;
+        double ty = j*spacing-center[0];
+        for(k = 0; k < levelN; k++)
+        {
+            double tz = k*spacing-center[1];
+            double rr = ty*ty + tz*tz;
+
+            if(rr > (EXTRACTOR_INNER_RADIUS*EXTRACTOR_INNER_RADIUS)
+                    &&
+               rr < (EXTRACTOR_OUTER_RADIUS*EXTRACTOR_OUTER_RADIUS))
+            v[nni + nj + k] = EXTRACTOR_VOLTAGE;
+        }
+    }
+    /***********************************/
+    /***********************************/
+    // Y = 0 and END faces
+    j = 0;
+    nj = levelN * j;
+    for(i = 0; i < levelN; i++)
+    {
+        nni = levelN*levelN*i;
+        for(k = 0; k < levelN; k++)
+            v[nni + nj + k] = 0;
+    }
+
+    j = levelN-1;
+    nj = levelN * j;
+    for(i = 0; i < levelN; i++)
+    {
+        nni = levelN*levelN*i;
+        for(k = 0; k < levelN; k++)
+            v[nni + nj + k] = 0;
+    }
+    /***********************************/
+    /***********************************/
+    // Z = 0 and END faces
+    k = 0;
+    for(i = 0; i < levelN; i++)
+    {
+        nni = levelN*levelN*i;
+        for(j = 0; j < levelN; j++)
+        {
+            nj = levelN*j;
+            v[nni + nj + k] = 0;
+        }
+
+    }
+
+    k = levelN-1;
+    for(i = 0; i < levelN; i++)
+    {
+        nni = levelN*levelN*i;
+        for(j = 0; j < levelN; j++)
+        {
+            nj = levelN*j;
+            v[nni + nj + k] = 0;
+        }
+    }
+    /***********************************/
+    /***********************************/
+} // end of setupBoundaryConditions
 
 // return current l2-norm squared of residual
 double vcycle(double **u, double **f, int q, const int smootherIter, int N, double *LU)
@@ -656,6 +717,38 @@ double vcycle(double **u, double **f, int q, const int smootherIter, int N, doub
     tInfo[q][6].numCalls++;
 
     return res;
+}
+
+void fmgInit(double **u, double **f, const int numLevels, const int smootherIter,
+             int coarseNumPoints, double h, double *LU)
+{
+    // solve on the coarsest grid
+    int N = coarseNumPoints;
+    const int NN = N*N;
+    const int totalNodes = NN*N;
+    solveWithLU(LU, totalNodes, f[0], u[0]);
+
+    // for loop
+    int l, Nc;
+    for(l = 1; l < numLevels; l++)
+    {
+        Nc = N;         // previous coarse num count
+        N = 2*N-1;      // finer grid count
+        h = h*0.5;      // halved spacing
+
+        // Interpolate previous level soln
+        // IMPORTANT: u[l] must have been ZEROED out at this point
+        prolongateAndCorrectError(u[l-1], Nc, u[l], N);
+
+        // setupBoundaryConditions on this level
+        setupBoundaryConditions(u, N, h, l);
+
+        // set previous level soln to zero?
+        memset(u[l], 0, sizeof(double)*N*N*N);
+
+        // do vcycles
+        vcycle(u, f, l, smootherIter, N, LU);
+    }
 }
 
 void updateEdgeValues(double *u, const int N)
@@ -806,97 +899,8 @@ void updateEdgeValues(double *u, const int N)
 //{ return 1.;}
 //{ return 1.;}
 
-// TODO: Improve this to take in a user function pointer?
-void setupBoundaryConditions(double *u, int levelN, double spacing, int numLevel)
-{
-    int i, j, k;
-    int nni, nj;
-
-    double *v = u[numLevel];
-    double center[2] = {GRID_LENGTH/2., GRID_LENGTH/2.};
-
-    /***********************************/
-    // X = 0 and END faces
-    i = 0;
-    nni = levelN*levelN*i;
-    for(j = 0; j < levelN; j++)
-    {
-        nj = levelN*j;
-        double ty = j*spacing-center[0];
-        for(k = 0; k < levelN; k++)
-        {
-            double tz = k*spacing-center[1];
-            double rr = ty*ty + tz*tz;
-            if(rr <= CAPILLARY_RADIUS*CAPILLARY_RADIUS)
-                v[nni + nj + k] = CAPILLARY_VOLTAGE;
-        }
-    }
-
-    i = levelN-1;
-    nni = levelN*levelN*i;
-    for(j = 0; j < levelN; j++)
-    {
-        nj = levelN*j;
-        double ty = j*spacing-center[0];
-        for(k = 0; k < levelN; k++)
-        {
-            double tz = k*spacing-center[1];
-            double rr = ty*ty + tz*tz;
-
-            if(rr > (EXTRACTOR_INNER_RADIUS*EXTRACTOR_INNER_RADIUS)
-                    &&
-               rr < (EXTRACTOR_OUTER_RADIUS*EXTRACTOR_OUTER_RADIUS))
-            v[nni + nj + k] = EXTRACTOR_VOLTAGE;
-        }
-    }
-    /***********************************/
-    /***********************************/
-    // Y = 0 and END faces
-    j = 0;
-    nj = levelN * j;
-    for(i = 0; i < levelN; i++)
-    {
-        nni = levelN*levelN*i;
-        for(k = 0; k < levelN; k++)
-            v[nni + nj + k] = 0;
-    }
-
-    j = levelN-1;
-    nj = levelN * j;
-    for(i = 0; i < levelN; i++)
-    {
-        nni = levelN*levelN*i;
-        for(k = 0; k < levelN; k++)
-            v[nni + nj + k] = 0;
-    }
-    /***********************************/
-    /***********************************/
-    // Z = 0 and END faces
-    k = 0;
-    for(i = 0; i < levelN; i++)
-    {
-        nni = levelN*levelN*i;
-        for(j = 0; j < levelN; j++)
-        {
-            nj = levelN*j;
-            v[nni + nj + k] = 0;
-        }
-
-    }
-
-    k = levelN-1;
-    for(i = 0; i < levelN; i++)
-    {
-        nni = levelN*levelN*i;
-        for(j = 0; j < levelN; j++)
-        {
-            nj = levelN*j;
-            v[nni + nj + k] = 0;
-        }
-    }
-    /***********************************/
-    /***********************************/
-} // end of setupBoundaryConditions
+void SolverSetupBoundaryConditions()
+{ return setupBoundaryConditions(u, finestOneSideNum, spacing, numLevels-1); }
 
 double SolverLinSolve()
 {
