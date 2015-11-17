@@ -137,7 +137,8 @@ int main(int argc, char **argv)
     gridInfo.spacing = h;
     gridInfo.invSpacing = 1./h;
 
-    SolverSetupBoundaryConditions();
+    // FMG Initialization
+    //SolverFMGInitialize();
 
     // now preallocate the particles data array
     Particle* MD_data = malloc(particleCount * sizeof(Particle));
@@ -168,6 +169,7 @@ int main(int argc, char **argv)
     double norm = 100., tolerance = 1e-6;
     double cmpNorm = SolverGetResidual() * tolerance;
 
+    SolverSetupBoundaryConditions();
     SolverResetTimingInfo();
     int iterCount;
     for(iterCount = 0; norm >= cmpNorm; iterCount++)

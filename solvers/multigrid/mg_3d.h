@@ -719,14 +719,19 @@ double vcycle(double **u, double **f, int q, const int smootherIter, int N, doub
     return res;
 }
 
-void fmgInit(double **u, double **f, const int numLevels, const int smootherIter,
-             int coarseNumPoints, double h, double *LU)
+void SolverFMGInitialize()
 {
     // solve on the coarsest grid
-    int N = coarseNumPoints;
+    int N = coarseGridNum;
     const int NN = N*N;
     const int totalNodes = NN*N;
-    solveWithLU(LU, totalNodes, f[0], u[0]);
+
+    // impose BCs on the coarsest level
+    double h = GRID_LENGTH/(coarseGridNum-1);
+    setupBoundaryConditions(u, N, h, 0);
+
+    // A should now be storing its LU counterpart
+    solveWithLU(A, totalNodes, d[0], u[0]);
 
     // for loop
     int l, Nc;
@@ -744,10 +749,10 @@ void fmgInit(double **u, double **f, const int numLevels, const int smootherIter
         setupBoundaryConditions(u, N, h, l);
 
         // set previous level soln to zero?
-        memset(u[l], 0, sizeof(double)*N*N*N);
+        memset(u[l-1], 0, sizeof(double)*Nc*Nc*Nc);
 
         // do vcycles
-        vcycle(u, f, l, smootherIter, N, LU);
+        vcycle(u, d, l, gsIterNum, N, A);
     }
 }
 
