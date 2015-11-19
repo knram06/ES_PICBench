@@ -247,39 +247,6 @@ void releaseParticles(
 
 }
 
-int simulateSingleParticleTillDomainExit(
-        const Particle *input_data,
-        const int inputCount,
-        EField *ElectricField,
-        GridInfo *gridInfo
-        )
-{
-    Particle pArr[1];
-    int lostParticles[1];
-    int particleCount = 0;
-    int lostParticleBound = -1;
-
-    // release a single particle
-    releaseParticles(1,
-                     input_data, inputCount,
-                     pArr, &particleCount,
-                     lostParticles,
-                     &lostParticleBound);
-
-    // count the number of iterations required till steady state
-    int possibIterCount = 0;
-    while(isParticleInDomain(pArr[0]))
-    {
-        moveParticlesInField(pArr, particleCount,
-                             lostParticles,//&lostParticleBound,
-                             ElectricField, gridInfo);
-        possibIterCount++;
-    }
-
-    return possibIterCount;
-}
-
-
 /*!
  * If when this function is called, lostParticlesBound is still not zero,
  * that means we lost a large enough number of particles, that the
@@ -358,6 +325,49 @@ int moveParticlesInField(Particle* domainParticles, int domainParticleBound,
 
     return lostParticleCount;
 }
+
+int simulateSingleParticleTillDomainExit(
+        const Particle *input_data,
+        const int inputCount,
+        EField *ElectricField,
+        GridInfo *gridInfo
+        )
+{
+    Particle p;
+    int lostParticles[1];
+    int particleCount = 1;
+    int lostParticleBound = -1;
+
+    // set the pArr to the particle with the least X-Velocity
+    // from the input set
+    p.Vx = 1e10;
+    int i;
+    for(i = 0; i < inputCount; i++)
+    {
+        if((input_data[i].Vx < p.Vx) && (input_data[i].Vx >= 0) )
+            p = input_data[i];
+    }
+
+    // release a single particle
+    //releaseParticles(1,
+    //                 input_data, inputCount,
+    //                 pArr, &particleCount,
+    //                 lostParticles,
+    //                 &lostParticleBound);
+
+    // count the number of iterations required till steady state
+    int possibIterCount = 0;
+    while(isParticleInDomain(p))
+    {
+        moveParticlesInField(&p, particleCount,
+                             lostParticles,//&lostParticleBound,
+                             ElectricField, gridInfo);
+        possibIterCount++;
+    }
+
+    return possibIterCount;
+}
+
 
 // routine to re-sort particles based on their distance
 // from capillary center
