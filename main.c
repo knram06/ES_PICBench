@@ -43,14 +43,14 @@
 #define PARTICLE_SIZE ((int)5e4)
 #define PARTICLE_SORT_INTERVAL (20)
 
-#define TIMESTEPS ((int)0)
+#define TIMESTEPS ((int)1000)
 #define ITER_INTERVAL (200)
 #define ITER_HEADER_INTERVAL (1500)
 #define POST_WRITE_FILES (false)
 #define POST_INTERVAL (200)
 #define POST_WRITE_PATH ("output/")
 
-#define POISSON_TIMESTEPS ((int)1)
+#define POISSON_TIMESTEPS ((int)0)
 //#define TEST_FUNCTION (x*x - 2*y*y + z*z)
 #define TEST_FUNCTION 0.
 
@@ -192,10 +192,6 @@ int main(int argc, char **argv)
     calcElectricField(ElectricField, grid, &gridInfo);
     printf("done\n");
 
-    // allocate for particles
-    Particle* domainParticles = malloc(PARTICLE_SIZE * sizeof(Particle));
-    int totalParticlesCount = 0;
-
     // calculate the release rate
     int Nrel;
     double Nfrac, runningNfrac, temp;
@@ -212,6 +208,16 @@ int main(int argc, char **argv)
     //Using this, new particles can be inserted into those locations appropriately.
     int* lostParticles = malloc( (Nrel + LOST_PARTICLES_MARGIN) * sizeof(int) );
     int lostParticleBound = -1;
+
+    // SINGLE PARTICLE release check for preallocating
+    int iterCountTillExit = simulateSingleParticleTillDomainExit(MD_data, particleCount, ElectricField, &gridInfo);
+    int particlePreallocCount = 2*Nrel * iterCountTillExit;
+    printf("%d Iterations were done for Particle to leave domain with Laplace solution.\nReleasing %d particles per timesteps, approx total particles to preallocate is %d (doubled - covering twice the domain length) \n", iterCountTillExit, Nrel, particlePreallocCount);
+
+
+    // allocate for particles
+    Particle* domainParticles = malloc(particlePreallocCount * sizeof(Particle));
+    int totalParticlesCount = 0;
 
     clock_t start = clock(), diff;
     // for required number of timesteps

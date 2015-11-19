@@ -247,6 +247,38 @@ void releaseParticles(
 
 }
 
+int simulateSingleParticleTillDomainExit(
+        const Particle *input_data,
+        const int inputCount,
+        EField *ElectricField,
+        GridInfo *gridInfo
+        )
+{
+    Particle pArr[1];
+    int lostParticles[1];
+    int particleCount = 0;
+    int lostParticleBound = -1;
+
+    // release a single particle
+    releaseParticles(1,
+                     input_data, inputCount,
+                     pArr, &particleCount,
+                     lostParticles,
+                     &lostParticleBound);
+
+    // count the number of iterations required till steady state
+    int possibIterCount = 0;
+    while(isParticleInDomain(pArr[0]))
+    {
+        moveParticlesInField(pArr, particleCount,
+                             lostParticles,//&lostParticleBound,
+                             ElectricField, gridInfo);
+        possibIterCount++;
+    }
+
+    return possibIterCount;
+}
+
 
 /*!
  * If when this function is called, lostParticlesBound is still not zero,
