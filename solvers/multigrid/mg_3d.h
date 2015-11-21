@@ -174,6 +174,7 @@ void GaussSeidelSmoother(double* __restrict__ v, const double* __restrict__ d, c
                           - hSq*d[p]              // hSq*f
                             );
 
+                    /*
                     // enforce Neumann bc (order?)
                     // if on the inner node adjacent to boundary
                     // copy to boundary node - this way we ensure residual
@@ -197,9 +198,9 @@ void GaussSeidelSmoother(double* __restrict__ v, const double* __restrict__ d, c
                         else
                         {
                             // outside annular ring
-                            if(rr <= (EXTRACTOR_INNER_RADIUS*EXTRACTOR_INNER_RADIUS)
+                            if((rr <= (EXTRACTOR_INNER_RADIUS*EXTRACTOR_INNER_RADIUS))
                                     ||
-                               rr >= (EXTRACTOR_OUTER_RADIUS*EXTRACTOR_OUTER_RADIUS))
+                               (rr >= (EXTRACTOR_OUTER_RADIUS*EXTRACTOR_OUTER_RADIUS)) )
                             {
                                 // copy (i,j,k) to (i+1,j,k)
                                 v[p+NN] = v[p];
@@ -224,6 +225,7 @@ void GaussSeidelSmoother(double* __restrict__ v, const double* __restrict__ d, c
                         v[p-1] = v[p];
                     else if(k == N-2)
                         v[p+1] = v[p];
+                    */
                 }
             } // end of j loop
         } // end of i loop
@@ -234,7 +236,7 @@ void GaussSeidelSmoother(double* __restrict__ v, const double* __restrict__ d, c
 double calculateResidual(const double* __restrict__ v, const double* __restrict__ d, const int N, const double h, double *res)
 {
     int i, j, k;
-    const double hSq = h*h;
+    const double invHsq = 1./(h*h);
     const int NN = N*N;
 
     // adjust for different boundary condition types?
@@ -250,10 +252,9 @@ double calculateResidual(const double* __restrict__ v, const double* __restrict_
             {
                 // effectively (nni+nj+k)
                 int p = pos + k;
-                double diff = hSq*d[p]
-                              - (v[p-NN] + v[p+NN] +
-                                 v[p-N]  + v[p+N]  +
-                                 v[p-1]  + v[p+1]  - 6*v[p]);
+                double diff = d[p] - invHsq*(v[p-NN] + v[p+NN] +
+                                             v[p-N]  + v[p+N]  +
+                                             v[p-1]  + v[p+1]  - 6*v[p]);
 
                 // fill in array if it exists
                 if(res)
@@ -390,7 +391,7 @@ void restrictResidual(const double* __restrict__ r, const int Nf, double* __rest
             {
                 double val = 0.;
 
-                // now we are at point (2*ic,2*jc,2*kc)
+                // now on the fine grid, we are at point (2*ic,2*jc,2*kc)
                 // lower corner of cube will be (if-1,jf-1,kf-1) (on fine grid)
                 int newPos = (nnif-NFNF) + (njf-Nf) + (2*k-1);
 
@@ -598,10 +599,12 @@ void setupBoundaryConditions(double **u, int levelN, double spacing, int numLeve
             double tz = k*spacing-center[1];
             double rr = ty*ty + tz*tz;
 
-            if(rr > (EXTRACTOR_INNER_RADIUS*EXTRACTOR_INNER_RADIUS)
+            if((rr > (EXTRACTOR_INNER_RADIUS*EXTRACTOR_INNER_RADIUS))
                     &&
-               rr < (EXTRACTOR_OUTER_RADIUS*EXTRACTOR_OUTER_RADIUS))
-            v[nni + nj + k] = EXTRACTOR_VOLTAGE;
+               (rr < (EXTRACTOR_OUTER_RADIUS*EXTRACTOR_OUTER_RADIUS)) )
+            {
+                v[nni + nj + k] = EXTRACTOR_VOLTAGE;
+            }
         }
     }
     /***********************************/
@@ -654,9 +657,15 @@ void setupBoundaryConditions(double **u, int levelN, double spacing, int numLeve
 } // end of setupBoundaryConditions
 
 // return current l2-norm squared of residual
-double vcycle(double **u, double **f, int q, const int smootherIter, int N, double *LU)
+double vcycle(double **u, double **f, int q, const int numLevels, const int smootherIter, int N, double *LU)
 {
     double h = GRID_LENGTH/(N-1);
+
+    double *v = u[q];
+    double *d = f[q];
+
+    if(q < (numLevels-1))
+        memset(v, 0, N*N*N*sizeof(double));
 
     double timingTemp;
     if(q == 0)
@@ -672,9 +681,6 @@ double vcycle(double **u, double **f, int q, const int smootherIter, int N, doub
 
         return 0.;
     }
-
-    double *v = u[q];
-    double *d = f[q];
 
     timingTemp = clock();
     GaussSeidelSmoother(v, d, N, h, smootherIter);
@@ -704,7 +710,7 @@ double vcycle(double **u, double **f, int q, const int smootherIter, int N, doub
 
     // do recursive call now
     timingTemp = clock();
-    vcycle(u, f, q-1, smootherIter, N_coarse, LU);
+    vcycle(u, f, q-1, numLevels, smootherIter, N_coarse, LU);
     tInfo[q][3].timeTaken += (clock() - timingTemp);
     tInfo[q][3].numCalls++;
 
@@ -753,16 +759,19 @@ void SolverFMGInitialize()
 
         // Interpolate previous level soln
         // IMPORTANT: u[l] must have been ZEROED out at this point
+        // since we are reusing prolongate fn for interpolating "soln"
+        // and not error
         prolongateAndCorrectError(u[l-1], Nc, u[l], N);
 
         // setupBoundaryConditions on this level
         setupBoundaryConditions(u, N, h, l);
 
-        // set previous level soln to zero?
+        // set previous level soln to zero so that it
+        // is relevant for V-Cycles
         memset(u[l-1], 0, sizeof(double)*Nc*Nc*Nc);
 
         // do vcycles
-        vcycle(u, d, l, gsIterNum, N, A);
+        vcycle(u, d, l, numLevels, gsIterNum, N, A);
     }
 }
 
@@ -919,7 +928,7 @@ void SolverSetupBoundaryConditions()
 
 double SolverLinSolve()
 {
-    double res = vcycle(u, d, numLevels-1, gsIterNum, finestOneSideNum, A);
+    double res = vcycle(u, d, numLevels-1, numLevels, gsIterNum, finestOneSideNum, A);
     return res;
 }
 
