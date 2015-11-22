@@ -81,6 +81,16 @@ void constructCoarseMatrixA(double *A, int N)
     const int NN = N*N;
     const int totalNodes = NN*N;
 
+    // CORRECT for the construction of A matrix by
+    // dividing by h^2 (Thanks to Rajesh Gandham for pointing this out)
+    double h = GRID_LENGTH/(N-1);
+    double hSq = h*h;
+    double invHsq = 1./hSq;
+
+    const double oneCoeff = 1.*invHsq;
+    const double sixCoeff = 6.*invHsq;
+
+    double center[2] = {GRID_LENGTH/2., GRID_LENGTH/2.};
     // just in case
     assert(totalNodes*totalNodes < INT_MAX);
 
@@ -95,24 +105,79 @@ void constructCoarseMatrixA(double *A, int N)
                 int pos = nni + nj + k;
                 int mat1DIndex = (totalNodes+1)*pos;
 
+                // TODO: Any way to unify this with other repeated
+                // code which does the same thing?
                 // if on boundary points
-                if(k == 0 || k == N-1
+                if(i == 0 || i == N-1
                 || j == 0 || j == N-1
-                || i == 0 || i == N-1)
-                    A[mat1DIndex] = 1.;
+                || k == 0 || k == N-1 )
+                {
+                    // default diagonal value
+                    // adjust for scaling A matrix by hSq
+                    A[mat1DIndex] = hSq;
+
+                    // if on boundary points
+                    if( i == 0 || i == N-1 )
+                    {
+                        // define vars for calculating distance from
+                        // center of circle
+                        double ty = j*h - center[0];
+                        double tz = k*h - center[1];
+                        double rr = ty*ty + tz*tz;
+
+                        if( i == 0 )
+                        {
+                            // add Neumann bc value at (i+1)
+                            if ( rr >= CAPILLARY_RADIUS*CAPILLARY_RADIUS )
+                                A[mat1DIndex+NN] = -hSq;
+                        }
+                        else
+                        {
+                            if( (rr <= EXTRACTOR_INNER_RADIUS*EXTRACTOR_INNER_RADIUS)
+                                    ||
+                                    (rr >= EXTRACTOR_OUTER_RADIUS*EXTRACTOR_OUTER_RADIUS) )
+                                A[mat1DIndex-NN] = -hSq;
+                        }
+                    } // end of if i==0 or N-1
+
+                    if(j == 0)
+                    {
+                        // j to be equal to j+1
+                        A[mat1DIndex+N] = -hSq;
+                    }
+                    else if (j == N-1)
+                    {
+                        // j to be equal to j-1
+                        A[mat1DIndex-N] = -hSq;
+                    }
+
+                    if(k == 0)
+                    {
+                        // k to be equal to k+1
+                        A[mat1DIndex+1] = -hSq;
+                    }
+                    else if (k == N-1)
+                    {
+                        // k to be equal to k-1
+                        A[mat1DIndex-1] = -hSq;
+                    }
+                } // end of if on boundary points
+
+                // if on interior points
                 else
                 {
-                    // i-1               , i+1
-                    A[mat1DIndex-NN] = 1.; A[mat1DIndex+NN] = 1.;
-                    // j-1               , j+1
-                    A[mat1DIndex-N]  = 1.; A[mat1DIndex+N]  = 1.;
-                    // k-1               , k+1
-                    A[mat1DIndex-1]  = 1.; A[mat1DIndex+1]  = 1.;
+                    // i-1,                      i+1
+                    A[mat1DIndex-NN] = oneCoeff; A[mat1DIndex+NN] = oneCoeff;
+                    // j-1,                      j+1
+                    A[mat1DIndex-N]  = oneCoeff; A[mat1DIndex+N]  = oneCoeff;
+                    // k-1,                      k+1
+                    A[mat1DIndex-1]  = oneCoeff; A[mat1DIndex+1]  = oneCoeff;
 
                     // node (i,j,k)
-                    A[mat1DIndex] = -6;
+                    A[mat1DIndex]    = -sixCoeff;
                 }
-            }
+
+            } // end of k loop
         } // end of j loop
     } // end of i loop
 }
@@ -174,11 +239,10 @@ void GaussSeidelSmoother(double* __restrict__ v, const double* __restrict__ d, c
                           - hSq*d[p]              // hSq*f
                             );
 
-                    /*
                     // enforce Neumann bc (order?)
                     // if on the inner node adjacent to boundary
-                    // copy to boundary node - this way we ensure residual
-                    // is zero on boundary node
+                    // copy to boundary node - this way we ensure
+                    // RESIDUAL IS ZERO on boundary node
                     if(i == 1 || i == N-2)
                     {
                         double ty = j*h - center[0];
@@ -225,8 +289,8 @@ void GaussSeidelSmoother(double* __restrict__ v, const double* __restrict__ d, c
                         v[p-1] = v[p];
                     else if(k == N-2)
                         v[p+1] = v[p];
-                    */
-                }
+
+                } // end of k loop
             } // end of j loop
         } // end of i loop
     } // end of smootherIter loop
@@ -664,6 +728,10 @@ double vcycle(double **u, double **f, int q, const int numLevels, const int smoo
     double *v = u[q];
     double *d = f[q];
 
+    // Reset lower level soln to zero - improved the convergence
+    // i.e. ensured constant number of iterations for desired relative reduction
+    // in error
+    // Thanks to Rajesh Gandham for pointing this out
     if(q < (numLevels-1))
         memset(v, 0, N*N*N*sizeof(double));
 
