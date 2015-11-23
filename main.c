@@ -164,7 +164,7 @@ int main(int argc, char **argv)
 
     SolverSetupBoundaryConditions();
     // solve and at each step, impose Neumann BCs?
-    double norm = SolverGetResidual(), tolerance = 1e-6;
+    double norm = SolverGetResidual(), tolerance = 1e-8;
     double cmpNorm = norm * tolerance;
 
     // FMG Initialization

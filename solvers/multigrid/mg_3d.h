@@ -112,9 +112,12 @@ void constructCoarseMatrixA(double *A, int N)
                 || j == 0 || j == N-1
                 || k == 0 || k == N-1 )
                 {
+                    // need to adjust for corner nodes/edges
+                    int selfCount = 0;
+
                     // default diagonal value
                     // adjust for scaling A matrix by hSq
-                    A[mat1DIndex] = hSq;
+                    //A[mat1DIndex] = 1.;
 
                     // if on boundary points
                     if( i == 0 || i == N-1 )
@@ -129,38 +132,55 @@ void constructCoarseMatrixA(double *A, int N)
                         {
                             // add Neumann bc value at (i+1)
                             if ( rr >= CAPILLARY_RADIUS*CAPILLARY_RADIUS )
-                                A[mat1DIndex+NN] = -hSq;
+                            {
+                                A[mat1DIndex+NN] = -1;
+                                selfCount++;
+                            }
                         }
                         else
                         {
                             if( (rr <= EXTRACTOR_INNER_RADIUS*EXTRACTOR_INNER_RADIUS)
                                     ||
                                     (rr >= EXTRACTOR_OUTER_RADIUS*EXTRACTOR_OUTER_RADIUS) )
-                                A[mat1DIndex-NN] = -hSq;
+                            {
+                                A[mat1DIndex-NN] = -1;
+                                selfCount++;
+                            }
                         }
                     } // end of if i==0 or N-1
 
                     if(j == 0)
                     {
                         // j to be equal to j+1
-                        A[mat1DIndex+N] = -hSq;
+                        A[mat1DIndex+N] = -1;
+                        selfCount++;
                     }
                     else if (j == N-1)
                     {
                         // j to be equal to j-1
-                        A[mat1DIndex-N] = -hSq;
+                        A[mat1DIndex-N] = -1;
+                        selfCount++;
                     }
 
                     if(k == 0)
                     {
                         // k to be equal to k+1
-                        A[mat1DIndex+1] = -hSq;
+                        A[mat1DIndex+1] = -1;
+                        selfCount++;
                     }
                     else if (k == N-1)
                     {
                         // k to be equal to k-1
-                        A[mat1DIndex-1] = -hSq;
+                        A[mat1DIndex-1] = -1;
+                        selfCount++;
                     }
+
+                    // hacky way of adjusting for corner points
+                    if(!selfCount)
+                        A[mat1DIndex] = 1;
+                    else
+                        A[mat1DIndex] = selfCount;
+
                 } // end of if on boundary points
 
                 // if on interior points
