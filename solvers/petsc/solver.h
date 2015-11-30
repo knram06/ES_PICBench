@@ -120,6 +120,7 @@ PetscErrorCode ComputeMatrix(KSP ksp, Mat J,Mat jac, void *ctx)
                         //v[num] = HyHzdHx;
                         //v[num] = Hx*Hy*Hz;
                         v[num] = 1;
+
                         col[num].i = i;
                         col[num].j = j;
                         col[num].k = k;
@@ -133,6 +134,7 @@ PetscErrorCode ComputeMatrix(KSP ksp, Mat J,Mat jac, void *ctx)
                         if (k == mz-1) {
                             //v[num]     = -HxHydHz;
                             v[num]     = -1;
+
                             col[num].i = i;
                             col[num].j = j;
                             col[num].k = k-1;
@@ -141,6 +143,7 @@ PetscErrorCode ComputeMatrix(KSP ksp, Mat J,Mat jac, void *ctx)
                         else if (k == 0) {
                             //v[num]     = -HxHydHz;
                             v[num]     = -1;
+
                             col[num].i = i;
                             col[num].j = j;
                             col[num].k = k+1;
@@ -150,6 +153,7 @@ PetscErrorCode ComputeMatrix(KSP ksp, Mat J,Mat jac, void *ctx)
                         if (j == my-1) {
                             //v[num]     = -HxHzdHy;
                             v[num]     = -1;
+
                             col[num].i = i;
                             col[num].j = j-1;
                             col[num].k = k;
@@ -158,6 +162,7 @@ PetscErrorCode ComputeMatrix(KSP ksp, Mat J,Mat jac, void *ctx)
                         else if (j == 0) {
                             //v[num]     = -HxHzdHy;
                             v[num]     = -1;
+
                             col[num].i = i;
                             col[num].j = j+1;
                             col[num].k = k;
@@ -172,13 +177,14 @@ PetscErrorCode ComputeMatrix(KSP ksp, Mat J,Mat jac, void *ctx)
                 }
                 else
                 {
-                    //v[0] = -HxHydHz;                          col[0].i = i;   col[0].j = j;   col[0].k = k-1;
-                    //v[1] = -HxHzdHy;                          col[1].i = i;   col[1].j = j-1; col[1].k = k;
-                    //v[2] = -HyHzdHx;                          col[2].i = i-1; col[2].j = j;   col[2].k = k;
-                    //v[3] = 2.0*(HxHydHz + HxHzdHy + HyHzdHx); col[3].i = i;   col[3].j = j;   col[3].k = k;
-                    //v[4] = -HyHzdHx;                          col[4].i = i+1; col[4].j = j;   col[4].k = k;
-                    //v[5] = -HxHzdHy;                          col[5].i = i;   col[5].j = j+1; col[5].k = k;
-                    //v[6] = -HxHydHz;                          col[6].i = i;   col[6].j = j;   col[6].k = k+1;
+                    v[0] = -HxHydHz;                          col[0].i = i;   col[0].j = j;   col[0].k = k-1;
+                    v[1] = -HxHzdHy;                          col[1].i = i;   col[1].j = j-1; col[1].k = k;
+                    v[2] = -HyHzdHx;                          col[2].i = i-1; col[2].j = j;   col[2].k = k;
+                    v[3] = 2.0*(HxHydHz + HxHzdHy + HyHzdHx); col[3].i = i;   col[3].j = j;   col[3].k = k;
+                    v[4] = -HyHzdHx;                          col[4].i = i+1; col[4].j = j;   col[4].k = k;
+                    v[5] = -HxHzdHy;                          col[5].i = i;   col[5].j = j+1; col[5].k = k;
+                    v[6] = -HxHydHz;                          col[6].i = i;   col[6].j = j;   col[6].k = k+1;
+                    /*
 
                     v[0] = -1;                          col[0].i = i;   col[0].j = j;   col[0].k = k-1;
                     v[1] = -1;                          col[1].i = i;   col[1].j = j-1; col[1].k = k;
@@ -187,6 +193,7 @@ PetscErrorCode ComputeMatrix(KSP ksp, Mat J,Mat jac, void *ctx)
                     v[4] = -1;                          col[4].i = i+1; col[4].j = j;   col[4].k = k;
                     v[5] = -1;                          col[5].i = i;   col[5].j = j+1; col[5].k = k;
                     v[6] = -1;                          col[6].i = i;   col[6].j = j;   col[6].k = k+1;
+                    */
                     ierr = MatSetValuesStencil(jac,1,&row,7,col,v,INSERT_VALUES);CHKERRQ(ierr);
                 }
             }

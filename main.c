@@ -167,7 +167,7 @@ int main(int argc, char **argv)
     printf("Solver time taken: %lf\n", solveTime);
 
     // since rhs is the same size, just reuse that array
-    getSolution(grid);
+    //getSolution(grid);
 
     // now preallocate the particles data array
     Particle* MD_data = malloc(particleCount * sizeof(Particle));
@@ -220,9 +220,9 @@ int main(int argc, char **argv)
     //diff = clock() - start;
     //double solveTime = diff /CLOCKS_PER_SEC;
 
-    printf("\nCalculating Electric Field.....");
-    calcElectricField(ElectricField, grid, &gridInfo);
-    printf("done\n");
+    //printf("\nCalculating Electric Field.....");
+    //calcElectricField(ElectricField, grid, &gridInfo);
+    //printf("done\n");
 
     // allocate for particles
     Particle* domainParticles = malloc(PARTICLE_SIZE * sizeof(Particle));
@@ -295,7 +295,7 @@ int main(int argc, char **argv)
 
     diff = clock() - start;
     double timeStepsTime = diff /CLOCKS_PER_SEC;
-    //SolverWriteVTK("laplace.vts");
+    SolverWriteVTK("laplace.vts");
     //writeOutputData("laplace.vtk", grid, ElectricField, &gridInfo);
     return 0;
 
