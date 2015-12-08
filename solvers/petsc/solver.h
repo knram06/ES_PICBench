@@ -86,6 +86,7 @@ PetscErrorCode ComputeMatrix(KSP ksp, Mat J,Mat jac, void *ctx)
                     // if on X-Faces
                     if(i==0 || i == mx-1)
                     {
+                        /*
                         if(i == 0)
                         {
                             if( rr > capillaryRadius*capillaryRadius)
@@ -116,6 +117,7 @@ PetscErrorCode ComputeMatrix(KSP ksp, Mat J,Mat jac, void *ctx)
                                 num++; numi++;
                             }
                         }
+                        */
 
                         //v[num] = HyHzdHx;
                         //v[num] = Hx*Hy*Hz;
@@ -257,14 +259,14 @@ PetscErrorCode ComputeRHS(KSP ksp, Vec b, void* ctx)
 
                     if(i==0)
                     {
-                        if( rr <= capillaryRadius*capillaryRadius)
+                        //if( rr <= capillaryRadius*capillaryRadius)
                             array[k][j][i] = CAPILLARY_VOLTAGE;
                     }
                     else if (i == mx-1)
                     {
-                        if( (rr >= extractorInner*extractorInner)
-                                &&
-                            (rr <= extractorOuter*extractorOuter) )
+                        //if( (rr >= extractorInner*extractorInner)
+                        //        &&
+                        //    (rr <= extractorOuter*extractorOuter) )
                             array[k][j][i] = EXTRACTOR_VOLTAGE;
                     }
 
