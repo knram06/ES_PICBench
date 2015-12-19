@@ -121,7 +121,6 @@ void constructCoarseMatrixA(double *A, int N)
                     {
                         A[mat1DIndex] = 1.;
 
-                        /*
                         // define vars for calculating distance from
                         // center of circle
                         double ty = j*h - center[0];
@@ -147,7 +146,6 @@ void constructCoarseMatrixA(double *A, int N)
                                 selfCount++;
                             }
                         }
-                        */
                     } // end of if i==0 or N-1
 
                     else
