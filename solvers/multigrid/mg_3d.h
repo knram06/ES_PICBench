@@ -112,9 +112,6 @@ void constructCoarseMatrixA(double *A, int N)
                 || j == 0 || j == N-1
                 || k == 0 || k == N-1 )
                 {
-                    // need to adjust for corner nodes/edges
-                    int selfCount = 0;
-
                     // default diagonal value
                     // adjust for scaling A matrix by hSq
                     //A[mat1DIndex] = 1.;
@@ -122,6 +119,9 @@ void constructCoarseMatrixA(double *A, int N)
                     // if on boundary points
                     if( i == 0 || i == N-1 )
                     {
+                        A[mat1DIndex] = 1.;
+
+                        /*
                         // define vars for calculating distance from
                         // center of circle
                         double ty = j*h - center[0];
@@ -147,39 +147,46 @@ void constructCoarseMatrixA(double *A, int N)
                                 selfCount++;
                             }
                         }
+                        */
                     } // end of if i==0 or N-1
 
-                    if(j == 0)
-                    {
-                        // j to be equal to j+1
-                        A[mat1DIndex+N] = -1;
-                        selfCount++;
-                    }
-                    else if (j == N-1)
-                    {
-                        // j to be equal to j-1
-                        A[mat1DIndex-N] = -1;
-                        selfCount++;
-                    }
-
-                    if(k == 0)
-                    {
-                        // k to be equal to k+1
-                        A[mat1DIndex+1] = -1;
-                        selfCount++;
-                    }
-                    else if (k == N-1)
-                    {
-                        // k to be equal to k-1
-                        A[mat1DIndex-1] = -1;
-                        selfCount++;
-                    }
-
-                    // hacky way of adjusting for corner points
-                    if(!selfCount)
-                        A[mat1DIndex] = 1;
                     else
+                    {
+                        // need to adjust for corner nodes/edges
+                        int selfCount = 0;
+
+                        if(j == 0)
+                        {
+                            // j to be equal to j+1
+                            A[mat1DIndex+N] = -1;
+                            selfCount++;
+                        }
+                        else if (j == N-1)
+                        {
+                            // j to be equal to j-1
+                            A[mat1DIndex-N] = -1;
+                            selfCount++;
+                        }
+
+                        if(k == 0)
+                        {
+                            // k to be equal to k+1
+                            A[mat1DIndex+1] = -1;
+                            selfCount++;
+                        }
+                        else if (k == N-1)
+                        {
+                            // k to be equal to k-1
+                            A[mat1DIndex-1] = -1;
+                            selfCount++;
+                        }
+
+                        // hacky way of adjusting for corner points
+                        //if(!selfCount)
+                        //    A[mat1DIndex] = 1;
+                        //else
                         A[mat1DIndex] = selfCount;
+                    }
 
                 } // end of if on boundary points
 
@@ -263,6 +270,7 @@ void GaussSeidelSmoother(double* __restrict__ v, const double* __restrict__ d, c
                     // if on the inner node adjacent to boundary
                     // copy to boundary node - this way we ensure
                     // RESIDUAL IS ZERO on boundary node
+                    /*
                     if(i == 1 || i == N-2)
                     {
                         double ty = j*h - center[0];
@@ -291,6 +299,7 @@ void GaussSeidelSmoother(double* __restrict__ v, const double* __restrict__ d, c
                             }
                         } // end of else, i.e. i == N-2
                     } // end of if on X faces
+                    */
 
                     // if on Y-Faces
                     if(j == 1)
@@ -656,42 +665,6 @@ void setupBoundaryConditions(double **u, int levelN, double spacing, int numLeve
     double center[2] = {GRID_LENGTH/2., GRID_LENGTH/2.};
 
     /***********************************/
-    // X = 0 and END faces
-    i = 0;
-    nni = levelN*levelN*i;
-    for(j = 0; j < levelN; j++)
-    {
-        nj = levelN*j;
-        double ty = j*spacing-center[0];
-        for(k = 0; k < levelN; k++)
-        {
-            double tz = k*spacing-center[1];
-            double rr = ty*ty + tz*tz;
-            if(rr <= CAPILLARY_RADIUS*CAPILLARY_RADIUS)
-                v[nni + nj + k] = CAPILLARY_VOLTAGE;
-        }
-    }
-
-    i = levelN-1;
-    nni = levelN*levelN*i;
-    for(j = 0; j < levelN; j++)
-    {
-        nj = levelN*j;
-        double ty = j*spacing-center[0];
-        for(k = 0; k < levelN; k++)
-        {
-            double tz = k*spacing-center[1];
-            double rr = ty*ty + tz*tz;
-
-            if((rr > (EXTRACTOR_INNER_RADIUS*EXTRACTOR_INNER_RADIUS))
-                    &&
-               (rr < (EXTRACTOR_OUTER_RADIUS*EXTRACTOR_OUTER_RADIUS)) )
-            {
-                v[nni + nj + k] = EXTRACTOR_VOLTAGE;
-            }
-        }
-    }
-    /***********************************/
     /***********************************/
     // Y = 0 and END faces
     j = 0;
@@ -737,6 +710,42 @@ void setupBoundaryConditions(double **u, int levelN, double spacing, int numLeve
         }
     }
     /***********************************/
+    /***********************************/
+    // X = 0 and END faces
+    i = 0;
+    nni = levelN*levelN*i;
+    for(j = 0; j < levelN; j++)
+    {
+        nj = levelN*j;
+        double ty = j*spacing-center[0];
+        for(k = 0; k < levelN; k++)
+        {
+            double tz = k*spacing-center[1];
+            double rr = ty*ty + tz*tz;
+            //if(rr <= CAPILLARY_RADIUS*CAPILLARY_RADIUS)
+                v[nni + nj + k] = CAPILLARY_VOLTAGE;
+        }
+    }
+
+    i = levelN-1;
+    nni = levelN*levelN*i;
+    for(j = 0; j < levelN; j++)
+    {
+        nj = levelN*j;
+        double ty = j*spacing-center[0];
+        for(k = 0; k < levelN; k++)
+        {
+            double tz = k*spacing-center[1];
+            double rr = ty*ty + tz*tz;
+
+            //if((rr > (EXTRACTOR_INNER_RADIUS*EXTRACTOR_INNER_RADIUS))
+            //        &&
+            //   (rr < (EXTRACTOR_OUTER_RADIUS*EXTRACTOR_OUTER_RADIUS)) )
+            {
+                v[nni + nj + k] = EXTRACTOR_VOLTAGE;
+            }
+        }
+    }
     /***********************************/
 } // end of setupBoundaryConditions
 
