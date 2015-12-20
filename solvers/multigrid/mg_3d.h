@@ -226,6 +226,134 @@ void deAllocGridLevels(double ***u, const int numLevels)
     free(*u);
 }
 
+void updateEdgeValues(double* __restrict__ u, const int N)
+{
+    const int NN = N*N;
+    int i, j, k;
+    int pos;
+
+    // update the 12 edges
+    // X = 0 face
+    i = 0; k = 0;
+    for(j = 1; j < N-1; j++)
+    {
+        pos = NN*i + N*j + k;
+        u[pos] = 0.5 * (u[pos+1] + u[pos+NN]);
+    }
+
+    i = 0; k = N-1;
+    for(j = 1; j < N-1; j++)
+    {
+        pos = NN*i + N*j + k;
+        u[pos] = 0.5 * (u[pos-1] + u[pos+NN]);
+    }
+
+    i = 0; j = 0;
+    for(k = 1; k < N-1; k++)
+    {
+        pos = NN*i + N*j + k;
+        u[pos] = 0.5 * (u[pos+N] + u[pos+NN]);
+    }
+    i = 0; j = N-1;
+    for(k = 1; k < N-1; k++)
+    {
+        pos = NN*i + N*j + k;
+        u[pos] = 0.5 * (u[pos-N] + u[pos+NN]);
+    }
+
+    // X = N-1 face
+    i = N-1; k = 0;
+    for(j = 1; j < N-1; j++)
+    {
+        pos = NN*i + N*j + k;
+        u[pos] = 0.5 * (u[pos+1] + u[pos-NN]);
+    }
+
+    i = N-1; k = N-1;
+    for(j = 1; j < N-1; j++)
+    {
+        pos = NN*i + N*j + k;
+        u[pos] = 0.5 * (u[pos-1] + u[pos-NN]);
+    }
+
+    i = N-1; j = 0;
+    for(k = 1; k < N-1; k++)
+    {
+        pos = NN*i + N*j + k;
+        u[pos] = 0.5 * (u[pos+N] + u[pos-NN]);
+    }
+    i = N-1; j = N-1;
+    for(k = 1; k < N-1; k++)
+    {
+        pos = NN*i + N*j + k;
+        u[pos] = 0.5 * (u[pos-N] + u[pos-NN]);
+    }
+
+    // Y = 0 face
+    j = 0; k = 0;
+    for(i = 1; i < N-1; i++)
+    {
+        pos = NN*i + N*j + k;
+        u[pos] = 0.5 * (u[pos+N] + u[pos+1]);
+    }
+    j = 0; k = N-1;
+    for(i = 1; i < N-1; i++)
+    {
+        pos = NN*i + N*j + k;
+        u[pos] = 0.5 * (u[pos+N] + u[pos-1]);
+    }
+    // Y = N-1 face
+    j = N-1; k = 0;
+    for(i = 1; i < N-1; i++)
+    {
+        pos = NN*i + N*j + k;
+        u[pos] = 0.5 * (u[pos-N] + u[pos+1]);
+    }
+    j = N-1; k = N-1;
+    for(i = 1; i < N-1; i++)
+    {
+        pos = NN*i + N*j + k;
+        u[pos] = 0.5 * (u[pos-N] + u[pos-1]);
+    }
+
+    // update the 8 corner point values first
+    // 4 points on X = 0 face
+    i = 0;
+    j = 0; k = 0;
+    pos = NN*i + N*j + k;
+    u[pos] = (1./3) * (u[pos+1] + u[pos+N] + u[pos+NN]);
+
+    j = 0; k = N-1;
+    pos = NN*i + N*j + k;
+    u[pos] = (1./3) * (u[pos-1] + u[pos+N] + u[pos+NN]);
+
+    j = N-1; k = 0;
+    pos = NN*i + N*j + k;
+    u[pos] = (1./3) * (u[pos+1] + u[pos-N] + u[pos+NN]);
+
+    j = N-1; k = N-1;
+    pos = NN*i + N*j + k;
+    u[pos] = (1./3) * (u[pos-1] + u[pos-N] + u[pos+NN]);
+
+    // 4 points on X=N-1 face
+    i = N-1;
+    j = 0; k = 0;
+    pos = NN*i + N*j + k;
+    u[pos] = (1./3) * (u[pos+1] + u[pos+N] + u[pos-NN]);
+
+    j = 0; k = N-1;
+    pos = NN*i + N*j + k;
+    u[pos] = (1./3) * (u[pos-1] + u[pos+N] + u[pos-NN]);
+
+    j = N-1; k = 0;
+    pos = NN*i + N*j + k;
+    u[pos] = (1./3) * (u[pos+1] + u[pos-N] + u[pos-NN]);
+
+    j = N-1; k = N-1;
+    pos = NN*i + N*j + k;
+    u[pos] = (1./3) * (u[pos+1] + u[pos-N] + u[pos-NN]);
+}
+
 // smoother function
 void GaussSeidelSmoother(double* __restrict__ v, const double* __restrict__ d, const int N, const double h, const int smootherIter)
 {
@@ -314,6 +442,10 @@ void GaussSeidelSmoother(double* __restrict__ v, const double* __restrict__ d, c
             } // end of j loop
         } // end of i loop
     } // end of smootherIter loop
+
+    // smoothen on the edges to make it consistent with coarse
+    // matrix construction
+    updateEdgeValues(v, N);
 
 } // end of GaussSeidelSmoother
 
@@ -861,136 +993,6 @@ void SolverFMGInitialize()
         // do vcycles
         vcycle(u, d, l, numLevels, gsIterNum, N, A);
     }
-}
-
-void updateEdgeValues(double *u, const int N)
-{
-    const int NN = N*N;
-    int i, j, k;
-    int pos;
-
-    // update the 12 edges
-    // X = 0 face
-    i = 0; k = 0;
-    for(j = 1; j < N-1; j++)
-    {
-        pos = NN*i + N*j + k;
-        u[pos] = 0.5 * (u[pos+1] + u[pos+NN]);
-    }
-
-    i = 0; k = N-1;
-    for(j = 1; j < N-1; j++)
-    {
-        pos = NN*i + N*j + k;
-        u[pos] = 0.5 * (u[pos-1] + u[pos+NN]);
-    }
-
-    i = 0; j = 0;
-    for(k = 1; k < N-1; k++)
-    {
-        pos = NN*i + N*j + k;
-        u[pos] = 0.5 * (u[pos+N] + u[pos+NN]);
-    }
-    i = 0; j = N-1;
-    for(k = 1; k < N-1; k++)
-    {
-        pos = NN*i + N*j + k;
-        u[pos] = 0.5 * (u[pos-N] + u[pos+NN]);
-    }
-
-    // X = N-1 face
-    i = N-1; k = 0;
-    for(j = 1; j < N-1; j++)
-    {
-        pos = NN*i + N*j + k;
-        u[pos] = 0.5 * (u[pos+1] + u[pos-NN]);
-    }
-
-    i = N-1; k = N-1;
-    for(j = 1; j < N-1; j++)
-    {
-        pos = NN*i + N*j + k;
-        u[pos] = 0.5 * (u[pos-1] + u[pos-NN]);
-    }
-
-    i = N-1; j = 0;
-    for(k = 1; k < N-1; k++)
-    {
-        pos = NN*i + N*j + k;
-        u[pos] = 0.5 * (u[pos+N] + u[pos-NN]);
-    }
-    i = N-1; j = N-1;
-    for(k = 1; k < N-1; k++)
-    {
-        pos = NN*i + N*j + k;
-        u[pos] = 0.5 * (u[pos-N] + u[pos-NN]);
-    }
-
-    // Y = 0 face
-    j = 0; k = 0;
-    for(i = 1; i < N-1; i++)
-    {
-        pos = NN*i + N*j + k;
-        u[pos] = 0.5 * (u[pos+N] + u[pos+1]);
-    }
-    j = 0; k = N-1;
-    for(i = 1; i < N-1; i++)
-    {
-        pos = NN*i + N*j + k;
-        u[pos] = 0.5 * (u[pos+N] + u[pos-1]);
-    }
-    // Y = N-1 face
-    j = N-1; k = 0;
-    for(i = 1; i < N-1; i++)
-    {
-        pos = NN*i + N*j + k;
-        u[pos] = 0.5 * (u[pos-N] + u[pos+1]);
-    }
-    j = N-1; k = N-1;
-    for(i = 1; i < N-1; i++)
-    {
-        pos = NN*i + N*j + k;
-        u[pos] = 0.5 * (u[pos-N] + u[pos-1]);
-    }
-
-    // update the 8 corner point values first
-    // 4 points on X = 0 face
-    i = 0;
-    j = 0; k = 0;
-    pos = NN*i + N*j + k;
-    u[pos] = (1./3) * (u[pos+1] + u[pos+N] + u[pos+NN]);
-
-    j = 0; k = N-1;
-    pos = NN*i + N*j + k;
-    u[pos] = (1./3) * (u[pos-1] + u[pos+N] + u[pos+NN]);
-
-    j = N-1; k = 0;
-    pos = NN*i + N*j + k;
-    u[pos] = (1./3) * (u[pos+1] + u[pos-N] + u[pos+NN]);
-
-    j = N-1; k = N-1;
-    pos = NN*i + N*j + k;
-    u[pos] = (1./3) * (u[pos-1] + u[pos-N] + u[pos+NN]);
-
-    // 4 points on X=N-1 face
-    i = N-1;
-    j = 0; k = 0;
-    pos = NN*i + N*j + k;
-    u[pos] = (1./3) * (u[pos+1] + u[pos+N] + u[pos-NN]);
-
-    j = 0; k = N-1;
-    pos = NN*i + N*j + k;
-    u[pos] = (1./3) * (u[pos-1] + u[pos+N] + u[pos-NN]);
-
-    j = N-1; k = 0;
-    pos = NN*i + N*j + k;
-    u[pos] = (1./3) * (u[pos+1] + u[pos-N] + u[pos-NN]);
-
-    j = N-1; k = N-1;
-    pos = NN*i + N*j + k;
-    u[pos] = (1./3) * (u[pos+1] + u[pos-N] + u[pos-NN]);
-
-
 }
 
 
