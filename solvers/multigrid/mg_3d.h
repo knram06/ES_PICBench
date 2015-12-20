@@ -116,12 +116,12 @@ void constructCoarseMatrixA(double *A, int N)
                     // adjust for scaling A matrix by hSq
                     //A[mat1DIndex] = 1.;
 
+                    // need to adjust for corner nodes/edges
+                    int selfCount = 0;
+
                     // if on boundary points
                     if( i == 0 || i == N-1 )
                     {
-                        A[mat1DIndex] = 1.;
-
-                        /*
                         // define vars for calculating distance from
                         // center of circle
                         double ty = j*h - center[0];
@@ -131,7 +131,7 @@ void constructCoarseMatrixA(double *A, int N)
                         if( i == 0 )
                         {
                             // add Neumann bc value at (i+1)
-                            if ( rr >= CAPILLARY_RADIUS*CAPILLARY_RADIUS )
+                            if ( rr > CAPILLARY_RADIUS*CAPILLARY_RADIUS )
                             {
                                 A[mat1DIndex+NN] = -1;
                                 selfCount++;
@@ -147,46 +147,39 @@ void constructCoarseMatrixA(double *A, int N)
                                 selfCount++;
                             }
                         }
-                        */
                     } // end of if i==0 or N-1
 
-                    else
+                    if(j == 0)
                     {
-                        // need to adjust for corner nodes/edges
-                        int selfCount = 0;
-
-                        if(j == 0)
-                        {
-                            // j to be equal to j+1
-                            A[mat1DIndex+N] = -1;
-                            selfCount++;
-                        }
-                        else if (j == N-1)
-                        {
-                            // j to be equal to j-1
-                            A[mat1DIndex-N] = -1;
-                            selfCount++;
-                        }
-
-                        if(k == 0)
-                        {
-                            // k to be equal to k+1
-                            A[mat1DIndex+1] = -1;
-                            selfCount++;
-                        }
-                        else if (k == N-1)
-                        {
-                            // k to be equal to k-1
-                            A[mat1DIndex-1] = -1;
-                            selfCount++;
-                        }
-
-                        // hacky way of adjusting for corner points
-                        //if(!selfCount)
-                        //    A[mat1DIndex] = 1;
-                        //else
-                        A[mat1DIndex] = selfCount;
+                        // j to be equal to j+1
+                        A[mat1DIndex+N] = -1;
+                        selfCount++;
                     }
+                    else if (j == N-1)
+                    {
+                        // j to be equal to j-1
+                        A[mat1DIndex-N] = -1;
+                        selfCount++;
+                    }
+
+                    if(k == 0)
+                    {
+                       // k to be equal to k+1
+                       A[mat1DIndex+1] = -1;
+                       selfCount++;
+                    }
+                    else if (k == N-1)
+                    {
+                       // k to be equal to k-1
+                       A[mat1DIndex-1] = -1;
+                       selfCount++;
+                    }
+
+                    // hacky way of adjusting for corner points
+                    if(!selfCount)
+                        A[mat1DIndex] = 1;
+                    else
+                        A[mat1DIndex] = selfCount;
 
                 } // end of if on boundary points
 
@@ -270,7 +263,6 @@ void GaussSeidelSmoother(double* __restrict__ v, const double* __restrict__ d, c
                     // if on the inner node adjacent to boundary
                     // copy to boundary node - this way we ensure
                     // RESIDUAL IS ZERO on boundary node
-                    /*
                     if(i == 1 || i == N-2)
                     {
                         double ty = j*h - center[0];
@@ -299,7 +291,6 @@ void GaussSeidelSmoother(double* __restrict__ v, const double* __restrict__ d, c
                             }
                         } // end of else, i.e. i == N-2
                     } // end of if on X faces
-                    */
 
                     // if on Y-Faces
                     if(j == 1)
@@ -515,13 +506,13 @@ void prolongateAndCorrectError(const double* __restrict__ ec, const int Nc, doub
     const int NCNC = Nc*Nc;
     const int NFNF = Nf*Nf;
 
-    for(i = 0; i < Nf; i++)
+    for(i = 1; i < Nf-1; i++)
     {
         const int nnif = i*NFNF;
-        for(j = 0; j < Nf; j++)
+        for(j = 1; j < Nf-1; j++)
         {
             const int njf = j*Nf;
-            for(k = 0; k < Nf; k++)
+            for(k = 1; k < Nf-1; k++)
             {
                 int isNotOnCoarseEdge[3] = {i%2, j%2, k%2};
                 const int val = isNotOnCoarseEdge[0] + isNotOnCoarseEdge[1] + isNotOnCoarseEdge[2];
@@ -722,7 +713,7 @@ void setupBoundaryConditions(double **u, int levelN, double spacing, int numLeve
         {
             double tz = k*spacing-center[1];
             double rr = ty*ty + tz*tz;
-            //if(rr <= CAPILLARY_RADIUS*CAPILLARY_RADIUS)
+            if(rr <= CAPILLARY_RADIUS*CAPILLARY_RADIUS)
                 v[nni + nj + k] = CAPILLARY_VOLTAGE;
         }
     }
@@ -738,9 +729,9 @@ void setupBoundaryConditions(double **u, int levelN, double spacing, int numLeve
             double tz = k*spacing-center[1];
             double rr = ty*ty + tz*tz;
 
-            //if((rr > (EXTRACTOR_INNER_RADIUS*EXTRACTOR_INNER_RADIUS))
-            //        &&
-            //   (rr < (EXTRACTOR_OUTER_RADIUS*EXTRACTOR_OUTER_RADIUS)) )
+            if((rr > (EXTRACTOR_INNER_RADIUS*EXTRACTOR_INNER_RADIUS))
+                    &&
+               (rr < (EXTRACTOR_OUTER_RADIUS*EXTRACTOR_OUTER_RADIUS)) )
             {
                 v[nni + nj + k] = EXTRACTOR_VOLTAGE;
             }
@@ -878,44 +869,6 @@ void updateEdgeValues(double *u, const int N)
     int i, j, k;
     int pos;
 
-    // update the 8 corner point values first
-    // 4 points on X = 0 face
-    i = 0;
-    j = 0; k = 0;
-    pos = NN*i + N*j + k;
-    u[pos] = (1./3) * (u[pos+1] + u[pos+N] + u[pos+NN]);
-
-    j = 0; k = N-1;
-    pos = NN*i + N*j + k;
-    u[pos] = (1./3) * (u[pos-1] + u[pos+N] + u[pos+NN]);
-
-    j = N-1; k = 0;
-    pos = NN*i + N*j + k;
-    u[pos] = (1./3) * (u[pos+1] + u[pos-N] + u[pos+NN]);
-
-    j = N-1; k = N-1;
-    pos = NN*i + N*j + k;
-    u[pos] = (1./3) * (u[pos-1] + u[pos-N] + u[pos+NN]);
-
-    // 4 points on X=N-1 face
-    i = N-1;
-    j = 0; k = 0;
-    pos = NN*i + N*j + k;
-    u[pos] = (1./3) * (u[pos+1] + u[pos+N] + u[pos-NN]);
-
-    j = 0; k = N-1;
-    pos = NN*i + N*j + k;
-    u[pos] = (1./3) * (u[pos-1] + u[pos+N] + u[pos-NN]);
-
-    j = N-1; k = 0;
-    pos = NN*i + N*j + k;
-    u[pos] = (1./3) * (u[pos+1] + u[pos-N] + u[pos-NN]);
-
-    j = N-1; k = N-1;
-    pos = NN*i + N*j + k;
-    u[pos] = (1./3) * (u[pos+1] + u[pos-N] + u[pos-NN]);
-
-
     // update the 12 edges
     // X = 0 face
     i = 0; k = 0;
@@ -999,6 +952,45 @@ void updateEdgeValues(double *u, const int N)
         pos = NN*i + N*j + k;
         u[pos] = 0.5 * (u[pos-N] + u[pos-1]);
     }
+
+    // update the 8 corner point values first
+    // 4 points on X = 0 face
+    i = 0;
+    j = 0; k = 0;
+    pos = NN*i + N*j + k;
+    u[pos] = (1./3) * (u[pos+1] + u[pos+N] + u[pos+NN]);
+
+    j = 0; k = N-1;
+    pos = NN*i + N*j + k;
+    u[pos] = (1./3) * (u[pos-1] + u[pos+N] + u[pos+NN]);
+
+    j = N-1; k = 0;
+    pos = NN*i + N*j + k;
+    u[pos] = (1./3) * (u[pos+1] + u[pos-N] + u[pos+NN]);
+
+    j = N-1; k = N-1;
+    pos = NN*i + N*j + k;
+    u[pos] = (1./3) * (u[pos-1] + u[pos-N] + u[pos+NN]);
+
+    // 4 points on X=N-1 face
+    i = N-1;
+    j = 0; k = 0;
+    pos = NN*i + N*j + k;
+    u[pos] = (1./3) * (u[pos+1] + u[pos+N] + u[pos-NN]);
+
+    j = 0; k = N-1;
+    pos = NN*i + N*j + k;
+    u[pos] = (1./3) * (u[pos-1] + u[pos+N] + u[pos-NN]);
+
+    j = N-1; k = 0;
+    pos = NN*i + N*j + k;
+    u[pos] = (1./3) * (u[pos+1] + u[pos-N] + u[pos-NN]);
+
+    j = N-1; k = N-1;
+    pos = NN*i + N*j + k;
+    u[pos] = (1./3) * (u[pos+1] + u[pos-N] + u[pos-NN]);
+
+
 }
 
 
