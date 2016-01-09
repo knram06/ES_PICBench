@@ -164,7 +164,7 @@ int main(int argc, char **argv)
 
     SolverSetupBoundaryConditions();
     // solve and at each step, impose Neumann BCs?
-    double norm = SolverGetResidual(), tolerance = 1e-8;
+    double norm = SolverGetResidual(), tolerance = 1e-6;
     double cmpNorm = norm * tolerance;
 
     // FMG Initialization
@@ -174,7 +174,7 @@ int main(int argc, char **argv)
 
     SolverResetTimingInfo();
     int iterCount;
-    for(iterCount = 0; norm >= cmpNorm; iterCount++)
+    for(iterCount = 0; norm > cmpNorm; iterCount++)
     {
         norm = SolverLinSolve();
 
@@ -186,11 +186,13 @@ int main(int argc, char **argv)
     }
     printf("%10d %20.8e\n", iterCount, norm);
     SolverPrintTimingInfo();
-    SolverSmoothenEdgeValues();
+    //SolverSmoothenEdgeValues();
 
     printf("\nCalculating Electric Field.....");
     calcElectricField(ElectricField, grid, &gridInfo);
     printf("done\n");
+    writeOutputData("laplace.vtk", grid, ElectricField, &gridInfo);
+    return 0;
 
     // calculate the release rate
     int Nrel;
@@ -267,7 +269,6 @@ int main(int argc, char **argv)
 
     diff = clock() - start;
     double timeStepsTime = diff /CLOCKS_PER_SEC;
-    writeOutputData("laplace.vtk", grid, ElectricField, &gridInfo);
 
     // TEMP - remove later
     resortParticles(domainParticles, totalParticlesCount);
