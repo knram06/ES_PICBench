@@ -43,6 +43,7 @@
 #define PARTICLE_SIZE ((int)5e4)
 #define PARTICLE_SORT_INTERVAL (20)
 
+#define MAX_ITER (600)
 #define TIMESTEPS ((int)0)
 #define ITER_INTERVAL (200)
 #define ITER_HEADER_INTERVAL (1500)
@@ -164,7 +165,8 @@ int main(int argc, char **argv)
 
     SolverSetupBoundaryConditions();
     // solve and at each step, impose Neumann BCs?
-    double norm = SolverGetResidual(), tolerance = 1e-6;
+    // FOR TESTING ONLY
+    double norm = SolverGetInitialResidual(), tolerance = 1e-6;
     double cmpNorm = norm * tolerance;
 
     // FMG Initialization
@@ -173,8 +175,10 @@ int main(int argc, char **argv)
     //printf("done\n");
 
     SolverResetTimingInfo();
-    int iterCount;
-    for(iterCount = 0; norm > cmpNorm; iterCount++)
+    int iterCount = 0;
+    printf("%10s %20s\n", "Iter_Count", "Norm");
+    printf("%10d %20.8e\n", iterCount, norm);
+    for(iterCount = 1; norm > cmpNorm && (iterCount < MAX_ITER); iterCount++)
     {
         norm = SolverLinSolve();
 
@@ -187,6 +191,10 @@ int main(int argc, char **argv)
     printf("%10d %20.8e\n", iterCount, norm);
     SolverPrintTimingInfo();
     //SolverSmoothenEdgeValues();
+
+    // if broke out due to MAX_ITER, warn so
+    if(iterCount == MAX_ITER)
+        fprintf(stderr, "Stopped iterations due to MAX_ITER limit of %d\n", MAX_ITER);
 
     printf("\nCalculating Electric Field.....");
     calcElectricField(ElectricField, grid, &gridInfo);
