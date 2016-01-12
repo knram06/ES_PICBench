@@ -1262,8 +1262,8 @@ double vcycle(double **u, double **f, double **res, double h, int q, const int n
 
     #pragma omp master 
     timingTemp = omp_get_wtime();
-    GaussSeidelSmoother(v, d, N, h, smootherIter);
-    //preSmoother(v, d, N, h, smootherIter);
+    //GaussSeidelSmoother(v, d, N, h, smootherIter);
+    preSmoother(v, d, N, h, smootherIter);
     #pragma omp master
     {
     tInfo[q][0].timeTaken += (omp_get_wtime() - timingTemp);
@@ -1321,8 +1321,8 @@ double vcycle(double **u, double **f, double **res, double h, int q, const int n
 
     #pragma omp master
     timingTemp = omp_get_wtime();
-    GaussSeidelSmoother(v, d, N, h, smootherIter);
-    //postSmoother(v, d, N, h, smootherIter);
+    //GaussSeidelSmoother(v, d, N, h, smootherIter);
+    postSmoother(v, d, N, h, smootherIter);
     #pragma omp master
     {
     tInfo[q][5].timeTaken += (omp_get_wtime() - timingTemp);
