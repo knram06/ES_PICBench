@@ -65,6 +65,61 @@ Particle randomizeParticleAttribs(Particle inputParticle)
     return inputParticle;
 }
 
+void getCellWeights(const double x, const double y, const double z,
+                    const double spacing, const double invSpacing,
+                    const int numNodes,
+                    double *indices, double *weightFactors)
+{
+        // get the nearest indices - these must be the lower
+        // corner indices of a cell - due to nature of (int) cast
+        int iPos = (int)(x*invSpacing);
+        int jPos = (int)(y*invSpacing);
+        int kPos = (int)(z*invSpacing);
+
+        double hx = (x - iPos*spacing)*invSpacing;
+        double hy = (y - jPos*spacing)*invSpacing;
+        double hz = (z - kPos*spacing)*invSpacing;
+
+        // ORDERING of filling in the weightfactors and indices
+        // X, Y, Z   --> X+1, Y, Z   --> X, Y+1, Z   --> X+1, Y+1, Z
+        // X, Y, Z+1 --> X+1, Y, Z+1 --> X, Y+1, Z+1 --> X+1, Y+1, Z+1
+
+        // manually fill in the distances and indices to each of the vertices
+        int ti = iPos, tj = jPos, tk = kPos;
+        indices[0] = INDEX_1D(numNodes, ti, tj, tk);
+        weightFactors[0] = (1-hx)*(1-hy)*(1-hz);
+
+        ti = iPos+1, tj = jPos, tk = kPos;
+        indices[1] = INDEX_1D(numNodes, ti, tj, tk);
+        weightFactors[1] = (hx)*(1-hy)*(1-hz);
+
+        ti = iPos; tj = jPos+1; tk = kPos;
+        indices[2] = INDEX_1D(numNodes, ti, tj, tk);
+        weightFactors[2] = (1-hx)*(hy)*(1-hz);
+
+        ti = iPos+1; tj = jPos+1; tk = kPos;
+        indices[3] = INDEX_1D(numNodes, ti, tj, tk);
+        weightFactors[3] = (hx)*(hy)*(1-hz);
+
+        /*********************************************/
+        /*********************************************/
+        ti = iPos; tj = jPos; tk = kPos+1;
+        indices[4] = INDEX_1D(numNodes, ti, tj, tk);
+        weightFactors[4] = (1-hx)*(1-hy)*(hz);
+
+        ti = iPos+1; tj = jPos; tk = kPos+1;
+        indices[5] = INDEX_1D(numNodes, ti, tj, tk);
+        weightFactors[5] = (hx)*(1-hy)*(hz);
+
+        ti = iPos; tj = jPos+1; tk = kPos+1;
+        indices[6] = INDEX_1D(numNodes, ti, tj, tk);
+        weightFactors[6] = (1-hx)*(hy)*(hz);
+
+        ti = iPos+1; tj = jPos+1; tk = kPos+1;
+        indices[7] = INDEX_1D(numNodes, ti, tj, tk);
+        weightFactors[7] = (hx)*(hy)*(hz);
+}
+
 int updateChargeFractions(
         const Particle *particleList, int particleCount,
         ColVal *indexVals,

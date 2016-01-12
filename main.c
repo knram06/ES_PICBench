@@ -279,14 +279,13 @@ int main(int argc, char **argv)
     double timeStepsTime = diff /CLOCKS_PER_SEC;
 
     // TEMP - remove later
-    //resortParticles(domainParticles, totalParticlesCount);
+    resortParticles(domainParticles, totalParticlesCount);
 
     /*********************************************/
     /***********POISSON SOLVER********************/
     /*********************************************/
-    //double *rhs = malloc(sizeof(double) * 8 * totalParticlesCount);
-    //int *rhsIndices = malloc(sizeof(int) * 8 * totalParticlesCount);
-    /*
+    double *rhs = malloc(sizeof(double) * 8 * totalParticlesCount);
+    int *rhsIndices = malloc(sizeof(int) * 8 * totalParticlesCount);
     ColVal *indVals = malloc(sizeof(ColVal) * 8 * totalParticlesCount);
 
     //FILE *iterData = fopen("iter_data.txt", "w");
@@ -368,7 +367,7 @@ int main(int argc, char **argv)
 
     diff = clock() - start;
     double poissonStepsTime = diff /CLOCKS_PER_SEC;
-    printf("\nTiming Info\n%10s %10.8e\n%10s %10.8e\n%10s %10.8e\n", "Solve", solveTime, "TimeSteps", timeStepsTime, "Poisson TimeSteps", poissonStepsTime);
+    //printf("\nTiming Info\n%10s %10.8e\n%10s %10.8e\n%10s %10.8e\n", "Solve", solveTime, "TimeSteps", timeStepsTime, "Poisson TimeSteps", poissonStepsTime);
 
 
     free(indVals);
@@ -379,11 +378,10 @@ int main(int argc, char **argv)
 
     free(lostParticles);
     free(domainParticles);
-    free(bNodes);
+    //free(bNodes);
     deallocEField(&ElectricField);
     deallocGrid(&grid);
     free(MD_data);
-    */
 
     return 0;
 }
