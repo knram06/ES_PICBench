@@ -68,7 +68,7 @@ Particle randomizeParticleAttribs(Particle inputParticle)
 void getCellWeights(const double x, const double y, const double z,
                     const double spacing, const double invSpacing,
                     const int numNodes,
-                    double *indices, double *weightFactors)
+                    int *indices, double *weightFactors)
 {
         // get the nearest indices - these must be the lower
         // corner indices of a cell - due to nature of (int) cast
@@ -328,13 +328,13 @@ int moveParticlesInField(Particle* domainParticles, int domainParticleBound,
                          int* lostParticlesArray,//int* lostParticlesBound,
                          EField* ElectricField, GridInfo* gInfo)
 {
-    const double invSpacing = gInfo->invSpacing;
     const double halfTimeStep = 0.5 * T_PIC;
-    const int N = gInfo->numNodes;
 
-    // FOR NOW
-    // Approximate each particle to nearest node
-    // TODO: Weight it based on distances to other nodes?
+    // declare arrays which hold the weighted values
+    double weights[8] = {0};
+    //EField  efield[8];          // how to zero initialize this by default?
+    int    indices[8] = {0};
+    EField elecField;
 
     // loop through all particles
     int i, lostParticleCount = 0;
@@ -343,13 +343,29 @@ int moveParticlesInField(Particle* domainParticles, int domainParticleBound,
     {
         Particle* p = &domainParticles[i];
 
-        // round off and get the nearest indices
-        int iPos = (int)(round( (p->x)*invSpacing) );
-        int jPos = (int)(round( (p->y)*invSpacing) );
-        int kPos = (int)(round( (p->z)*invSpacing) );
+        // TODO: optimize this by avoiding reweighting corner efield values
+        // if the new particle is in the same cell as the previous?
+        // get the cellWeights
+        getCellWeights(p->x, p->y, p->z,
+                       gInfo->spacing, gInfo->invSpacing,
+                       gInfo->numNodes,
+                       indices, weights);
+
+        // reset the elecfield components to zero
+        // in preparation for weighting
+        elecField.components[0] = 0;
+        elecField.components[1] = 0;
+        elecField.components[2] = 0;
 
         // now store the ElectricField value
-        EField* elecField = &ElectricField[N*N*iPos + N*jPos + kPos];
+        int c, j;
+        for(c = 0; c < 8; c++)
+        {
+            EField efield = ElectricField[ indices[c] ];
+            for(j = 0; j < 3; j++)
+                elecField.components[j] += weights[c] * efield.components[j];
+        }
+
 
         // TODO: generalize as a loop through the number of components?
         const double multFactor = (p->charge * ELECTRONIC_CHARGE * T_PIC/ p->mass);
@@ -360,9 +376,9 @@ int moveParticlesInField(Particle* domainParticles, int domainParticleBound,
                old_Vy = p->Vy,
                old_Vz = p->Vz;
 
-        p->Vx += elecField->components[0] * multFactor;
-        p->Vy += elecField->components[1] * multFactor;
-        p->Vz += elecField->components[2] * multFactor;
+        p->Vx += elecField.components[0] * multFactor;
+        p->Vy += elecField.components[1] * multFactor;
+        p->Vz += elecField.components[2] * multFactor;
 
         // update the position
         p->x += halfTimeStep * (old_Vx + p->Vx);

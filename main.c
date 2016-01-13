@@ -274,6 +274,7 @@ int main(int argc, char **argv)
             writeParticleData(outputPath, domainParticles, totalParticlesCount);
         }
     }
+    return 0;
 
     diff = clock() - start;
     double timeStepsTime = diff /CLOCKS_PER_SEC;
