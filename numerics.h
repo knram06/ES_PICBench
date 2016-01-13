@@ -1,6 +1,7 @@
 #ifndef NUMERICS_H
 #define NUMERICS_H
 
+#include "solvers/multigrid/mg_3d.h"
 //double single_step_solve(double* grid, const int numNodes, const double sorOmega)
 //{
 //    int i, j, k;
@@ -32,6 +33,29 @@
 //
 //    return norm;
 //}
+
+void Solve(double initNorm, double toler, int maxIter)
+{
+    int iterCount = 0;
+    double norm = initNorm, cmpNorm = toler*initNorm;
+    printf("%10s %20s\n", "Iter_Count", "Norm");
+    printf("%10d %20.8e\n", iterCount, norm);
+    for(iterCount = 1; norm > cmpNorm && (iterCount < maxIter); iterCount++)
+    {
+        norm = SolverLinSolve();
+
+        if(!(iterCount % ITER_HEADER_INTERVAL))
+            printf("%10s %20s\n", "Iter_Count", "Norm");
+
+        if(!(iterCount % ITER_INTERVAL) )
+            printf("%10d %20.8e\n", iterCount, norm);
+    }
+    printf("%10d %20.8e\n", iterCount, norm);
+
+    // if broke out due to MAX_ITER, warn so
+    if(iterCount == maxIter)
+        fprintf(stderr, "Stopped iterations due to MAX_ITER limit of %d\n", maxIter);
+}
 
 // calculate the ElectricField once Node values are known
 void calcElectricField(EField* ElectricField, double* grid, GridInfo* gInfo)

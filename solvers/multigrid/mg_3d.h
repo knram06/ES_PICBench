@@ -1,3 +1,6 @@
+#ifndef MG_3D_H
+#define MG_3D_H
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -261,10 +264,11 @@ void constructCoarseMatrixA(double *A, int N, const double h)
     } // end of i loop
 }
 
-int SolverGetDetails(double **grid, double *h)
+int SolverGetDetails(double **grid, double **rhs, double *h)
 {
     // set the user pointer to finest level
     (*grid) = u[numLevels-1];
+    (*rhs)  = d[numLevels-1];
 
     // preallocate and fill the coarse matrix A
     int matDim = coarseGridNum*coarseGridNum*coarseGridNum;
@@ -1503,4 +1507,4 @@ int main(int argc, char** argv)
     return 0;
 }
 */
-
+#endif

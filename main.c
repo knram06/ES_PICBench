@@ -127,9 +127,9 @@ int main(int argc, char **argv)
     printf("Number of lines read was %d.\n", particleCount);
 
     // allocate the grid
-    double* grid = NULL;
+    double *grid = NULL, *rhs = NULL;
     double h;
-    int finestGridNum = SolverGetDetails(&grid, &h);
+    int finestGridNum = SolverGetDetails(&grid, &rhs, &h);
 
     // fill in GridInfo data
     GridInfo gridInfo;
@@ -167,7 +167,6 @@ int main(int argc, char **argv)
     // solve and at each step, impose Neumann BCs?
     // FOR TESTING ONLY
     double norm = SolverGetInitialResidual(), tolerance = 1e-6;
-    double cmpNorm = norm * tolerance;
 
     // FMG Initialization
     //printf("Carrying out FMG Initialization.... ");
@@ -175,26 +174,8 @@ int main(int argc, char **argv)
     //printf("done\n");
 
     SolverResetTimingInfo();
-    int iterCount = 0;
-    printf("%10s %20s\n", "Iter_Count", "Norm");
-    printf("%10d %20.8e\n", iterCount, norm);
-    for(iterCount = 1; norm > cmpNorm && (iterCount < MAX_ITER); iterCount++)
-    {
-        norm = SolverLinSolve();
-
-        if(!(iterCount % ITER_HEADER_INTERVAL))
-            printf("%10s %20s\n", "Iter_Count", "Norm");
-
-        if(!(iterCount % ITER_INTERVAL) )
-            printf("%10d %20.8e\n", iterCount, norm);
-    }
-    printf("%10d %20.8e\n", iterCount, norm);
+    Solve(norm, tolerance, MAX_ITER);
     SolverPrintTimingInfo();
-    //SolverSmoothenEdgeValues();
-
-    // if broke out due to MAX_ITER, warn so
-    if(iterCount == MAX_ITER)
-        fprintf(stderr, "Stopped iterations due to MAX_ITER limit of %d\n", MAX_ITER);
 
     printf("\nCalculating Electric Field.....");
     calcElectricField(ElectricField, grid, &gridInfo);
@@ -285,9 +266,9 @@ int main(int argc, char **argv)
     /*********************************************/
     /***********POISSON SOLVER********************/
     /*********************************************/
-    double *rhs = malloc(sizeof(double) * 8 * totalParticlesCount);
-    int *rhsIndices = malloc(sizeof(int) * 8 * totalParticlesCount);
-    ColVal *indVals = malloc(sizeof(ColVal) * 8 * totalParticlesCount);
+    //double *rhs = malloc(sizeof(double) * 8 * totalParticlesCount);
+    //int *rhsIndices = malloc(sizeof(int) * 8 * totalParticlesCount);
+    //ColVal *indVals = malloc(sizeof(ColVal) * 8 * totalParticlesCount);
 
     //FILE *iterData = fopen("iter_data.txt", "w");
     start = clock();
@@ -323,18 +304,18 @@ int main(int argc, char **argv)
             resortParticles(domainParticles, totalParticlesCount);
 
         // reset the rhs vector
-        //memset(rhs, 0, sizeof(double) * gridInfo.totalNodes);
+        memset(rhs, 0, sizeof(double) * gridInfo.totalNodes);
         // based on the new particle positions, update charge fractions at nodes
-        int validNodesCount = updateChargeFractions(domainParticles, totalParticlesCount, indVals, &gridInfo);
+        int validNodesCount = updateChargeFractions(domainParticles, totalParticlesCount, rhs, &gridInfo);
 
-        // using validNodesNumber, send modified rhs to solver
-        //updateRHS(rhs, rhsIndices, validNodesCount);
-        //int iterNum = SolverLinSolve();
+        // SOLVE here
+        norm = SolverGetResidual();
+        Solve(norm, tolerance, MAX_ITER);
 
-        //getSolution(grid);
+        // update the electric field
         calcElectricField(ElectricField, grid, &gridInfo);
 
-        // then move them
+        // then move the particles
         lostParticleCount = moveParticlesInField(domainParticles, totalParticlesCount,
                                                  lostParticles,//&lostParticleBound,
                                                  ElectricField, &gridInfo);
@@ -371,7 +352,6 @@ int main(int argc, char **argv)
     //printf("\nTiming Info\n%10s %10.8e\n%10s %10.8e\n%10s %10.8e\n", "Solve", solveTime, "TimeSteps", timeStepsTime, "Poisson TimeSteps", poissonStepsTime);
 
 
-    free(indVals);
     //free(rhsIndices);
     //free(rhs);
     //deallocCSRForm(&mcsr);

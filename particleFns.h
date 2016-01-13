@@ -122,7 +122,7 @@ void getCellWeights(const double x, const double y, const double z,
 
 int updateChargeFractions(
         const Particle *particleList, int particleCount,
-        ColVal *indexVals,
+        double *chargeFractions,
         GridInfo *gInfo
         )
 {
@@ -133,68 +133,34 @@ int updateChargeFractions(
     double invSpacing = gInfo->invSpacing;
     double spacing = gInfo->spacing;
 
+    // arrays for storing weightFactors and indices
+    double weightFactors[8];
+    int indices[8];
+
     // cache the multiplication factor
     // taking spacing factors to rhs and taking vol as spacing^3
-    const double multFactor = -invSpacing * ELECTRONIC_CHARGE / FREE_SPACE_PERMITTIVITY;
+    const double invCellVol = invSpacing*invSpacing*invSpacing;
+    const double multFactor = -invCellVol * ELECTRONIC_CHARGE / FREE_SPACE_PERMITTIVITY;
 
     for(i = 0; i < particleCount; i++)
     {
         const Particle *p = &particleList[i];
 
-        // get the nearest indices - these must be the lower
-        // corner indices of a cell - due to nature of (int) cast
-        int iPos = (int)((p->x)*invSpacing);
-        int jPos = (int)((p->y)*invSpacing);
-        int kPos = (int)((p->z)*invSpacing);
+        // get the relevant weight factors
+        getCellWeights(p->x, p->y, p->z,
+                       spacing, invSpacing,
+                       numNodes,
+                       indices, weightFactors);
 
-        double hx = (p->x - iPos*spacing)*invSpacing;
-        double hy = (p->y - jPos*spacing)*invSpacing;
-        double hz = (p->z - kPos*spacing)*invSpacing;
-
-        // array to store calculated distances from vertices
-        // distances can be squared as it does not affect the comparison
-        double weightFactors[8];
-        int indices[8][3];
-
-        // manually fill in the distances and indices to each of the vertices
-        int ti = iPos, tj = jPos, tk = kPos;
-        indices[0][0] = ti; indices[0][1] = tj; indices[0][2] = tk;
-        weightFactors[0] = (1-hx)*(1-hy)*(1-hz);
-
-        // even if it is redundant, explicitly setting to make it clear
-        ti = iPos; tj = jPos; tk = kPos+1;
-        indices[1][0] = ti; indices[1][1] = tj; indices[1][2] = tk;
-        weightFactors[1] = (1-hx)*(1-hy)*(hz);
-
-        ti = iPos; tj = jPos+1; tk = kPos;
-        indices[2][0] = ti; indices[2][1] = tj; indices[2][2] = tk;
-        weightFactors[2] = (1-hx)*(hy)*(1-hz);
-
-        ti = iPos; tj = jPos+1; tk = kPos+1;
-        indices[3][0] = ti; indices[3][1] = tj; indices[3][2] = tk;
-        weightFactors[3] = (1-hx)*(hy)*(hz);
-
-        /*********************************************/
-        /*********************************************/
-        ti = iPos+1, tj = jPos, tk = kPos;
-        indices[4][0] = ti; indices[4][1] = tj; indices[4][2] = tk;
-        weightFactors[4] = (hx)*(1-hy)*(1-hz);
-
-        // even if it is redundant, explicitly setting to make it clear
-        ti = iPos+1; tj = jPos; tk = kPos+1;
-        indices[5][0] = ti; indices[5][1] = tj; indices[5][2] = tk;
-        weightFactors[5] = (hx)*(1-hy)*(hz);
-
-        ti = iPos+1; tj = jPos+1; tk = kPos;
-        indices[6][0] = ti; indices[6][1] = tj; indices[6][2] = tk;
-        weightFactors[6] = (hx)*(hy)*(1-hz);
-
-        ti = iPos+1; tj = jPos+1; tk = kPos+1;
-        indices[7][0] = ti; indices[7][1] = tj; indices[7][2] = tk;
-        weightFactors[7] = (hx)*(hy)*(hz);
+        // update the charge fractions, based on
+        // the weight factors
+        int c;
+        for(c = 0; c < 8; c++)
+            chargeFractions[ indices[c] ] += p->charge * weightFactors[c] * multFactor;
 
         // now loop through the weight factors
         // and update positions in the charge fractions list
+        /*
         int j;
         for(j = 0; j < 8; j++)
         {
@@ -236,6 +202,7 @@ int updateChargeFractions(
                 }
             } // end of if check for indices within valid limits
         } // end of for loop for min distance
+        */
 
     } // end of loop through particles array
 
