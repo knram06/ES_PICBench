@@ -67,8 +67,7 @@ Particle randomizeParticleAttribs(Particle inputParticle)
 
 void getCellWeights(const double x, const double y, const double z,
                     const double spacing, const double invSpacing,
-                    const int numNodes,
-                    int *indices, double *weightFactors)
+                    int indices[][3], double *weightFactors)
 {
         // get the nearest indices - these must be the lower
         // corner indices of a cell - due to nature of (int) cast
@@ -86,45 +85,45 @@ void getCellWeights(const double x, const double y, const double z,
 
         // manually fill in the distances and indices to each of the vertices
         int ti = iPos, tj = jPos, tk = kPos;
-        indices[0] = INDEX_1D(numNodes, ti, tj, tk);
+        indices[0][0] = ti; indices[0][1] = tj; indices[0][2] = tk;
         weightFactors[0] = (1-hx)*(1-hy)*(1-hz);
 
         ti = iPos+1, tj = jPos, tk = kPos;
-        indices[1] = INDEX_1D(numNodes, ti, tj, tk);
+        indices[1][0] = ti; indices[1][1] = tj; indices[1][2] = tk;
         weightFactors[1] = (hx)*(1-hy)*(1-hz);
 
         ti = iPos; tj = jPos+1; tk = kPos;
-        indices[2] = INDEX_1D(numNodes, ti, tj, tk);
+        indices[2][0] = ti; indices[2][1] = tj; indices[2][2] = tk;
         weightFactors[2] = (1-hx)*(hy)*(1-hz);
 
         ti = iPos+1; tj = jPos+1; tk = kPos;
-        indices[3] = INDEX_1D(numNodes, ti, tj, tk);
+        indices[3][0] = ti; indices[3][1] = tj; indices[3][2] = tk;
         weightFactors[3] = (hx)*(hy)*(1-hz);
 
         /*********************************************/
         /*********************************************/
         ti = iPos; tj = jPos; tk = kPos+1;
-        indices[4] = INDEX_1D(numNodes, ti, tj, tk);
+        indices[4][0] = ti; indices[4][1] = tj; indices[4][2] = tk;
         weightFactors[4] = (1-hx)*(1-hy)*(hz);
 
         ti = iPos+1; tj = jPos; tk = kPos+1;
-        indices[5] = INDEX_1D(numNodes, ti, tj, tk);
+        indices[5][0] = ti; indices[5][1] = tj; indices[5][2] = tk;
         weightFactors[5] = (hx)*(1-hy)*(hz);
 
         ti = iPos; tj = jPos+1; tk = kPos+1;
-        indices[6] = INDEX_1D(numNodes, ti, tj, tk);
+        indices[6][0] = ti; indices[6][1] = tj; indices[6][2] = tk;
         weightFactors[6] = (1-hx)*(hy)*(hz);
 
         ti = iPos+1; tj = jPos+1; tk = kPos+1;
-        indices[7] = INDEX_1D(numNodes, ti, tj, tk);
+        indices[7][0] = ti; indices[7][1] = tj; indices[7][2] = tk;
         weightFactors[7] = (hx)*(hy)*(hz);
 }
 
-int updateChargeFractions(
-        const Particle *particleList, int particleCount,
-        double *chargeFractions,
-        GridInfo *gInfo
-        )
+void updateChargeFractions(
+         const Particle *particleList, int particleCount,
+         double *chargeFractions,
+         GridInfo *gInfo
+         )
 {
     int i, validNodesNumber = 0;
     int searchIndex = 0;
@@ -135,7 +134,7 @@ int updateChargeFractions(
 
     // arrays for storing weightFactors and indices
     double weightFactors[8];
-    int indices[8];
+    int indices[8][3];
 
     // cache the multiplication factor
     // taking spacing factors to rhs and taking vol as spacing^3
@@ -149,14 +148,19 @@ int updateChargeFractions(
         // get the relevant weight factors
         getCellWeights(p->x, p->y, p->z,
                        spacing, invSpacing,
-                       numNodes,
                        indices, weightFactors);
 
         // update the charge fractions, based on
         // the weight factors
         int c;
         for(c = 0; c < 8; c++)
-            chargeFractions[ indices[c] ] += p->charge * weightFactors[c] * multFactor;
+        {
+            int ti = indices[c][0], tj = indices[c][1], tk = indices[c][2];
+            int index = INDEX_1D(numNodes, ti, tj, tk);
+
+            // TODO: if within the domain lengths, only then update the charge fractions
+            chargeFractions[ index ] += p->charge * weightFactors[c] * multFactor;
+        }
 
         // now loop through the weight factors
         // and update positions in the charge fractions list
@@ -205,8 +209,6 @@ int updateChargeFractions(
         */
 
     } // end of loop through particles array
-
-    return validNodesNumber;
 }
 
 /*!
@@ -239,7 +241,7 @@ void releaseParticles(
     //int particleBoundCopy = (*domainParticleBound);
 
     // assert just in case
-    assert(*domainParticleCount <= PARTICLE_SIZE);
+    //assert(*domainParticleCount <= PARTICLE_SIZE);
 
     // loop through MD_data and randomize particle attributes
     for(i = 0; i < numParticlesToRelease; i++)
@@ -300,7 +302,7 @@ int moveParticlesInField(Particle* domainParticles, int domainParticleBound,
     // declare arrays which hold the weighted values
     double weights[8] = {0};
     //EField  efield[8];          // how to zero initialize this by default?
-    int    indices[8] = {0};
+    int    indices[8][3];
     EField elecField;
 
     // loop through all particles
@@ -315,7 +317,6 @@ int moveParticlesInField(Particle* domainParticles, int domainParticleBound,
         // get the cellWeights
         getCellWeights(p->x, p->y, p->z,
                        gInfo->spacing, gInfo->invSpacing,
-                       gInfo->numNodes,
                        indices, weights);
 
         // reset the elecfield components to zero
@@ -328,9 +329,11 @@ int moveParticlesInField(Particle* domainParticles, int domainParticleBound,
         int c, j;
         for(c = 0; c < 8; c++)
         {
-            EField efield = ElectricField[ indices[c] ];
+            int index = INDEX_1D(gInfo->numNodes, indices[c][0], indices[c][1], indices[c][2]);
+            double weightFactor = weights[c];
+            EField efield = ElectricField[ index ];
             for(j = 0; j < 3; j++)
-                elecField.components[j] += weights[c] * efield.components[j];
+                elecField.components[j] += weightFactor * efield.components[j];
         }
 
 

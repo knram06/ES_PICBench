@@ -40,11 +40,11 @@
 // define all problem parameters in terms of macros
 #define MD_FILE "./input_data/MD_data/10_input_Pos_Q488_20130318.inp"
 
-#define PARTICLE_SIZE ((int)5e4)
+//#define PARTICLE_SIZE ((int)5e4)
 #define PARTICLE_SORT_INTERVAL (20)
 
 #define MAX_ITER (200)
-#define TIMESTEPS ((int)0)
+#define TIMESTEPS ((int)8000)
 #define ITER_INTERVAL (200)
 #define ITER_HEADER_INTERVAL (1500)
 #define POST_WRITE_FILES (false)
@@ -254,7 +254,7 @@ int main(int argc, char **argv)
             sprintf(outputPath, "%s/particleOutput/particleOutput_%d.txt", POST_WRITE_PATH, i);
             writeParticleData(outputPath, domainParticles, totalParticlesCount);
         }
-    }
+    } // end of Laplace loop
     return 0;
 
     diff = clock() - start;
@@ -306,7 +306,7 @@ int main(int argc, char **argv)
         // reset the rhs vector
         memset(rhs, 0, sizeof(double) * gridInfo.totalNodes);
         // based on the new particle positions, update charge fractions at nodes
-        int validNodesCount = updateChargeFractions(domainParticles, totalParticlesCount, rhs, &gridInfo);
+        updateChargeFractions(domainParticles, totalParticlesCount, rhs, &gridInfo);
 
         // SOLVE here
         norm = SolverGetResidual();
@@ -343,7 +343,7 @@ int main(int argc, char **argv)
     } // end of Poisson timestep loop
     //fclose(iterData);
 
-    //writeOutputData("poisson.vtk", grid, ElectricField, &gridInfo);
+    writeOutputData("poisson.vtk", grid, ElectricField, &gridInfo);
     //getRHS(rhs);
     //writeVectorToFile("poisson_v.txt", rhs, gridInfo.totalNodes);
 
