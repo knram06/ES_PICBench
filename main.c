@@ -44,14 +44,14 @@
 #define PARTICLE_SORT_INTERVAL (20)
 
 #define MAX_ITER (200)
-#define TIMESTEPS ((int)8000)
+#define TIMESTEPS ((int)0)
 #define ITER_INTERVAL (200)
 #define ITER_HEADER_INTERVAL (1500)
-#define POST_WRITE_FILES (false)
+#define POST_WRITE_FILES (true)
 #define POST_INTERVAL (200)
 #define POST_WRITE_PATH ("output/")
 
-#define POISSON_TIMESTEPS ((int)0)
+#define POISSON_TIMESTEPS ((int)2000)
 //#define TEST_FUNCTION (x*x - 2*y*y + z*z)
 #define TEST_FUNCTION 0.
 
@@ -255,7 +255,7 @@ int main(int argc, char **argv)
             writeParticleData(outputPath, domainParticles, totalParticlesCount);
         }
     } // end of Laplace loop
-    return 0;
+    //return 0;
 
     diff = clock() - start;
     double timeStepsTime = diff /CLOCKS_PER_SEC;
@@ -304,7 +304,7 @@ int main(int argc, char **argv)
             resortParticles(domainParticles, totalParticlesCount);
 
         // reset the rhs vector
-        memset(rhs, 0, sizeof(double) * gridInfo.totalNodes);
+        resetRHSInteriorPoints(rhs, &gridInfo);       // resets only interior points
         // based on the new particle positions, update charge fractions at nodes
         updateChargeFractions(domainParticles, totalParticlesCount, rhs, &gridInfo);
 

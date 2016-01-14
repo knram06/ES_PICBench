@@ -156,10 +156,20 @@ void updateChargeFractions(
         for(c = 0; c < 8; c++)
         {
             int ti = indices[c][0], tj = indices[c][1], tk = indices[c][2];
-            int index = INDEX_1D(numNodes, ti, tj, tk);
 
-            // TODO: if within the domain lengths, only then update the charge fractions
-            chargeFractions[ index ] += p->charge * weightFactors[c] * multFactor;
+            // NECESSARY?
+            // if within interior points of the grid
+            // since we don't want to overwrite boundary
+            // portion of the grid
+            if( ((ti > 0) && (ti < numNodes-1))
+                          &&
+                ((tj > 0) && (tj < numNodes-1))
+                          &&
+                ((tk > 0) && (tk < numNodes-1)) )
+            {
+                int index = INDEX_1D(numNodes, ti, tj, tk);
+                chargeFractions[ index ] += p->charge * weightFactors[c] * multFactor;
+            }
         }
 
         // now loop through the weight factors

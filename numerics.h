@@ -34,6 +34,27 @@
 //    return norm;
 //}
 
+void resetRHSInteriorPoints(double *rhs, GridInfo *gInfo)
+{
+    int i, j, k;
+    const int N = gInfo->numNodes;
+    const int NN = N*N;
+
+    for(i = 1; i < N-1; i++)
+    {
+        const int nni = NN*i;
+        for(j = 1; j < N-1; j++)
+        {
+            const int nj = N*j;
+            for(k = 1; k < N-1; k++)
+            {
+                int pos = nni + nj + k;
+                rhs[pos] = 0;
+            }
+        }
+    } // end of outermost i loop
+}
+
 void Solve(double initNorm, double toler, int maxIter)
 {
     int iterCount = 0;
