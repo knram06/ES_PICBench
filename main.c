@@ -201,10 +201,9 @@ int main(int argc, char **argv)
     int lostParticleBound = -1;
 
     // SINGLE PARTICLE release check for preallocating
-    int iterCountTillExit = simulateSingleParticleTillDomainExit(MD_data, particleCount, ElectricField, &gridInfo);
+    int iterCountTillExit = 0;//simulateSingleParticleTillDomainExit(MD_data, particleCount, ElectricField, &gridInfo);
     int particlePreallocCount = 2*Nrel * iterCountTillExit;
     printf("%d Iterations were done for Particle to leave domain with Laplace solution.\nReleasing %d particles per timesteps, approx total particles to preallocate is %d (doubled - covering twice the domain length) \n", iterCountTillExit, Nrel, particlePreallocCount);
-
 
     // allocate for particles
     Particle* domainParticles = malloc(particlePreallocCount * sizeof(Particle));
@@ -350,7 +349,6 @@ int main(int argc, char **argv)
     diff = clock() - start;
     double poissonStepsTime = diff /CLOCKS_PER_SEC;
     //printf("\nTiming Info\n%10s %10.8e\n%10s %10.8e\n%10s %10.8e\n", "Solve", solveTime, "TimeSteps", timeStepsTime, "Poisson TimeSteps", poissonStepsTime);
-
 
     //free(rhsIndices);
     //free(rhs);

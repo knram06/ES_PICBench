@@ -13,12 +13,12 @@ void parseMDFileToParticles(Particle particleData[], FILE* fp)
     while(fgets(line, sizeof(line), fp))
     {
         char* token;
-        int fieldIndex = 1;
 
         //printf("line: %s\n", line);
         token = strtok(line, " ");
         particleData[particleCount].x = atof(token);
 
+        int fieldIndex = 1;
         while(fieldIndex < 8)
         {
             token = strtok(NULL, " ");

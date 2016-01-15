@@ -1447,7 +1447,7 @@ void SolverFinalize()
     int i;
     for(i = 0; i < numLevels; i++)
         deAllocTimingInfo( &(tInfo[i]) );
-    free((*tInfo));
+    free(tInfo);
 
     // free the coarse matrix constructed
     free(A);
