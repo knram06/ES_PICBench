@@ -136,7 +136,7 @@ void SolverInitialize(int argc, char **argv)
         "Smoother1", "CalcResidual1", "Restrict Residual", "Recurse, Direct Solve", "Prolongate&Correct", "Smoother2", "CalcResidual2"};
     int i;
     for(i = 0; i < 7; i++)
-        (*tInfo)[i] = allocTimingInfo(*tInfo, stageNames, 7);
+        (*tInfo)[i] = allocTimingInfo(&((*tInfo)[i]), stageNames, 7);
 
     // fill in the details at the finest level
     spacing = GRID_LENGTH/(finestOneSideNum-1);
