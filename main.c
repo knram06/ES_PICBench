@@ -355,13 +355,13 @@ int main(int argc, char **argv)
     //free(rhsIndices);
     //free(rhs);
     //deallocCSRForm(&mcsr);
-    //SolverFinalize();
+    SolverFinalize();
 
     free(lostParticles);
     free(domainParticles);
     //free(bNodes);
     deallocEField(&ElectricField);
-    deallocGrid(&grid);
+    //deallocGrid(&grid);
     free(MD_data);
 
     return 0;
