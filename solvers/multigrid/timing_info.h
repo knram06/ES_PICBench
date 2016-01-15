@@ -33,8 +33,8 @@ void allocTimingInfo(TimingInfo **tInfo, char **stageNames, const int numStages)
 
 void resetTimingInfo(TimingInfo *tInfo)
 {
-    memset(tInfo->numCalls,  0, tInfo->numStages);
-    memset(tInfo->timeTaken, 0, tInfo->numStages);
+    memset(tInfo->numCalls,  0, sizeof(int)*tInfo->numStages);
+    memset(tInfo->timeTaken, 0, sizeof(double)*tInfo->numStages);
 }
 
 void printTimingInfo(TimingInfo *tInfo)

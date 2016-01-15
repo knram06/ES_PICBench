@@ -135,8 +135,8 @@ void SolverInitialize(int argc, char **argv)
     const char* stageNames[7] = {
         "Smoother1", "CalcResidual1", "Restrict Residual", "Recurse, Direct Solve", "Prolongate&Correct", "Smoother2", "CalcResidual2"};
     int i;
-    for(i = 0; i < 7; i++)
-        (*tInfo)[i] = allocTimingInfo(&((*tInfo)[i]), stageNames, 7);
+    for(i = 0; i < numLevels; i++)
+        allocTimingInfo(&(tInfo[i]), stageNames, 7);
 
     // fill in the details at the finest level
     spacing = GRID_LENGTH/(finestOneSideNum-1);
@@ -1261,8 +1261,8 @@ double vcycle(double **u, double **f, double **res, double h, int q, const int n
 
             timingTemp = omp_get_wtime();
             solveWithLU(LU, totalNodes, d, v);
-            tInfo[q].timeTaken[3] += (omp_get_wtime() - timingTemp);
-            tInfo[q].numCalls[3]++;
+            tInfo[q]->timeTaken[3] += (omp_get_wtime() - timingTemp);
+            tInfo[q]->numCalls[3]++;
         }
 
         // THIS MUST be encountered by all threads
@@ -1275,8 +1275,8 @@ double vcycle(double **u, double **f, double **res, double h, int q, const int n
     preSmoother(v, d, N, h, smootherIter);
     #pragma omp master
     {
-    tInfo[q].timeTaken[0] += (omp_get_wtime() - timingTemp);
-    tInfo[q].numCalls[0]++;
+    tInfo[q]->timeTaken[0] += (omp_get_wtime() - timingTemp);
+    tInfo[q]->numCalls[0]++;
     }
 
     // allocate the residual vector
@@ -1287,8 +1287,8 @@ double vcycle(double **u, double **f, double **res, double h, int q, const int n
     calculateResidual(v, d, N, h, r);
     #pragma omp master
     {
-    tInfo[q].timeTaken[1] += (omp_get_wtime() - timingTemp);
-    tInfo[q].numCalls[1]++;
+    tInfo[q]->timeTaken[1] += (omp_get_wtime() - timingTemp);
+    tInfo[q]->numCalls[1]++;
     }
 
     // update N for next coarser level
@@ -1303,8 +1303,8 @@ double vcycle(double **u, double **f, double **res, double h, int q, const int n
     restrictResidual(r, N, d1, N_coarse);
     #pragma omp master
     {
-    tInfo[q].timeTaken[2] += (omp_get_wtime() - timingTemp);
-    tInfo[q].numCalls[2]++;
+    tInfo[q]->timeTaken[2] += (omp_get_wtime() - timingTemp);
+    tInfo[q]->numCalls[2]++;
     }
 
     // do recursive call now
@@ -1313,8 +1313,8 @@ double vcycle(double **u, double **f, double **res, double h, int q, const int n
     vcycle(u, f, res, h_coarse, q-1, numLevels, smootherIter, N_coarse, LU);
     #pragma omp master
     {
-    tInfo[q].timeTaken[3] += (omp_get_wtime() - timingTemp);
-    tInfo[q].numCalls[3]++;
+    tInfo[q]->timeTaken[3] += (omp_get_wtime() - timingTemp);
+    tInfo[q]->numCalls[3]++;
     }
 
     // now do prolongation to the fine grid
@@ -1324,8 +1324,8 @@ double vcycle(double **u, double **f, double **res, double h, int q, const int n
     prolongateAndCorrectError(v1, N_coarse, v, N);
     #pragma omp master
     {
-    tInfo[q].timeTaken[4] += (omp_get_wtime() - timingTemp);
-    tInfo[q].numCalls[4]++;
+    tInfo[q]->timeTaken[4] += (omp_get_wtime() - timingTemp);
+    tInfo[q]->numCalls[4]++;
     }
 
     #pragma omp master
@@ -1334,8 +1334,8 @@ double vcycle(double **u, double **f, double **res, double h, int q, const int n
     postSmoother(v, d, N, h, smootherIter);
     #pragma omp master
     {
-    tInfo[q].timeTaken[5] += (omp_get_wtime() - timingTemp);
-    tInfo[q].numCalls[5]++;
+    tInfo[q]->timeTaken[5] += (omp_get_wtime() - timingTemp);
+    tInfo[q]->numCalls[5]++;
     }
 
     // TODO: Make this fully parallel too
@@ -1347,8 +1347,8 @@ double vcycle(double **u, double **f, double **res, double h, int q, const int n
     double rsd = calculateResidual(v, d, N, h, NULL);
     #pragma omp master
     {
-    tInfo[q].timeTaken[6] += (omp_get_wtime() - timingTemp);
-    tInfo[q].numCalls[6]++;
+    tInfo[q]->timeTaken[6] += (omp_get_wtime() - timingTemp);
+    tInfo[q]->numCalls[6]++;
     }
 
     return rsd;
@@ -1429,7 +1429,7 @@ void SolverResetTimingInfo()
 {
     int i;
     for(i = 0; i < numLevels; i++)
-        resetTimingInfo((*tInfo)[i]);
+        resetTimingInfo( tInfo[i] );
 }
 
 void SolverPrintTimingInfo()
@@ -1438,7 +1438,7 @@ void SolverPrintTimingInfo()
     for(i = 0; i < numLevels; i++)
     {
         printf("LEVEL %d\n", i);
-        printTimingInfo((*tInfo)[i]);
+        printTimingInfo( tInfo[i] );
     }
 }
 
@@ -1446,7 +1446,7 @@ void SolverFinalize()
 {
     int i;
     for(i = 0; i < numLevels; i++)
-        deAllocTimingInfo((*tInfo)[i]);
+        deAllocTimingInfo( &(tInfo[i]) );
     free((*tInfo));
 
     // free the coarse matrix constructed

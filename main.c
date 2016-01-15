@@ -51,7 +51,7 @@
 #define POST_INTERVAL (200)
 #define POST_WRITE_PATH ("output/")
 
-#define POISSON_TIMESTEPS ((int)2000)
+#define POISSON_TIMESTEPS ((int)0)
 //#define TEST_FUNCTION (x*x - 2*y*y + z*z)
 #define TEST_FUNCTION 0.
 
