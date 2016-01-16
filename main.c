@@ -51,7 +51,7 @@
 #define POST_INTERVAL (200)
 #define POST_WRITE_PATH ("output/")
 
-#define POISSON_TIMESTEPS ((int)0)
+#define POISSON_TIMESTEPS ((int)1)
 //#define TEST_FUNCTION (x*x - 2*y*y + z*z)
 #define TEST_FUNCTION 0.
 
@@ -270,7 +270,11 @@ int main(int argc, char **argv)
     //ColVal *indVals = malloc(sizeof(ColVal) * 8 * totalParticlesCount);
 
     //FILE *iterData = fopen("iter_data.txt", "w");
-    start = clock();
+    TimingInfo *tInfo = NULL;
+    char *stageNames[8] = {"Release Particles", "SwapGaps", "ReSort", "ResetRHS", "UpdateChargeFrns", "Solve","calcElecField", "moveParticlesInField"};
+    allocTimingInfo(&tInfo, stageNames, 8);
+
+    start = clock(); double timingTemp;
     for(i = 1; i <= POISSON_TIMESTEPS; i++)
     {
         clock_t tstart = clock();
@@ -283,15 +287,21 @@ int main(int argc, char **argv)
         //totalParticlesBound += numParticlesToRelease - lostParticleCount;
         lostParticleBound = (lostParticleCount - 1);        // adjust for one off issue
         // introduce the particles
+        timingTemp = omp_get_wtime();
         releaseParticles(numParticlesToRelease,
                          MD_data, particleCount,
                          domainParticles, &totalParticlesCount,
                          lostParticles,
                          &lostParticleBound);          // adjust for one off issue
+        tInfo->timeTaken[0] += (omp_get_wtime() - timingTemp);
+        tInfo->numCalls[0]++;
 
         //totalParticlesBound = (totalParticlesCount - 1);
+        timingTemp = omp_get_wtime();
         swapGapsWithEndParticles(domainParticles, &totalParticlesCount,
                                  lostParticles, &lostParticleBound);
+        tInfo->timeTaken[1] += (omp_get_wtime() - timingTemp);
+        tInfo->numCalls[1]++;
 
         printf("Total Number of Particles: %d\n", totalParticlesCount); // need +1 for the one-off offset
 
@@ -300,24 +310,45 @@ int main(int argc, char **argv)
         // BUT don't do this every iteration, since we will use qsort
         // and QUICKSORT WORST CASE performance is when array is ALMOST SORTED - O(n^2)
         if( !(i % PARTICLE_SORT_INTERVAL) )
+        {
+            timingTemp = omp_get_wtime();
             resortParticles(domainParticles, totalParticlesCount);
+            tInfo->timeTaken[2] += (omp_get_wtime() - timingTemp);
+            tInfo->numCalls[2]++;
+        }
 
         // reset the rhs vector
+        timingTemp = omp_get_wtime();
         resetRHSInteriorPoints(rhs, &gridInfo);       // resets only interior points
+        tInfo->timeTaken[3] += (omp_get_wtime() - timingTemp);
+        tInfo->numCalls[3]++;
+
         // based on the new particle positions, update charge fractions at nodes
+        timingTemp = omp_get_wtime();
         updateChargeFractions(domainParticles, totalParticlesCount, rhs, &gridInfo);
+        tInfo->timeTaken[4] += (omp_get_wtime() - timingTemp);
+        tInfo->numCalls[4]++;
 
         // SOLVE here
         norm = SolverGetResidual();
+        timingTemp = omp_get_wtime();
         Solve(norm, tolerance, MAX_ITER);
+        tInfo->timeTaken[5] += (omp_get_wtime() - timingTemp);
+        tInfo->numCalls[5]++;
 
         // update the electric field
+        timingTemp = omp_get_wtime();
         calcElectricField(ElectricField, grid, &gridInfo);
+        tInfo->timeTaken[6] += (omp_get_wtime() - timingTemp);
+        tInfo->numCalls[6]++;
 
         // then move the particles
+        timingTemp = omp_get_wtime();
         lostParticleCount = moveParticlesInField(domainParticles, totalParticlesCount,
                                                  lostParticles,//&lostParticleBound,
                                                  ElectricField, &gridInfo);
+        tInfo->timeTaken[7] += (omp_get_wtime() - timingTemp);
+        tInfo->numCalls[7]++;
         printf("%d Particles left the domain\n", lostParticleCount);
         //printf("%d empty slots in the domain particles\n", lostParticleBound+1);
 
@@ -342,6 +373,7 @@ int main(int argc, char **argv)
     } // end of Poisson timestep loop
     //fclose(iterData);
 
+    printTimingInfo(tInfo);
     writeOutputData("poisson.vtk", grid, ElectricField, &gridInfo);
     //getRHS(rhs);
     //writeVectorToFile("poisson_v.txt", rhs, gridInfo.totalNodes);
