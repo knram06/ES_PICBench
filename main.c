@@ -51,7 +51,7 @@
 #define POST_INTERVAL (200)
 #define POST_WRITE_PATH ("output/")
 
-#define POISSON_TIMESTEPS ((int)1)
+#define POISSON_TIMESTEPS ((int)100)
 //#define TEST_FUNCTION (x*x - 2*y*y + z*z)
 #define TEST_FUNCTION 0.
 
@@ -201,7 +201,7 @@ int main(int argc, char **argv)
     int lostParticleBound = -1;
 
     // SINGLE PARTICLE release check for preallocating
-    int iterCountTillExit = 0;//simulateSingleParticleTillDomainExit(MD_data, particleCount, ElectricField, &gridInfo);
+    int iterCountTillExit = simulateSingleParticleTillDomainExit(MD_data, particleCount, ElectricField, &gridInfo);
     int particlePreallocCount = 2*Nrel * iterCountTillExit;
     printf("%d Iterations were done for Particle to leave domain with Laplace solution.\nReleasing %d particles per timesteps, approx total particles to preallocate is %d (doubled - covering twice the domain length) \n", iterCountTillExit, Nrel, particlePreallocCount);
 
@@ -372,14 +372,15 @@ int main(int argc, char **argv)
         }
     } // end of Poisson timestep loop
     //fclose(iterData);
+    diff = clock() - start;
+    double poissonStepsTime = diff /CLOCKS_PER_SEC;
+    printf("Poisson steps time: %10.8lf\n", poissonStepsTime);
 
     printTimingInfo(tInfo);
     writeOutputData("poisson.vtk", grid, ElectricField, &gridInfo);
     //getRHS(rhs);
     //writeVectorToFile("poisson_v.txt", rhs, gridInfo.totalNodes);
 
-    diff = clock() - start;
-    double poissonStepsTime = diff /CLOCKS_PER_SEC;
     //printf("\nTiming Info\n%10s %10.8e\n%10s %10.8e\n%10s %10.8e\n", "Solve", solveTime, "TimeSteps", timeStepsTime, "Poisson TimeSteps", poissonStepsTime);
 
     //free(rhsIndices);
