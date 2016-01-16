@@ -58,8 +58,8 @@
 // declare the Particle data type here
 typedef struct
 {
-    double x, y, z;
-    double Vx, Vy, Vz;
+    double pos[3];
+    double vel[3];
     double mass, charge;
 } Particle;
 

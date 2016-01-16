@@ -12,16 +12,16 @@ int axial_dist_compare(const void *p1, const void *p2)
     const Particle *p_1 = (Particle*)p1;
     const Particle *p_2 = (Particle*)p2;
 
-    double tx = p_1->x - capillary_center[0];
-    double ty = p_1->y - capillary_center[1];
-    double tz = p_1->z - capillary_center[2];
+    double tx = p_1->pos[0] - capillary_center[0];
+    double ty = p_1->pos[1] - capillary_center[1];
+    double tz = p_1->pos[2] - capillary_center[2];
 
     // first position vector squared
     double r1 = tx*tx + ty*ty + tz*tz;
 
-    tx = p_2->x - capillary_center[0];
-    ty = p_2->y - capillary_center[1];
-    tz = p_2->z - capillary_center[2];
+    tx = p_2->pos[0] - capillary_center[0];
+    ty = p_2->pos[1] - capillary_center[1];
+    tz = p_2->pos[2] - capillary_center[2];
     double r2 = tx*tx + ty*ty + tz*tz;
 
     double res = r1-r2;
@@ -37,30 +37,30 @@ bool isParticleInDomain(const Particle p)
 {
     // assuming that domain lengths can never go -ve
     // or beyond the max GRID_LENGTH
-    return ( (p.x >= 0) && (p.x <= GRID_LENGTH) )
-        && ( (p.y >= 0) && (p.y <= GRID_LENGTH) )
-        && ( (p.z >= 0) && (p.z <= GRID_LENGTH) );
+    return ( (p.pos[0] >= 0) && (p.pos[0] <= GRID_LENGTH) )
+        && ( (p.pos[1] >= 0) && (p.pos[1] <= GRID_LENGTH) )
+        && ( (p.pos[2] >= 0) && (p.pos[2] <= GRID_LENGTH) );
 }
 
 Particle randomizeParticleAttribs(Particle inputParticle)
 {
     double randNum = (rand() / (double)(RAND_MAX)) * 2. * M_PI;
 
-    double temp1 = (inputParticle.y - (GRID_LENGTH/2.));
-    double temp2 = (inputParticle.z - (GRID_LENGTH/2.));
+    double temp1 = (inputParticle.pos[1] - (GRID_LENGTH/2.));
+    double temp2 = (inputParticle.pos[2] - (GRID_LENGTH/2.));
 
     double rYZ = sqrt(temp1*temp1 + temp2*temp2);
 
     // adjust for the fact that our origin is at corner
     // whereas MD data origin is at capillary center
-    inputParticle.y = rYZ * cos(randNum) + (GRID_LENGTH/2.);
-    inputParticle.z = rYZ * sin(randNum) + (GRID_LENGTH/2.);
+    inputParticle.pos[1] = rYZ * cos(randNum) + (GRID_LENGTH/2.);
+    inputParticle.pos[2] = rYZ * sin(randNum) + (GRID_LENGTH/2.);
 
     // choose a different random number for velocity - just for more randomization
     randNum = (rand() / (double)(RAND_MAX)) * 2. * M_PI;
-    double velYZ = sqrt(inputParticle.Vy*inputParticle.Vy + inputParticle.Vz*inputParticle.Vz);
-    inputParticle.Vy = velYZ * cos(randNum);
-    inputParticle.Vz = velYZ * sin(randNum);
+    double velYZ = sqrt(inputParticle.vel[1]*inputParticle.vel[1] + inputParticle.vel[2]*inputParticle.vel[2]);
+    inputParticle.vel[1] = velYZ * cos(randNum);
+    inputParticle.vel[2] = velYZ * sin(randNum);
 
     return inputParticle;
 }
@@ -146,7 +146,7 @@ void updateChargeFractions(
         const Particle *p = &particleList[i];
 
         // get the relevant weight factors
-        getCellWeights(p->x, p->y, p->z,
+        getCellWeights(p->pos[0], p->pos[1], p->pos[2],
                        spacing, invSpacing,
                        indices, weightFactors);
 
@@ -325,7 +325,7 @@ int moveParticlesInField(Particle* domainParticles, int domainParticleBound,
         // TODO: optimize this by avoiding reweighting corner efield values
         // if the new particle is in the same cell as the previous?
         // get the cellWeights
-        getCellWeights(p->x, p->y, p->z,
+        getCellWeights(p->pos[0], p->pos[1], p->pos[2],
                        gInfo->spacing, gInfo->invSpacing,
                        indices, weights);
 
@@ -352,18 +352,16 @@ int moveParticlesInField(Particle* domainParticles, int domainParticleBound,
 
         // update the velocity
         // save the old velocities
-        double old_Vx = p->Vx,
-               old_Vy = p->Vy,
-               old_Vz = p->Vz;
+        double oldVel[3] = {p->vel[0], p->vel[1], p->vel[2]};
 
-        p->Vx += elecField.components[0] * multFactor;
-        p->Vy += elecField.components[1] * multFactor;
-        p->Vz += elecField.components[2] * multFactor;
+        // TODO: check if this gets vectorized?
+        for(c = 0; c < 3; c++)
+            p->vel[c] += elecField.components[c] * multFactor;
 
         // update the position
-        p->x += halfTimeStep * (old_Vx + p->Vx);
-        p->y += halfTimeStep * (old_Vy + p->Vy);
-        p->z += halfTimeStep * (old_Vz + p->Vz);
+        // TODO: check if this gets vectorized?
+        for(c = 0; c < 3; c++)
+            p->pos[c] += halfTimeStep * (oldVel[c] + p->vel[c]);
 
         // check if the particle is out of bounds
         if(!isParticleInDomain(*p))
@@ -391,11 +389,11 @@ int simulateSingleParticleTillDomainExit(
 
     // set the pArr to the particle with the least X-Velocity
     // from the input set
-    p.Vx = 1e10;
+    p.vel[0] = 1e10;
     int i;
     for(i = 0; i < inputCount; i++)
     {
-        if((input_data[i].Vx < p.Vx) && (input_data[i].Vx >= 0) )
+        if((input_data[i].vel[0] < p.vel[0]) && (input_data[i].vel[0] >= 0) )
             p = input_data[i];
     }
 

@@ -16,7 +16,7 @@ void parseMDFileToParticles(Particle particleData[], FILE* fp)
 
         //printf("line: %s\n", line);
         token = strtok(line, " ");
-        particleData[particleCount].x = atof(token);
+        particleData[particleCount].pos[0] = atof(token);
 
         int fieldIndex = 1;
         while(fieldIndex < 8)
@@ -26,23 +26,23 @@ void parseMDFileToParticles(Particle particleData[], FILE* fp)
             switch(fieldIndex)
             {
                 case 1:
-                    particleData[particleCount].y = atof(token) + (GRID_LENGTH / 2.);
+                    particleData[particleCount].pos[1] = atof(token) + (GRID_LENGTH / 2.);
                     break;
 
                 case 2:
-                    particleData[particleCount].z = atof(token) + (GRID_LENGTH / 2.);
+                    particleData[particleCount].pos[2] = atof(token) + (GRID_LENGTH / 2.);
                     break;
 
                 case 3:
-                    particleData[particleCount].Vx = atof(token);
+                    particleData[particleCount].vel[0] = atof(token);
                     break;
 
                 case 4:
-                    particleData[particleCount].Vy = atof(token);
+                    particleData[particleCount].vel[1] = atof(token);
                     break;
 
                 case 5:
-                    particleData[particleCount].Vz = atof(token);
+                    particleData[particleCount].vel[2] = atof(token);
                     break;
 
                 case 6:

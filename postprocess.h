@@ -105,7 +105,9 @@ void writeParticleData(const char* fileName, const Particle* particleData, int p
         const Particle* p = &particleData[i];
 
         fprintf(fileValues, "%20.8e %20.8e %20.8e %20.8e %20.8e %20.8e %20.8e %20.8e\n",
-                              p->x,  p->y,  p->z, p->Vx, p->Vy,  p->Vz, p->mass, p->charge);
+                              p->pos[0],  p->pos[1],  p->pos[2],
+                              p->vel[0],  p->vel[1],  p->vel[2],
+                              p->mass, p->charge);
     }
 
     fclose(fileValues);
