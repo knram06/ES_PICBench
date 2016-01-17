@@ -44,7 +44,7 @@
 #define PARTICLE_SORT_INTERVAL (20)
 
 #define MAX_ITER (200)
-#define TIMESTEPS ((int)8000)
+#define TIMESTEPS ((int)0)
 #define ITER_INTERVAL (200)
 #define ITER_HEADER_INTERVAL (1500)
 #define POST_WRITE_FILES (false)

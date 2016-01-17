@@ -61,21 +61,49 @@ void Solve(double initNorm, double toler, int maxIter)
     double norm = initNorm, cmpNorm = toler*initNorm;
     printf("%10s %20s\n", "Iter_Count", "Norm");
     printf("%10d %20.8e\n", iterCount, norm);
-    for(iterCount = 1; norm > cmpNorm && (iterCount < maxIter); iterCount++)
+
+    int numThreads = omp_get_max_threads();
+    double *threadNorm = calloc(numThreads, sizeof(double));
+    #pragma omp parallel private(iterCount)
     {
-        norm = SolverLinSolve();
+        int tid = omp_get_thread_num();
+        for(iterCount = 1; norm > cmpNorm && (iterCount < maxIter); iterCount++)
+        {
+            threadNorm[tid] = SolverLinSolve();
 
-        if(!(iterCount % ITER_HEADER_INTERVAL))
-            printf("%10s %20s\n", "Iter_Count", "Norm");
+            #pragma omp barrier // VERY IMPORTANT!!
+            // let one thread calculate the actual norm
+            #pragma omp single
+            {
+                int i;
+                norm = 0;
+                for(i = 0; i < numThreads; i++)
+                {
+                    // square and sum it to get the l2-norm
+                    // at the end
+                    norm += threadNorm[i]*threadNorm[i];
+                }
+                norm = sqrt(norm);
 
-        if(!(iterCount % ITER_INTERVAL) )
-            printf("%10d %20.8e\n", iterCount, norm);
-    }
-    printf("%10d %20.8e\n", iterCount, norm);
+                if(!(iterCount % ITER_HEADER_INTERVAL))
+                    printf("%10s %20s\n", "Iter_Count", "Norm");
 
-    // if broke out due to MAX_ITER, warn so
-    if(iterCount == maxIter)
-        fprintf(stderr, "Stopped iterations due to MAX_ITER limit of %d\n", maxIter);
+                if(!(iterCount % ITER_INTERVAL) )
+                    printf("%10d %20.8e\n", iterCount, norm);
+            }
+        } // end of iteration loop
+        #pragma omp single
+        {
+        printf("%10d %20.8e\n", iterCount, norm);
+
+        // if broke out due to MAX_ITER, warn so
+        if(iterCount == maxIter)
+            fprintf(stderr, "Stopped iterations due to MAX_ITER limit of %d\n", maxIter);
+        }
+    } // end of OMP PRAGMA loop
+
+    // free malloc-ed memory
+    free(threadNorm);
 }
 
 // calculate the ElectricField once Node values are known
