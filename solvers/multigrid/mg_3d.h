@@ -307,6 +307,7 @@ void updateEdgeValues(double* __restrict__ u, const int N)
     // update the 12 edges
     // X = 0 face
     i = 0; k = 0;
+    #pragma omp for schedule(static)
     for(j = 1; j < N-1; j++)
     {
         pos = NN*i + N*j + k;
@@ -314,6 +315,7 @@ void updateEdgeValues(double* __restrict__ u, const int N)
     }
 
     i = 0; k = N-1;
+    #pragma omp for schedule(static)
     for(j = 1; j < N-1; j++)
     {
         pos = NN*i + N*j + k;
@@ -321,12 +323,14 @@ void updateEdgeValues(double* __restrict__ u, const int N)
     }
 
     i = 0; j = 0;
+    #pragma omp for schedule(static)
     for(k = 1; k < N-1; k++)
     {
         pos = NN*i + N*j + k;
         u[pos] = 0.5 * (u[pos+N] + u[pos+NN]);
     }
     i = 0; j = N-1;
+    #pragma omp for schedule(static)
     for(k = 1; k < N-1; k++)
     {
         pos = NN*i + N*j + k;
@@ -335,6 +339,7 @@ void updateEdgeValues(double* __restrict__ u, const int N)
 
     // X = N-1 face
     i = N-1; k = 0;
+    #pragma omp for schedule(static)
     for(j = 1; j < N-1; j++)
     {
         pos = NN*i + N*j + k;
@@ -342,6 +347,7 @@ void updateEdgeValues(double* __restrict__ u, const int N)
     }
 
     i = N-1; k = N-1;
+    #pragma omp for schedule(static)
     for(j = 1; j < N-1; j++)
     {
         pos = NN*i + N*j + k;
@@ -349,12 +355,14 @@ void updateEdgeValues(double* __restrict__ u, const int N)
     }
 
     i = N-1; j = 0;
+    #pragma omp for schedule(static)
     for(k = 1; k < N-1; k++)
     {
         pos = NN*i + N*j + k;
         u[pos] = 0.5 * (u[pos+N] + u[pos-NN]);
     }
     i = N-1; j = N-1;
+    #pragma omp for schedule(static)
     for(k = 1; k < N-1; k++)
     {
         pos = NN*i + N*j + k;
@@ -363,12 +371,14 @@ void updateEdgeValues(double* __restrict__ u, const int N)
 
     // Y = 0 face
     j = 0; k = 0;
+    #pragma omp for schedule(static)
     for(i = 1; i < N-1; i++)
     {
         pos = NN*i + N*j + k;
         u[pos] = 0.5 * (u[pos+N] + u[pos+1]);
     }
     j = 0; k = N-1;
+    #pragma omp for schedule(static)
     for(i = 1; i < N-1; i++)
     {
         pos = NN*i + N*j + k;
@@ -376,12 +386,14 @@ void updateEdgeValues(double* __restrict__ u, const int N)
     }
     // Y = N-1 face
     j = N-1; k = 0;
+    #pragma omp for schedule(static)
     for(i = 1; i < N-1; i++)
     {
         pos = NN*i + N*j + k;
         u[pos] = 0.5 * (u[pos-N] + u[pos+1]);
     }
     j = N-1; k = N-1;
+    #pragma omp for schedule(static)
     for(i = 1; i < N-1; i++)
     {
         pos = NN*i + N*j + k;
@@ -390,6 +402,8 @@ void updateEdgeValues(double* __restrict__ u, const int N)
 
     // update the 8 corner point values first
     // 4 points on X = 0 face
+    #pragma omp single
+    {
     i = 0;
     j = 0; k = 0;
     pos = NN*i + N*j + k;
@@ -424,6 +438,7 @@ void updateEdgeValues(double* __restrict__ u, const int N)
     j = N-1; k = N-1;
     pos = NN*i + N*j + k;
     u[pos] = (1./3) * (u[pos-1] + u[pos-N] + u[pos-NN]);
+    }
 }
 
 void smoothenAtIndex(double* __restrict__ v, const double* __restrict__ d,
@@ -503,6 +518,7 @@ void enforceDirichlet(double* __restrict__ v, const double* __restrict__ d, cons
     // X = 0 and END faces
     i = 0;
     nni = NN*i;
+    #pragma omp for schedule(static)
     for(j = 0; j < N; j++)
     {
         nj = N*j;
@@ -519,6 +535,7 @@ void enforceDirichlet(double* __restrict__ v, const double* __restrict__ d, cons
 
     i = N-1;
     nni = NN*i;
+    #pragma omp for schedule(static)
     for(j = 0; j < N; j++)
     {
         nj = N*j;

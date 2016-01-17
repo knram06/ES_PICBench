@@ -58,12 +58,14 @@ void resetRHSInteriorPoints(double *rhs, GridInfo *gInfo)
 void Solve(double initNorm, double toler, int maxIter)
 {
     int iterCount = 0;
+    int maxThreads = omp_get_max_threads();
     double norm = initNorm, cmpNorm = toler*initNorm;
     printf("%10s %20s\n", "Iter_Count", "Norm");
     printf("%10d %20.8e\n", iterCount, norm);
 
-    int numThreads = omp_get_max_threads();
-    double *threadNorm = calloc(numThreads, sizeof(double));
+    //printf("Max threads: %d\n", maxThreads);
+
+    double *threadNorm = calloc(maxThreads, sizeof(double));
     #pragma omp parallel private(iterCount)
     {
         int tid = omp_get_thread_num();
@@ -77,7 +79,7 @@ void Solve(double initNorm, double toler, int maxIter)
             {
                 int i;
                 norm = 0;
-                for(i = 0; i < numThreads; i++)
+                for(i = 0; i < maxThreads; i++)
                 {
                     // square and sum it to get the l2-norm
                     // at the end
