@@ -306,7 +306,7 @@ void swapGapsWithEndParticles(Particle* domainParticles, int* domainParticleCoun
     for(i = (*lostParticleBound); i >= 0; i--)
     {
         // swap lostParticlesBound with domainParticleBound value
-        domainParticles[ lostParticlesArray[*lostParticleBound] ] = domainParticles[ (*domainParticleCount) - 1 ];
+        domainParticles[ lostParticlesArray[i] ] = domainParticles[ (*domainParticleCount) - 1 ];
         (*domainParticleCount)--;
     }
 
