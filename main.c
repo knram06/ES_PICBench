@@ -44,10 +44,10 @@
 #define PARTICLE_SORT_INTERVAL (20)
 
 #define MAX_ITER (200)
-#define TIMESTEPS ((int)0)
+#define TIMESTEPS ((int)8000)
 #define ITER_INTERVAL (200)
 #define ITER_HEADER_INTERVAL (1500)
-#define POST_WRITE_FILES (true)
+#define POST_WRITE_FILES (false)
 #define POST_INTERVAL (200)
 #define POST_WRITE_PATH ("output/")
 
@@ -213,16 +213,32 @@ int main(int argc, char **argv)
     // for required number of timesteps
     int i;
     int lostParticleCount = 0;
+    int numParticlesToRelease;
+    const int maxThreads = omp_get_max_threads();
+
+    // store for one extra space, i.e. with zero index
+    int *localLostParticlesCount = calloc(maxThreads+1, sizeof(int));
+    int *threadOffsetLostParticles = &(localLostParticlesCount[1]);
+    #pragma omp parallel
+    {
+        int t;                                  // per thread loop counter
+        int tid = omp_get_thread_num();         // thread id
+
+        // per thread space for storing lost particles
+        int *localLostParticles = calloc(Nrel + LOST_PARTICLES_MARGIN, sizeof(int));
+
     for(i = 1; i <= TIMESTEPS; i++)
     {
+        #pragma omp master
+        {
         printf("\nTimestep %d:\n", i);
 
         // calculate the current timestep's release rate
         runningNfrac = modf(runningNfrac, &temp);
-        const int numParticlesToRelease = Nrel + (int)(temp);
-
-        //totalParticlesBound += numParticlesToRelease - lostParticleCount;
+        numParticlesToRelease = Nrel + (int)(temp);
         lostParticleBound = (lostParticleCount - 1);        // adjust for one off issue
+        }
+
         // introduce the particles
         releaseParticles(numParticlesToRelease,
                          MD_data, particleCount,
@@ -230,31 +246,59 @@ int main(int argc, char **argv)
                          lostParticles,
                          &lostParticleBound);          // adjust for one off issue
 
-        //totalParticlesBound = (totalParticlesCount - 1);
+        // TODO: Improve this?
+        #pragma omp single
         swapGapsWithEndParticles(domainParticles, &totalParticlesCount,
                                  lostParticles, &lostParticleBound);
 
+        # pragma omp master
         printf("Total Number of Particles: %d\n", totalParticlesCount); // need +1 for the one-off offset
 
         // then move them
-        lostParticleCount = moveParticlesInField(domainParticles, totalParticlesCount,
-                                                 lostParticles,//&lostParticleBound,
-                                                 ElectricField, &gridInfo);
-        printf("%d Particles left the domain\n", lostParticleCount);
-        //printf("%d empty slots in the domain particles\n", lostParticleBound+1);
+        threadOffsetLostParticles[tid] = moveParticlesInField(
+                                domainParticles, totalParticlesCount,
+                                localLostParticles,//&lostParticleBound,
+                                ElectricField, &gridInfo);
 
-        // IMPORTANT: add Nfrac to runningNfrac to adjust correctly
-        // for the fractional part
-        runningNfrac += Nfrac;
-
-        char outputPath[50];
-        if(POST_WRITE_FILES && !(i % POST_INTERVAL) )
+        // form a cumulative sum for the localLostParticlesCount
+        #pragma omp barrier     // IMPORTANT!!
+        #pragma omp single
         {
-            sprintf(outputPath, "%s/particleOutput/particleOutput_%d.txt", POST_WRITE_PATH, i);
-            writeParticleData(outputPath, domainParticles, totalParticlesCount);
+            for(t = 1; t < maxThreads; t++)
+                threadOffsetLostParticles[t] += threadOffsetLostParticles[t-1];
+        }
+
+        // now using the cumulative sum array, copy over from shared local lost particles
+        // arrays to the global one
+        {
+            int localCount = localLostParticlesCount[tid];
+            for(t = localLostParticlesCount[tid]; t < localLostParticlesCount[tid+1]; t++)
+                lostParticles[t] = localLostParticles[t - localCount];
+        }
+
+        #pragma omp single // just so we can use the implicit barrier
+        {
+            // update the lostParticleCount - which is the last entry in the
+            // cumulative array
+            lostParticleCount = threadOffsetLostParticles[maxThreads-1];
+
+            printf("%d Particles left the domain\n", lostParticleCount);
+            // IMPORTANT: add Nfrac to runningNfrac to adjust correctly
+            // for the fractional part
+            runningNfrac += Nfrac;
+
+            char outputPath[50];
+            if(POST_WRITE_FILES && !(i % POST_INTERVAL) )
+            {
+                sprintf(outputPath, "%s/particleOutput/particleOutput_%d.txt", POST_WRITE_PATH, i);
+                writeParticleData(outputPath, domainParticles, totalParticlesCount);
+            }
         }
     } // end of Laplace loop
-    //return 0;
+    free(localLostParticles);
+    }
+    free(localLostParticlesCount);
+    return 0;
 
     diff = clock() - start;
     double timeStepsTime = diff /CLOCKS_PER_SEC;

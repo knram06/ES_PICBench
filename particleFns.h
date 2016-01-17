@@ -254,11 +254,15 @@ void releaseParticles(
     //assert(*domainParticleCount <= PARTICLE_SIZE);
 
     // loop through MD_data and randomize particle attributes
+    #pragma omp for schedule(static)
     for(i = 0; i < numParticlesToRelease; i++)
     {
         Particle releasedParticle = randomizeParticleAttribs(inputData[rand() % inputCount] );
 
         // if bound is not 0
+        // TODO: avoid this somehow?!
+        #pragma omp critical
+        {
         if(*lostParticleBound >= 0)
         {
             // insert particles from the end
@@ -277,6 +281,7 @@ void releaseParticles(
             // domainParticles array
             (*domainParticleCount)++;
         }
+        } // end of pragma critical
     }
 
 }
@@ -291,12 +296,21 @@ void releaseParticles(
 void swapGapsWithEndParticles(Particle* domainParticles, int* domainParticleCount,
                               int* lostParticlesArray, int* lostParticleBound)
 {
-    while(*lostParticleBound >= 0)
+    int i;
+
+    // TODO: looks like it will be hard to parallleize this
+    // since threads can see the same domainParticleCount and end up
+    // copying the same particle into two different places!
+    //#pragma omp single
+    {
+    for(i = (*lostParticleBound); i >= 0; i--)
     {
         // swap lostParticlesBound with domainParticleBound value
         domainParticles[ lostParticlesArray[*lostParticleBound] ] = domainParticles[ (*domainParticleCount) - 1 ];
         (*domainParticleCount)--;
-        (*lostParticleBound)--;
+    }
+
+    (*lostParticleBound) = -1;
     }
 
     // at the end of this, lostParticleBound HAS to be -1 again no?
@@ -317,7 +331,7 @@ int moveParticlesInField(Particle* domainParticles, int domainParticleBound,
 
     // loop through all particles
     int i, lostParticleCount = 0;
-    //int lostParticlesBound = -1;
+    #pragma omp for schedule(static)
     for(i = 0; i < domainParticleBound; i++)
     {
         Particle* p = &domainParticles[i];
