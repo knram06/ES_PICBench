@@ -300,22 +300,26 @@ void releaseParticles(
 void swapGapsWithEndParticles(Particle* domainParticles, int* domainParticleCount,
                               int* lostParticlesArray, int* lostParticleBound)
 {
-    int i;
+    int i, j = 0;
+    int endIndex = (*domainParticleCount)-1;
 
     // TODO: looks like it will be hard to parallleize this
     // since threads can see the same domainParticleCount and end up
     // copying the same particle into two different places!
-    //#pragma omp single
-    {
+    #pragma omp for schedule(static)
     for(i = (*lostParticleBound); i >= 0; i--)
     {
+        j = (*lostParticleBound)-i;
         // swap lostParticlesBound with domainParticleBound value
-        domainParticles[ lostParticlesArray[i] ] = domainParticles[ (*domainParticleCount) - 1 ];
-        (*domainParticleCount)--;
+        domainParticles[ lostParticlesArray[i] ] = domainParticles[ endIndex-j ];
     }
 
+    #pragma omp single
+    {
+    (*domainParticleCount) -= (*lostParticleBound)+1;   // loop executes (*lostPBound)+1 times
     (*lostParticleBound) = -1;
     }
+
 
     // at the end of this, lostParticleBound HAS to be -1 again no?
     //assert(*lostParticleBound == -1);

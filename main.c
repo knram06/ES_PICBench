@@ -252,7 +252,7 @@ int main(int argc, char **argv)
                          randSeeds);
 
         // TODO: Improve this?
-        #pragma omp single
+        //#pragma omp single
         swapGapsWithEndParticles(domainParticles, &totalParticlesCount,
                                  lostParticles, &lostParticleBound);
 
