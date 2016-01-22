@@ -260,7 +260,8 @@ void releaseParticles(
     #pragma omp for schedule(static)
     for(i = 0; i < numParticlesToRelease; i++)
     {
-        Particle releasedParticle = randomizeParticleAttribs(inputData[rand_r( &(randSeeds(tid)) ) % inputCount] );
+        Particle releasedParticle = randomizeParticleAttribs(inputData[rand_r( &(randSeeds[tid]) ) % inputCount] );
+        //Particle releasedParticle = randomizeParticleAttribs(inputData[rand() % inputCount] );
 
         // if bound is not 0
         // TODO: avoid this somehow?!
@@ -362,7 +363,6 @@ int moveParticlesInField(Particle* domainParticles, int domainParticleBound,
             for(j = 0; j < 3; j++)
                 elecField.components[j] += weightFactor * efield.components[j];
         }
-
 
         // TODO: generalize as a loop through the number of components?
         const double multFactor = (p->charge * ELECTRONIC_CHARGE * T_PIC/ p->mass);

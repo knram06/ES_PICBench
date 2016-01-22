@@ -44,7 +44,7 @@
 #define PARTICLE_SORT_INTERVAL (20)
 
 #define MAX_ITER (200)
-#define TIMESTEPS ((int)8000)
+#define TIMESTEPS ((int)7000)
 #define ITER_INTERVAL (200)
 #define ITER_HEADER_INTERVAL (1500)
 #define POST_WRITE_FILES (false)
@@ -215,6 +215,7 @@ int main(int argc, char **argv)
     int lostParticleCount = 0;
     int numParticlesToRelease;
     const int maxThreads = omp_get_max_threads();
+    printf("Max threads: %d\n", maxThreads);
 
     // store for one extra space, i.e. with zero index
     int *localLostParticlesCount = calloc(maxThreads+1, sizeof(int));
@@ -232,7 +233,7 @@ int main(int argc, char **argv)
 
     for(i = 1; i <= TIMESTEPS; i++)
     {
-        #pragma omp master
+        #pragma omp single
         {
         printf("\nTimestep %d:\n", i);
 
@@ -323,6 +324,7 @@ int main(int argc, char **argv)
     char *stageNames[8] = {"Release Particles", "SwapGaps", "ReSort", "ResetRHS", "UpdateChargeFrns", "Solve","calcElecField", "moveParticlesInField"};
     allocTimingInfo(&tInfo, stageNames, 8);
 
+    /*
     start = clock(); double timingTemp;
     for(i = 1; i <= POISSON_TIMESTEPS; i++)
     {
@@ -431,6 +433,7 @@ int main(int argc, char **argv)
     //writeVectorToFile("poisson_v.txt", rhs, gridInfo.totalNodes);
 
     //printf("\nTiming Info\n%10s %10.8e\n%10s %10.8e\n%10s %10.8e\n", "Solve", solveTime, "TimeSteps", timeStepsTime, "Poisson TimeSteps", poissonStepsTime);
+    */
 
     //free(rhsIndices);
     //free(rhs);
