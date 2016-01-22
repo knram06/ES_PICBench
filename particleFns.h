@@ -240,9 +240,12 @@ void releaseParticles(
         Particle* domainParticles,        /**< An array with the Particles currently in the domain */
         int* domainParticleCount,         /**< Count of particles in the domain */
         int* lostParticlesArray,          /**< Array indicating the particle indices where the particles have left the domain */
-        int* lostParticleBound            /**< Pass by pointer for modifying lostParticles index counts */
+        int* lostParticleBound,            /**< Pass by pointer for modifying lostParticles index counts */
+        unsigned int *randSeeds
         )
 {
+    int tid = omp_get_thread_num();
+
     int i;
 
     // TODO: move this one level above?
@@ -257,7 +260,7 @@ void releaseParticles(
     #pragma omp for schedule(static)
     for(i = 0; i < numParticlesToRelease; i++)
     {
-        Particle releasedParticle = randomizeParticleAttribs(inputData[rand() % inputCount] );
+        Particle releasedParticle = randomizeParticleAttribs(inputData[rand_r( &(randSeeds(tid)) ) % inputCount] );
 
         // if bound is not 0
         // TODO: avoid this somehow?!

@@ -44,7 +44,7 @@
 #define PARTICLE_SORT_INTERVAL (20)
 
 #define MAX_ITER (200)
-#define TIMESTEPS ((int)0)
+#define TIMESTEPS ((int)8000)
 #define ITER_INTERVAL (200)
 #define ITER_HEADER_INTERVAL (1500)
 #define POST_WRITE_FILES (false)
@@ -219,13 +219,16 @@ int main(int argc, char **argv)
     // store for one extra space, i.e. with zero index
     int *localLostParticlesCount = calloc(maxThreads+1, sizeof(int));
     int *threadOffsetLostParticles = &(localLostParticlesCount[1]);
-    #pragma omp parallel
+    #pragma omp parallel private(i)
     {
         int t;                                  // per thread loop counter
         int tid = omp_get_thread_num();         // thread id
 
         // per thread space for storing lost particles
         int *localLostParticles = calloc(Nrel + LOST_PARTICLES_MARGIN, sizeof(int));
+
+        // SEEDS for thread-safe random number generation
+        unsigned int *randSeeds = calloc(maxThreads, sizeof(unsigned int));
 
     for(i = 1; i <= TIMESTEPS; i++)
     {
@@ -244,7 +247,8 @@ int main(int argc, char **argv)
                          MD_data, particleCount,
                          domainParticles, &totalParticlesCount,
                          lostParticles,
-                         &lostParticleBound);          // adjust for one off issue
+                         &lostParticleBound, // adjust for one off issue
+                         randSeeds);
 
         // TODO: Improve this?
         #pragma omp single
@@ -295,6 +299,7 @@ int main(int argc, char **argv)
             }
         }
     } // end of Laplace loop
+    free(randSeeds);
     free(localLostParticles);
     }
     free(localLostParticlesCount);
