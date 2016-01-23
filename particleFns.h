@@ -169,6 +169,10 @@ void updateChargeFractions(
                 ((tk > 0) && (tk < numNodes-1)) )
             {
                 int index = INDEX_1D(numNodes, ti, tj, tk);
+
+                // TODO: Possible RACE condition here - RESOLVE!!
+                // different values of i, can lead to same index, if particles in cells
+                // share vertex
                 chargeFractions[ index ] += p->charge * weightFactors[c] * multFactor;
             }
         }

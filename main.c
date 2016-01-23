@@ -322,6 +322,7 @@ int main(int argc, char **argv)
     char *stageNames[8] = {"Release Particles", "SwapGaps", "ReSort", "ResetRHS", "UpdateChargeFrns", "Solve","calcElecField", "moveParticlesInField"};
     allocTimingInfo(&tInfo, stageNames, 8);
 
+    double *threadNorm = calloc(maxThreads, sizeof(double));
     start = clock(); double timingTemp;
     #pragma omp parallel private(i)
     {
@@ -410,8 +411,20 @@ int main(int argc, char **argv)
         tInfo->numCalls[4]++;
         }
 
-        // TODO: Accumulate norms from threads and calculate
-        norm = SolverGetResidual();
+        threadNorm[tid] = SolverGetResidual();
+        #pragma omp barrier
+        #pragma omp single
+        {
+            int i;
+            norm = 0;
+            for(i = 0; i < maxThreads; i++)
+            {
+                // square and sum it to get the l2-norm
+                // at the end
+                norm += threadNorm[i]*threadNorm[i];
+            }
+            norm = sqrt(norm);
+        }
 
         #pragma omp master
         timingTemp = omp_get_wtime();
@@ -490,6 +503,7 @@ int main(int argc, char **argv)
     free(localLostParticles);
     }
     free(localLostParticlesCount);
+    free(threadNorm);
     //fclose(iterData);
     diff = clock() - start;
     double poissonStepsTime = diff /CLOCKS_PER_SEC;
