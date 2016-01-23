@@ -220,6 +220,8 @@ int main(int argc, char **argv)
     // store for one extra space, i.e. with zero index
     int *localLostParticlesCount = calloc(maxThreads+1, sizeof(int));
     int *threadOffsetLostParticles = &(localLostParticlesCount[1]);
+
+    /*
     #pragma omp parallel private(i)
     {
         int t;                                  // per thread loop counter
@@ -304,31 +306,39 @@ int main(int argc, char **argv)
     free(localLostParticles);
     }
     free(localLostParticlesCount);
-    return 0;
 
     diff = clock() - start;
     double timeStepsTime = diff /CLOCKS_PER_SEC;
 
     // TEMP - remove later
     resortParticles(domainParticles, totalParticlesCount);
+    */
 
     /*********************************************/
     /***********POISSON SOLVER********************/
     /*********************************************/
-    //double *rhs = malloc(sizeof(double) * 8 * totalParticlesCount);
-    //int *rhsIndices = malloc(sizeof(int) * 8 * totalParticlesCount);
-    //ColVal *indVals = malloc(sizeof(ColVal) * 8 * totalParticlesCount);
-
     //FILE *iterData = fopen("iter_data.txt", "w");
     TimingInfo *tInfo = NULL;
     char *stageNames[8] = {"Release Particles", "SwapGaps", "ReSort", "ResetRHS", "UpdateChargeFrns", "Solve","calcElecField", "moveParticlesInField"};
     allocTimingInfo(&tInfo, stageNames, 8);
 
-    /*
     start = clock(); double timingTemp;
+    #pragma omp parallel private(i)
+    {
+        int t;                                  // per thread loop counter
+        int tid = omp_get_thread_num();         // thread id
+
+        // per thread space for storing lost particles
+        int *localLostParticles = calloc(Nrel + LOST_PARTICLES_MARGIN, sizeof(int));
+
+        // SEEDS for thread-safe random number generation
+        unsigned int *randSeeds = calloc(maxThreads, sizeof(unsigned int));
+
     for(i = 1; i <= POISSON_TIMESTEPS; i++)
     {
-        clock_t tstart = clock();
+        //clock_t tstart = clock();
+        #pragma omp master
+        {
         printf("\nPoisson Timestep %d:\n", i);
 
         // calculate the current timestep's release rate
@@ -339,18 +349,27 @@ int main(int argc, char **argv)
         lostParticleBound = (lostParticleCount - 1);        // adjust for one off issue
         // introduce the particles
         timingTemp = omp_get_wtime();
+        }
+
         releaseParticles(numParticlesToRelease,
                          MD_data, particleCount,
                          domainParticles, &totalParticlesCount,
                          lostParticles,
-                         &lostParticleBound);          // adjust for one off issue
+                         &lostParticleBound,          // adjust for one off issue
+                         randSeeds);
+
+        #pragma omp master
+        {
         tInfo->timeTaken[0] += (omp_get_wtime() - timingTemp);
         tInfo->numCalls[0]++;
 
         //totalParticlesBound = (totalParticlesCount - 1);
         timingTemp = omp_get_wtime();
+        }
         swapGapsWithEndParticles(domainParticles, &totalParticlesCount,
                                  lostParticles, &lostParticleBound);
+        #pragma omp master
+        {
         tInfo->timeTaken[1] += (omp_get_wtime() - timingTemp);
         tInfo->numCalls[1]++;
 
@@ -370,58 +389,107 @@ int main(int argc, char **argv)
 
         // reset the rhs vector
         timingTemp = omp_get_wtime();
+        } // end of OMP MASTER
+
         resetRHSInteriorPoints(rhs, &gridInfo);       // resets only interior points
+
+        #pragma omp master
+        {
         tInfo->timeTaken[3] += (omp_get_wtime() - timingTemp);
         tInfo->numCalls[3]++;
 
         // based on the new particle positions, update charge fractions at nodes
         timingTemp = omp_get_wtime();
+        }
+
         updateChargeFractions(domainParticles, totalParticlesCount, rhs, &gridInfo);
+
+        #pragma omp master
+        {
         tInfo->timeTaken[4] += (omp_get_wtime() - timingTemp);
         tInfo->numCalls[4]++;
+        }
 
-        // SOLVE here
+        // TODO: Accumulate norms from threads and calculate
         norm = SolverGetResidual();
+
+        #pragma omp master
         timingTemp = omp_get_wtime();
         Solve(norm, tolerance, MAX_ITER);
+
+        #pragma omp master
+        {
         tInfo->timeTaken[5] += (omp_get_wtime() - timingTemp);
         tInfo->numCalls[5]++;
 
         // update the electric field
         timingTemp = omp_get_wtime();
+        }
         calcElectricField(ElectricField, grid, &gridInfo);
+
+        #pragma omp master
+        {
         tInfo->timeTaken[6] += (omp_get_wtime() - timingTemp);
         tInfo->numCalls[6]++;
 
         // then move the particles
         timingTemp = omp_get_wtime();
-        lostParticleCount = moveParticlesInField(domainParticles, totalParticlesCount,
-                                                 lostParticles,//&lostParticleBound,
-                                                 ElectricField, &gridInfo);
+        }
+
+        threadOffsetLostParticles[tid] = moveParticlesInField(
+                                domainParticles, totalParticlesCount,
+                                localLostParticles,//&lostParticleBound,
+                                ElectricField, &gridInfo);
+
+        // form a cumulative sum for the localLostParticlesCount
+        #pragma omp barrier     // IMPORTANT!!
+        #pragma omp single
+        {
+            for(t = 1; t < maxThreads; t++)
+                threadOffsetLostParticles[t] += threadOffsetLostParticles[t-1];
+        }
+
+        // now using the cumulative sum array, copy over from shared local lost particles
+        // arrays to the global one
+        {
+            int localCount = localLostParticlesCount[tid];
+            for(t = localLostParticlesCount[tid]; t < localLostParticlesCount[tid+1]; t++)
+                lostParticles[t] = localLostParticles[t - localCount];
+        }
+
         tInfo->timeTaken[7] += (omp_get_wtime() - timingTemp);
         tInfo->numCalls[7]++;
-        printf("%d Particles left the domain\n", lostParticleCount);
-        //printf("%d empty slots in the domain particles\n", lostParticleBound+1);
-
-        // IMPORTANT: add Nfrac to runningNfrac to adjust correctly
-        // for the fractional part
-        runningNfrac += Nfrac;
-
-        // avoid timing the IO portion
-        diff = clock() - tstart;
-        double timeTaken = (double)diff/CLOCKS_PER_SEC;
-        //fprintf(iterData, "%10d %10lf\n", iterNum, timeTaken);
-
-        char outputPath[50];
-        if(POST_WRITE_FILES && !(i % POST_INTERVAL) )
+        #pragma omp single // just so we can use the implicit barrier
         {
-            sprintf(outputPath, "%s/particleOutput/particleOutput_%d.txt", POST_WRITE_PATH, i);
-            writeParticleData(outputPath, domainParticles, totalParticlesCount);
+            // update the lostParticleCount - which is the last entry in the
+            // cumulative array
+            lostParticleCount = threadOffsetLostParticles[maxThreads-1];
 
-            sprintf(outputPath, "%s/solutions/out_%d.vtk", POST_WRITE_PATH, i);
-            writeOutputData(outputPath, grid, ElectricField, &gridInfo);
+            printf("%d Particles left the domain\n", lostParticleCount);
+            // IMPORTANT: add Nfrac to runningNfrac to adjust correctly
+            // for the fractional part
+            runningNfrac += Nfrac;
+
+            // avoid timing the IO portion
+            //diff = clock() - tstart;
+            //double timeTaken = (double)diff/CLOCKS_PER_SEC;
+            //fprintf(iterData, "%10d %10lf\n", iterNum, timeTaken);
+
+            char outputPath[50];
+            if(POST_WRITE_FILES && !(i % POST_INTERVAL) )
+            {
+                sprintf(outputPath, "%s/particleOutput/particleOutput_%d.txt", POST_WRITE_PATH, i);
+                writeParticleData(outputPath, domainParticles, totalParticlesCount);
+
+                sprintf(outputPath, "%s/solutions/out_%d.vtk", POST_WRITE_PATH, i);
+                writeOutputData(outputPath, grid, ElectricField, &gridInfo);
+            }
         }
     } // end of Poisson timestep loop
+    free(randSeeds);
+    free(localLostParticles);
+    }
+    free(localLostParticlesCount);
     //fclose(iterData);
     diff = clock() - start;
     double poissonStepsTime = diff /CLOCKS_PER_SEC;
@@ -433,7 +501,6 @@ int main(int argc, char **argv)
     //writeVectorToFile("poisson_v.txt", rhs, gridInfo.totalNodes);
 
     //printf("\nTiming Info\n%10s %10.8e\n%10s %10.8e\n%10s %10.8e\n", "Solve", solveTime, "TimeSteps", timeStepsTime, "Poisson TimeSteps", poissonStepsTime);
-    */
 
     //free(rhsIndices);
     //free(rhs);

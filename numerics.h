@@ -40,6 +40,7 @@ void resetRHSInteriorPoints(double *rhs, GridInfo *gInfo)
     const int N = gInfo->numNodes;
     const int NN = N*N;
 
+    #pragma omp for schedule(static)
     for(i = 1; i < N-1; i++)
     {
         const int nni = NN*i;
@@ -121,6 +122,7 @@ void calcElectricField(EField* ElectricField, double* grid, GridInfo* gInfo)
     const double multFactor = (-invSpacing * 0.5);
 
     // boundaries need to be handled separately
+    #pragma omp for schedule(static)
     for(i = 0; i < N; i++)
     {
         bool isI_0 = (i == 0);

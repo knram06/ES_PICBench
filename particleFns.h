@@ -141,6 +141,7 @@ void updateChargeFractions(
     const double invCellVol = invSpacing*invSpacing*invSpacing;
     const double multFactor = -invCellVol * ELECTRONIC_CHARGE / FREE_SPACE_PERMITTIVITY;
 
+    #pragma omp for schedule(static)
     for(i = 0; i < particleCount; i++)
     {
         const Particle *p = &particleList[i];
