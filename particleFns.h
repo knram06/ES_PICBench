@@ -288,7 +288,9 @@ void releaseParticles(
             *lostParticleBound -= numParticlesToRelease;
         else
         {
+            // IMPORTANT: This should come BEFORE modifying lostParticleBound count
             (*domainParticleCount) += (numParticlesToRelease - (*lostParticleBound+1));
+
             *lostParticleBound = -1;
         }
     }
