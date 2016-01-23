@@ -241,6 +241,7 @@ void releaseParticles(
         int* domainParticleCount,         /**< Count of particles in the domain */
         int* lostParticlesArray,          /**< Array indicating the particle indices where the particles have left the domain */
         int* lostParticleBound,            /**< Pass by pointer for modifying lostParticles index counts */
+        /*** PER-THREAD VARS ***/
         unsigned int *randSeeds
         )
 {
@@ -263,15 +264,11 @@ void releaseParticles(
         Particle releasedParticle = randomizeParticleAttribs(inputData[rand_r( &(randSeeds[tid]) ) % inputCount] );
         //Particle releasedParticle = randomizeParticleAttribs(inputData[rand() % inputCount] );
 
-        // if bound is not 0
-        // TODO: avoid this somehow?!
-        #pragma omp critical
-        {
-        if(*lostParticleBound >= 0)
+        int localVal = (*lostParticleBound) - i;
+        if(localVal >= 0)
         {
             // insert particles from the end
-            domainParticles[ lostParticlesArray[(*lostParticleBound)] ] = releasedParticle;
-            (*lostParticleBound)--;
+            domainParticles[ lostParticlesArray[localVal] ] = releasedParticle;
             //(*domainParticleBound)--;
         }
         // if it is 0
@@ -279,13 +276,21 @@ void releaseParticles(
         else
         {
             // store a copy of domainParticleBound
-            domainParticles[ *domainParticleCount] = releasedParticle;
-
-            // increment counter since we are inserting at the end of the
-            // domainParticles array
-            (*domainParticleCount)++;
+            // use 1+localVal as the appropriate offset
+            domainParticles[ (*domainParticleCount) - (1+localVal) ] = releasedParticle;
         }
-        } // end of pragma critical
+    }
+
+    #pragma omp single
+    {
+        // more lost particle gaps than to be released count
+        if((*lostParticleBound)+1 >= numParticlesToRelease)
+            *lostParticleBound -= numParticlesToRelease;
+        else
+        {
+            (*domainParticleCount) += (numParticlesToRelease - (*lostParticleBound+1));
+            *lostParticleBound = -1;
+        }
     }
 
 }
