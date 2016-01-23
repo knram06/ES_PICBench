@@ -11,7 +11,7 @@ typedef struct __time_t
     double *timeTaken;
 } TimingInfo;
 
-void allocTimingInfo(TimingInfo **tInfo, char **stageNames, const int numStages)
+void allocTimingInfo(TimingInfo **tInfo, const char **stageNames, const int numStages)
 {
     (*tInfo) = malloc(sizeof(TimingInfo));
     assert((*tInfo));

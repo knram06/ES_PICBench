@@ -2,6 +2,7 @@
 #define PARTICLEFNS_H
 
 #include <math.h>
+#include <omp.h>
 
 // define global vars
 double capillary_center[3] = {0, GRID_LENGTH/2., GRID_LENGTH/2.};
@@ -125,8 +126,7 @@ void updateChargeFractions(
          GridInfo *gInfo
          )
 {
-    int i, validNodesNumber = 0;
-    int searchIndex = 0;
+    int i;
 
     int numNodes = gInfo->numNodes;
     double invSpacing = gInfo->invSpacing;
@@ -141,7 +141,7 @@ void updateChargeFractions(
     const double invCellVol = invSpacing*invSpacing*invSpacing;
     const double multFactor = -invCellVol * ELECTRONIC_CHARGE / FREE_SPACE_PERMITTIVITY;
 
-    #pragma omp for schedule(static)
+    //#pragma omp for schedule(static)
     for(i = 0; i < particleCount; i++)
     {
         const Particle *p = &particleList[i];
@@ -420,7 +420,7 @@ int simulateSingleParticleTillDomainExit(
     Particle p;
     int lostParticles[1];
     int particleCount = 1;
-    int lostParticleBound = -1;
+    //int lostParticleBound = -1;
 
     // set the pArr to the particle with the least X-Velocity
     // from the input set

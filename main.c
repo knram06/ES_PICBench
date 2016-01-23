@@ -88,7 +88,7 @@ typedef struct
 
 #include "utilities.h"
 #include "preprocess.h"
-#include "csrroutines.h"
+//#include "csrroutines.h"
 #include "particleFns.h"
 #include "numerics.h"
 #include "postprocess.h"
@@ -319,7 +319,7 @@ int main(int argc, char **argv)
     /*********************************************/
     //FILE *iterData = fopen("iter_data.txt", "w");
     TimingInfo *tInfo = NULL;
-    char *stageNames[8] = {"Release Particles", "SwapGaps", "ReSort", "ResetRHS", "UpdateChargeFrns", "Solve","calcElecField", "moveParticlesInField"};
+    const char *stageNames[8] = {"Release Particles", "SwapGaps", "ReSort", "ResetRHS", "UpdateChargeFrns", "Solve","calcElecField", "moveParticlesInField"};
     allocTimingInfo(&tInfo, stageNames, 8);
 
     double *threadNorm = calloc(maxThreads, sizeof(double));
@@ -344,7 +344,7 @@ int main(int argc, char **argv)
 
         // calculate the current timestep's release rate
         runningNfrac = modf(runningNfrac, &temp);
-        const int numParticlesToRelease = Nrel + (int)(temp);
+        numParticlesToRelease = Nrel + (int)(temp);
 
         //totalParticlesBound += numParticlesToRelease - lostParticleCount;
         lostParticleBound = (lostParticleCount - 1);        // adjust for one off issue
@@ -403,6 +403,8 @@ int main(int argc, char **argv)
         timingTemp = omp_get_wtime();
         }
 
+        //TODO: Remove later
+        #pragma omp single
         updateChargeFractions(domainParticles, totalParticlesCount, rhs, &gridInfo);
 
         #pragma omp master

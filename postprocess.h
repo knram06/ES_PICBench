@@ -111,6 +111,7 @@ void writeParticleData(const char* fileName, const Particle* particleData, int p
     fclose(fileValues);
 }
 
+/*
 void writeSparseMatRowColForm(const char *filename, MatCSR *mcsr, bool useOneBasedIndex)
 {
     const int numRows = mcsr->numRows;
@@ -136,6 +137,7 @@ void writeSparseMatRowColForm(const char *filename, MatCSR *mcsr, bool useOneBas
 
     fclose(fp);
 }
+*/
 
 void writeVectorToFile(const char* filename, const double *vec, const int vecCount)
 {
