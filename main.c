@@ -232,7 +232,7 @@ int main(int argc, char **argv)
         // SEEDS for thread-safe random number generation
         // using malloc so that we get a random seed - based on whatever
         // the value is at startup
-        unsigned int *randSeeds = calloc(maxThreads, sizeof(unsigned int));
+        unsigned int *randSeeds = malloc(maxThreads*sizeof(unsigned int));
 
     for(i = 1; i <= TIMESTEPS; i++)
     {
