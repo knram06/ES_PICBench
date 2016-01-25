@@ -44,7 +44,7 @@
 #define PARTICLE_SORT_INTERVAL (20)
 
 #define MAX_ITER (200)
-#define TIMESTEPS ((int)7000)
+#define TIMESTEPS ((int)8000)
 #define ITER_INTERVAL (200)
 #define ITER_HEADER_INTERVAL (1500)
 #define POST_WRITE_FILES (false)
@@ -221,7 +221,6 @@ int main(int argc, char **argv)
     int *localLostParticlesCount = calloc(maxThreads+1, sizeof(int));
     int *threadOffsetLostParticles = &(localLostParticlesCount[1]);
 
-    /*
     #pragma omp parallel private(i)
     {
         int t;                                  // per thread loop counter
@@ -231,6 +230,8 @@ int main(int argc, char **argv)
         int *localLostParticles = calloc(Nrel + LOST_PARTICLES_MARGIN, sizeof(int));
 
         // SEEDS for thread-safe random number generation
+        // using malloc so that we get a random seed - based on whatever
+        // the value is at startup
         unsigned int *randSeeds = calloc(maxThreads, sizeof(unsigned int));
 
     for(i = 1; i <= TIMESTEPS; i++)
@@ -309,14 +310,15 @@ int main(int argc, char **argv)
 
     diff = clock() - start;
     double timeStepsTime = diff /CLOCKS_PER_SEC;
+    return 0;
 
     // TEMP - remove later
-    resortParticles(domainParticles, totalParticlesCount);
-    */
+    //resortParticles(domainParticles, totalParticlesCount);
 
     /*********************************************/
     /***********POISSON SOLVER********************/
     /*********************************************/
+    /*
     //FILE *iterData = fopen("iter_data.txt", "w");
     TimingInfo *tInfo = NULL;
     const char *stageNames[8] = {"Release Particles", "SwapGaps", "ReSort", "ResetRHS", "UpdateChargeFrns", "Solve","calcElecField", "moveParticlesInField"};
@@ -513,6 +515,7 @@ int main(int argc, char **argv)
 
     printTimingInfo(tInfo);
     writeOutputData("poisson.vtk", grid, ElectricField, &gridInfo);
+    */
     //getRHS(rhs);
     //writeVectorToFile("poisson_v.txt", rhs, gridInfo.totalNodes);
 
