@@ -43,9 +43,10 @@ bool isParticleInDomain(const Particle p)
         && ( (p.z >= 0) && (p.z <= GRID_LENGTH) );
 }
 
-Particle randomizeParticleAttribs(Particle inputParticle)
+Particle randomizeParticleAttribs(Particle inputParticle, unsigned int *randSeeds)
 {
-    double randNum = (rand() / (double)(RAND_MAX)) * 2. * M_PI;
+    int tid = omp_get_thread_num();
+    double randNum = (rand_r(&randSeeds[tid]) / (double)(RAND_MAX)) * 2. * M_PI;
 
     double temp1 = (inputParticle.y - (GRID_LENGTH/2.));
     double temp2 = (inputParticle.z - (GRID_LENGTH/2.));
@@ -58,7 +59,7 @@ Particle randomizeParticleAttribs(Particle inputParticle)
     inputParticle.z = rYZ * sin(randNum) + (GRID_LENGTH/2.);
 
     // choose a different random number for velocity - just for more randomization
-    randNum = (rand() / (double)(RAND_MAX)) * 2. * M_PI;
+    randNum = (rand_r(&randSeeds[tid]) / (double)(RAND_MAX)) * 2. * M_PI;
     double velYZ = sqrt(inputParticle.Vy*inputParticle.Vy + inputParticle.Vz*inputParticle.Vz);
     inputParticle.Vy = velYZ * cos(randNum);
     inputParticle.Vz = velYZ * sin(randNum);
@@ -141,6 +142,7 @@ void updateChargeFractions(
     const double invCellVol = invSpacing*invSpacing*invSpacing;
     const double multFactor = -invCellVol * ELECTRONIC_CHARGE / FREE_SPACE_PERMITTIVITY;
 
+    // TODO: resolve potential race condition in update of charge fractions
     //#pragma omp for schedule(static)
     for(i = 0; i < particleCount; i++)
     {
@@ -266,7 +268,7 @@ void releaseParticles(
     #pragma omp for schedule(static)
     for(i = 0; i < numParticlesToRelease; i++)
     {
-        Particle releasedParticle = randomizeParticleAttribs(inputData[rand_r( &(randSeeds[tid]) ) % inputCount] );
+        Particle releasedParticle = randomizeParticleAttribs(inputData[rand_r( &(randSeeds[tid]) ) % inputCount], randSeeds );
         //Particle releasedParticle = randomizeParticleAttribs(inputData[rand() % inputCount] );
 
         int localVal = (*lostParticleBound) - i;
@@ -281,7 +283,7 @@ void releaseParticles(
         else
         {
             // store a copy of domainParticleBound
-            // use 1+localVal as the appropriate offset
+            // use -(1+localVal) as the appropriate offset
             domainParticles[ (*domainParticleCount) - (1+localVal) ] = releasedParticle;
         }
     }
@@ -315,9 +317,7 @@ void swapGapsWithEndParticles(Particle* domainParticles, int* domainParticleCoun
     int i, j = 0;
     int endIndex = (*domainParticleCount)-1;
 
-    // TODO: looks like it will be hard to parallleize this
-    // since threads can see the same domainParticleCount and end up
-    // copying the same particle into two different places!
+    // parallelized this by letting threads swap
     #pragma omp for schedule(static)
     for(i = (*lostParticleBound); i >= 0; i--)
     {
@@ -407,6 +407,7 @@ int moveParticlesInField(Particle* domainParticles, int domainParticleBound,
         }
     }
 
+    //int tid = omp_get_thread_num();
     return lostParticleCount;
 }
 

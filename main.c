@@ -197,7 +197,7 @@ int main(int argc, char **argv)
     //The idea behind is that, particles may leave the domain and this is an index
     //of such particles.
     //Using this, new particles can be inserted into those locations appropriately.
-    int* lostParticles = malloc( (Nrel + LOST_PARTICLES_MARGIN) * sizeof(int) );
+    int* lostParticles = malloc( (2*Nrel) * sizeof(int) );
     int lostParticleBound = -1;
 
     // SINGLE PARTICLE release check for preallocating
@@ -214,20 +214,21 @@ int main(int argc, char **argv)
     int i;
     int lostParticleCount = 0;
     int numParticlesToRelease;
-    const int maxThreads = omp_get_max_threads();
+
+    const int maxThreads = omp_get_max_threads(); // test with 8 in gcc -g mode in gdb
     printf("Max threads: %d\n", maxThreads);
 
     // store for one extra space, i.e. with zero index
     int *localLostParticlesCount = calloc(maxThreads+1, sizeof(int));
     int *threadOffsetLostParticles = &(localLostParticlesCount[1]);
 
-    #pragma omp parallel private(i)
+    #pragma omp parallel private(i) //num_threads(8)
     {
         int t;                                  // per thread loop counter
         int tid = omp_get_thread_num();         // thread id
 
         // per thread space for storing lost particles
-        int *localLostParticles = calloc(Nrel + LOST_PARTICLES_MARGIN, sizeof(int));
+        int *localLostParticles = calloc(2*Nrel, sizeof(int));
 
         // SEEDS for thread-safe random number generation
         // using malloc so that we get a random seed - based on whatever
@@ -254,12 +255,10 @@ int main(int argc, char **argv)
                          &lostParticleBound, // adjust for one off issue
                          randSeeds);
 
-        // TODO: Improve this?
-        //#pragma omp single
         swapGapsWithEndParticles(domainParticles, &totalParticlesCount,
                                  lostParticles, &lostParticleBound);
 
-        # pragma omp master
+        # pragma omp single
         printf("Total Number of Particles: %d\n", totalParticlesCount); // need +1 for the one-off offset
 
         // then move them
@@ -310,7 +309,6 @@ int main(int argc, char **argv)
 
     diff = clock() - start;
     double timeStepsTime = diff /CLOCKS_PER_SEC;
-    return 0;
 
     // TEMP - remove later
     //resortParticles(domainParticles, totalParticlesCount);
