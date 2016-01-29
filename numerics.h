@@ -110,7 +110,7 @@ void Solve(double initNorm, double toler, int maxIter)
 }
 
 // calculate the ElectricField once Node values are known
-void calcElectricField(EField* ElectricField, double* grid, GridInfo* gInfo)
+void calcElectricField(EField* ElectricField, const double* grid, GridInfo* gInfo)
 {
     const int    N = gInfo->numNodes;
     const int   NN = N*N;
@@ -147,64 +147,66 @@ void calcElectricField(EField* ElectricField, double* grid, GridInfo* gInfo)
 
                 /**************************************/
                 /****** X = 0 || X = GRID_LENGTH ******/
-                double val = 0.;
+                double valX = 0.;
                 if(isI_0_OR_LEN)
                 {
                     if(isI_0)
-                        val = ( -grid[NN*(i+2) + nj + k]
+                        valX = ( -grid[NN*(i+2) + nj + k]
                              + 4*grid[NN*(i+1) + nj + k]
                              - 3*grid[   nni   + nj + k] );
 
                     else if (isI_LEN)
-                        val = -( -grid[NN*(i-2) + nj + k]
+                        valX = -( -grid[NN*(i-2) + nj + k]
                               + 4*grid[NN*(i-1) + nj + k]
                               - 3*grid[  nni    + nj + k] );
                 }
                 else
-                    val = (grid[NN*(i+1) + nj + k] - grid[NN*(i-1) +nj + k] );
+                    valX = (grid[NN*(i+1) + nj + k] - grid[NN*(i-1) +nj + k] );
 
                 // by now ElectricField[i][j][k] needs to be filled
-                elecField->components[0] = multFactor * val;
+                elecField->components[0] = multFactor * valX;
 
 
                 /**************************************/
                 /****** Y = 0 || Y = GRID_LENGTH ******/
+                double valY = 0;
                 if(isJ_0_OR_LEN)
                 {
                     if (isJ_0)
-                        val = ( -grid[nni + N*(j+2) + k]
+                        valY = ( -grid[nni + N*(j+2) + k]
                              + 4*grid[nni + N*(j+1) + k]
                              - 3*grid[nni +   nj    + k]);
                     else if (isJ_LEN)
-                        val = -(-grid[nni + N*(j-2) + k]
+                        valY = -(-grid[nni + N*(j-2) + k]
                              + 4*grid[nni + N*(j-1) + k]
                              - 3*grid[nni +   nj    + k] );
                 }
                 else
-                    val = (grid[nni + N*(j+1) + k] - grid[nni + N*(j-1) + k]);
+                    valY = (grid[nni + N*(j+1) + k] - grid[nni + N*(j-1) + k]);
 
                 // by now ElectricField[i][j][k] needs to be filled
-                elecField->components[1] = multFactor * val;
+                elecField->components[1] = multFactor * valY;
 
 
                 /**************************************/
                 /****** Z = 0 || Z = GRID_LENGTH ******/
+                double valZ = 0;
                 if(isK_0_OR_LEN)
                 {
                     if (isK_0)
-                        val = ( -grid[nni + nj + k+2]
+                        valZ = ( -grid[nni + nj + k+2]
                              + 4*grid[nni + nj + k+1]
                              - 3*grid[nni + nj + k  ] );
                     else if (isK_LEN)
-                        val = -( -grid[nni + nj + k-2]
+                        valZ = -( -grid[nni + nj + k-2]
                               + 4*grid[nni + nj + k-1]
                               - 3*grid[nni + nj + k  ] );
                 }
                 else
-                    val = (grid[nni + nj + k+1] - grid[nni + nj + k-1]);
+                    valZ = (grid[nni + nj + k+1] - grid[nni + nj + k-1]);
 
                 // by now ElectricField[i][j][k] needs to be filled
-                elecField->components[2] = multFactor * val;
+                elecField->components[2] = multFactor * valZ;
             } // end of k loop
         } // end of j loop
     } // end of i loop
