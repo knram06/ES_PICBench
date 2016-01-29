@@ -218,6 +218,11 @@ int main(int argc, char **argv)
     const int maxThreads = omp_get_max_threads(); // test with 8 in gcc -g mode in gdb
     printf("Max threads: %d\n", maxThreads);
 
+    double timingTemp;
+    TimingInfo *tInfo = NULL;
+    const char* stageNames[3] = {"ReleaseParticles", "SwapGaps", "MoveParticles"};
+    allocTimingInfo(&tInfo, stageNames, 3);
+
     // store for one extra space, i.e. with zero index
     int *localLostParticlesCount = calloc(maxThreads+1, sizeof(int));
     int *threadOffsetLostParticles = &(localLostParticlesCount[1]);
@@ -237,7 +242,7 @@ int main(int argc, char **argv)
 
     for(i = 1; i <= TIMESTEPS; i++)
     {
-        #pragma omp single
+        #pragma omp master
         {
         printf("\nTimestep %d:\n", i);
 
@@ -245,6 +250,7 @@ int main(int argc, char **argv)
         runningNfrac = modf(runningNfrac, &temp);
         numParticlesToRelease = Nrel + (int)(temp);
         lostParticleBound = (lostParticleCount - 1);        // adjust for one off issue
+        timingTemp = omp_get_wtime();
         }
 
         // introduce the particles
@@ -254,25 +260,46 @@ int main(int argc, char **argv)
                          lostParticles,
                          &lostParticleBound, // adjust for one off issue
                          randSeeds);
+        #pragma omp master
+        {
+        tInfo->timeTaken[0] += (omp_get_wtime() - timingTemp);
+        tInfo->numCalls[0]++;
+
+        timingTemp = omp_get_wtime();
+        }
 
         swapGapsWithEndParticles(domainParticles, &totalParticlesCount,
                                  lostParticles, &lostParticleBound);
+        #pragma omp master
+        {
+        tInfo->timeTaken[1] += (omp_get_wtime() - timingTemp);
+        tInfo->numCalls[1]++;
 
-        # pragma omp single
+        //# pragma omp single
         printf("Total Number of Particles: %d\n", totalParticlesCount); // need +1 for the one-off offset
+        timingTemp = omp_get_wtime();
+        }
 
         // then move them
         threadOffsetLostParticles[tid] = moveParticlesInField(
                                 domainParticles, totalParticlesCount,
                                 localLostParticles,//&lostParticleBound,
                                 ElectricField, &gridInfo);
+        #pragma omp master
+        {
+        tInfo->timeTaken[2] += (omp_get_wtime() - timingTemp);
+        tInfo->numCalls[2]++;
+        }
 
         // form a cumulative sum for the localLostParticlesCount
+        // may be negligible for small number of threads - not timing this
         #pragma omp barrier     // IMPORTANT!!
         #pragma omp single
         {
             for(t = 1; t < maxThreads; t++)
                 threadOffsetLostParticles[t] += threadOffsetLostParticles[t-1];
+
+            timingTemp = omp_get_wtime();
         }
 
         // now using the cumulative sum array, copy over from shared local lost particles
@@ -281,6 +308,13 @@ int main(int argc, char **argv)
             int localCount = localLostParticlesCount[tid];
             for(t = localLostParticlesCount[tid]; t < localLostParticlesCount[tid+1]; t++)
                 lostParticles[t] = localLostParticles[t - localCount];
+
+            #pragma omp barrier // ensure all threads finish the update, done for the timing
+            #pragma omp master
+            {
+            tInfo->timeTaken[3] += (omp_get_wtime() - timingTemp);
+            tInfo->numCalls[3];
+            }
         }
 
         #pragma omp single // just so we can use the implicit barrier
@@ -306,6 +340,7 @@ int main(int argc, char **argv)
     free(localLostParticles);
     }
     free(localLostParticlesCount);
+    printTimingInfo(tInfo);
 
     diff = clock() - start;
     double timeStepsTime = diff /CLOCKS_PER_SEC;
@@ -522,6 +557,7 @@ int main(int argc, char **argv)
     //free(rhsIndices);
     //free(rhs);
     //deallocCSRForm(&mcsr);
+    deAllocTimingInfo(&tInfo);
     SolverFinalize();
 
     free(lostParticles);
