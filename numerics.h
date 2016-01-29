@@ -66,7 +66,8 @@ void Solve(double initNorm, double toler, int maxIter)
 
     //printf("Max threads: %d\n", maxThreads);
 
-    double *threadNorm = calloc(maxThreads, sizeof(double));
+    //double *threadNorm = calloc(maxThreads, sizeof(double));
+    double threadNorm[1];
     #pragma omp parallel private(iterCount)
     {
         int tid = omp_get_thread_num();
@@ -106,7 +107,7 @@ void Solve(double initNorm, double toler, int maxIter)
     } // end of OMP PRAGMA loop
 
     // free malloc-ed memory
-    free(threadNorm);
+    //free(threadNorm);
 }
 
 // calculate the ElectricField once Node values are known

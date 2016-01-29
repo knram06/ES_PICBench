@@ -44,7 +44,7 @@
 #define PARTICLE_SORT_INTERVAL (20)
 
 #define MAX_ITER (200)
-#define TIMESTEPS ((int)8000)
+#define TIMESTEPS ((int)1)
 #define ITER_INTERVAL (200)
 #define ITER_HEADER_INTERVAL (1500)
 #define POST_WRITE_FILES (false)
@@ -220,8 +220,8 @@ int main(int argc, char **argv)
 
     double timingTemp;
     TimingInfo *tInfo = NULL;
-    const char* stageNames[3] = {"ReleaseParticles", "SwapGaps", "MoveParticles"};
-    allocTimingInfo(&tInfo, stageNames, 3);
+    const char* stageNames[4] = {"ReleaseParticles", "SwapGaps", "MoveParticles", "ThreadUpdates"};
+    allocTimingInfo(&tInfo, stageNames, 4);
 
     // store for one extra space, i.e. with zero index
     int *localLostParticlesCount = calloc(maxThreads+1, sizeof(int));
@@ -298,9 +298,10 @@ int main(int argc, char **argv)
         {
             for(t = 1; t < maxThreads; t++)
                 threadOffsetLostParticles[t] += threadOffsetLostParticles[t-1];
-
-            timingTemp = omp_get_wtime();
         }
+
+        #pragma omp master
+        timingTemp = omp_get_wtime();
 
         // now using the cumulative sum array, copy over from shared local lost particles
         // arrays to the global one
@@ -313,7 +314,7 @@ int main(int argc, char **argv)
             #pragma omp master
             {
             tInfo->timeTaken[3] += (omp_get_wtime() - timingTemp);
-            tInfo->numCalls[3];
+            tInfo->numCalls[3]++;
             }
         }
 
