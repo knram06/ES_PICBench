@@ -242,7 +242,8 @@ int main(int argc, char **argv)
 
     for(i = 1; i <= TIMESTEPS; i++)
     {
-        #pragma omp master
+        // Implicit barrier is NECESSARY! So that releaseParticles sees the calculation update!!
+        #pragma omp single
         {
         printf("\nTimestep %d:\n", i);
 
@@ -250,8 +251,10 @@ int main(int argc, char **argv)
         runningNfrac = modf(runningNfrac, &temp);
         numParticlesToRelease = Nrel + (int)(temp);
         lostParticleBound = (lostParticleCount - 1);        // adjust for one off issue
-        timingTemp = omp_get_wtime();
         }
+
+        #pragma omp master
+        timingTemp = omp_get_wtime();
 
         // introduce the particles
         releaseParticles(numParticlesToRelease,
