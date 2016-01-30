@@ -44,14 +44,14 @@
 #define PARTICLE_SORT_INTERVAL (20)
 
 #define MAX_ITER (200)
-#define TIMESTEPS ((int)8000)
+#define TIMESTEPS ((int)200)
 #define ITER_INTERVAL (200)
 #define ITER_HEADER_INTERVAL (1500)
 #define POST_WRITE_FILES (false)
 #define POST_INTERVAL (200)
 #define POST_WRITE_PATH ("output/")
 
-#define POISSON_TIMESTEPS ((int)100)
+#define POISSON_TIMESTEPS ((int)30)
 //#define TEST_FUNCTION (x*x - 2*y*y + z*z)
 #define TEST_FUNCTION 0.
 
@@ -166,15 +166,23 @@ int main(int argc, char **argv)
     SolverSetupBoundaryConditions();
     // solve and at each step, impose Neumann BCs?
     // FOR TESTING ONLY
-    double norm = SolverGetInitialResidual(), tolerance = 1e-6;
+    double tolerance = 1e-6;
 
     // FMG Initialization
     //printf("Carrying out FMG Initialization.... ");
     //SolverFMGInitialize();
     //printf("done\n");
 
+    const int maxThreads = omp_get_max_threads(); // test with 8 in gcc -g mode in gdb
+    printf("Max threads: %d\n", maxThreads);
+
+    double *threadNorm = calloc(maxThreads, sizeof(double));
+    // HACKY WAY - fill in the first element of threadNorm to seed the initial norm
+    // calculation
+    threadNorm[0] = SolverGetInitialResidual();
     SolverResetTimingInfo();
-    Solve(norm, tolerance, MAX_ITER);
+    #pragma omp parallel
+    { Solve(tolerance, MAX_ITER, threadNorm); }
     SolverPrintTimingInfo();
 
     printf("\nCalculating Electric Field.....");
@@ -215,19 +223,16 @@ int main(int argc, char **argv)
     int lostParticleCount = 0;
     int numParticlesToRelease;
 
-    const int maxThreads = omp_get_max_threads(); // test with 8 in gcc -g mode in gdb
-    printf("Max threads: %d\n", maxThreads);
-
-    double timingTemp;
-    TimingInfo *tInfo = NULL;
-    const char* stageNames[4] = {"ReleaseParticles", "SwapGaps", "MoveParticles", "ThreadUpdates"};
-    allocTimingInfo(&tInfo, stageNames, 4);
-
     // store for one extra space, i.e. with zero index
     int *localLostParticlesCount = calloc(maxThreads+1, sizeof(int));
     int *threadOffsetLostParticles = &(localLostParticlesCount[1]);
 
     /*
+    double timingTemp;
+    TimingInfo *tInfo = NULL;
+    const char* stageNames[4] = {"ReleaseParticles", "SwapGaps", "MoveParticles", "ThreadUpdates"};
+    allocTimingInfo(&tInfo, stageNames, 4);
+
     #pragma omp parallel private(i) //num_threads(8)
     {
         int t;                                  // per thread loop counter
@@ -362,7 +367,6 @@ int main(int argc, char **argv)
     const char *stageNames[8] = {"Release Particles", "SwapGaps", "ReSort", "ResetRHS", "UpdateChargeFrns", "Solve","calcElecField", "moveParticlesInField"};
     allocTimingInfo(&tInfo, stageNames, 8);
 
-    double *threadNorm = calloc(maxThreads, sizeof(double));
     start = clock(); double timingTemp;
     #pragma omp parallel private(i)
     {
@@ -456,6 +460,7 @@ int main(int argc, char **argv)
 
         threadNorm[tid] = SolverGetResidual();
         #pragma omp barrier     // VERY IMPORTANT! to ensure threadNorm array is correctly filled by all threads before moving on to calculating the norm
+        /* ****** Moved as part of Solve routine ******
         #pragma omp single
         {
             int i;
@@ -468,11 +473,12 @@ int main(int argc, char **argv)
             }
             norm = sqrt(norm);
         }
+        */
 
         #pragma omp master
         timingTemp = omp_get_wtime();
 
-        Solve(norm, tolerance, MAX_ITER);
+        Solve(tolerance, MAX_ITER, threadNorm);
 
         #pragma omp master
         {
