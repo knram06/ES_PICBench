@@ -143,7 +143,7 @@ void updateChargeFractions(
     const double multFactor = -invCellVol * ELECTRONIC_CHARGE / FREE_SPACE_PERMITTIVITY;
 
     // TODO: resolve potential race condition in update of charge fractions
-    //#pragma omp for schedule(static)
+    #pragma omp for schedule(static)
     for(i = 0; i < particleCount; i++)
     {
         const Particle *p = &particleList[i];
@@ -172,9 +172,9 @@ void updateChargeFractions(
             {
                 int index = INDEX_1D(numNodes, ti, tj, tk);
 
-                // TODO: Possible RACE condition here - RESOLVE!!
                 // different values of i, can lead to same index, if particles in cells
                 // share vertex
+                #pragma omp atomic // TODO: avoid atomics? use thread-local arrays instead?
                 chargeFractions[ index ] += p->charge * weightFactors[c] * multFactor;
             }
         }

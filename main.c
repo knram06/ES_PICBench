@@ -227,6 +227,7 @@ int main(int argc, char **argv)
     int *localLostParticlesCount = calloc(maxThreads+1, sizeof(int));
     int *threadOffsetLostParticles = &(localLostParticlesCount[1]);
 
+    /*
     #pragma omp parallel private(i) //num_threads(8)
     {
         int t;                                  // per thread loop counter
@@ -351,11 +352,11 @@ int main(int argc, char **argv)
 
     // TEMP - remove later
     //resortParticles(domainParticles, totalParticlesCount);
+    */
 
     /*********************************************/
     /***********POISSON SOLVER********************/
     /*********************************************/
-    /*
     //FILE *iterData = fopen("iter_data.txt", "w");
     TimingInfo *tInfo = NULL;
     const char *stageNames[8] = {"Release Particles", "SwapGaps", "ReSort", "ResetRHS", "UpdateChargeFrns", "Solve","calcElecField", "moveParticlesInField"};
@@ -377,7 +378,7 @@ int main(int argc, char **argv)
     for(i = 1; i <= POISSON_TIMESTEPS; i++)
     {
         //clock_t tstart = clock();
-        #pragma omp master
+        #pragma omp single
         {
         printf("\nPoisson Timestep %d:\n", i);
 
@@ -387,10 +388,12 @@ int main(int argc, char **argv)
 
         //totalParticlesBound += numParticlesToRelease - lostParticleCount;
         lostParticleBound = (lostParticleCount - 1);        // adjust for one off issue
-        // introduce the particles
-        timingTemp = omp_get_wtime();
         }
 
+        #pragma omp master
+        timingTemp = omp_get_wtime();
+
+        // introduce the particles
         releaseParticles(numParticlesToRelease,
                          MD_data, particleCount,
                          domainParticles, &totalParticlesCount,
@@ -442,8 +445,7 @@ int main(int argc, char **argv)
         timingTemp = omp_get_wtime();
         }
 
-        //TODO: Remove later
-        #pragma omp single
+        //#pragma omp single
         updateChargeFractions(domainParticles, totalParticlesCount, rhs, &gridInfo);
 
         #pragma omp master
@@ -453,7 +455,7 @@ int main(int argc, char **argv)
         }
 
         threadNorm[tid] = SolverGetResidual();
-        #pragma omp barrier
+        #pragma omp barrier     // VERY IMPORTANT! to ensure threadNorm array is correctly filled by all threads before moving on to calculating the norm
         #pragma omp single
         {
             int i;
@@ -469,6 +471,7 @@ int main(int argc, char **argv)
 
         #pragma omp master
         timingTemp = omp_get_wtime();
+
         Solve(norm, tolerance, MAX_ITER);
 
         #pragma omp master
@@ -552,8 +555,6 @@ int main(int argc, char **argv)
 
     printTimingInfo(tInfo);
     writeOutputData("poisson.vtk", grid, ElectricField, &gridInfo);
-    */
-    //getRHS(rhs);
     //writeVectorToFile("poisson_v.txt", rhs, gridInfo.totalNodes);
 
     //printf("\nTiming Info\n%10s %10.8e\n%10s %10.8e\n%10s %10.8e\n", "Solve", solveTime, "TimeSteps", timeStepsTime, "Poisson TimeSteps", poissonStepsTime);
