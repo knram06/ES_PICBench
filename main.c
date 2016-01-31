@@ -504,6 +504,12 @@ int main(int argc, char **argv)
                                 localLostParticles,//&lostParticleBound,
                                 ElectricField, &gridInfo);
 
+        #pragma omp master
+        {
+        tInfo->timeTaken[7] += (omp_get_wtime() - timingTemp);
+        tInfo->numCalls[7]++;
+        }
+
         // form a cumulative sum for the localLostParticlesCount
         #pragma omp barrier     // IMPORTANT!!
         #pragma omp single
@@ -520,8 +526,6 @@ int main(int argc, char **argv)
                 lostParticles[t] = localLostParticles[t - localCount];
         }
 
-        tInfo->timeTaken[7] += (omp_get_wtime() - timingTemp);
-        tInfo->numCalls[7]++;
         #pragma omp single // just so we can use the implicit barrier
         {
             // update the lostParticleCount - which is the last entry in the
