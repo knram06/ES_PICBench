@@ -93,25 +93,26 @@ void Solve(double toler, int maxIter, double *threadNorm)
         threadNorm[tid] = SolverLinSolve();
 
         #pragma omp barrier // VERY IMPORTANT!!
-        // let one thread calculate the actual norm
-        #pragma omp single
+        // let all threads calculate this, so that they see the same NORM
+        // IMPORTANT: else one thread can break out of the loop while other is
+        // still waiting for it at some synchronization point (like an implied barrier
+        // for worksharing constructs)
+        //#pragma omp single
+        int i;
+        norm = 0;
+        for(i = 0; i < maxThreads; i++)
         {
-            int i;
-            norm = 0;
-            for(i = 0; i < maxThreads; i++)
-            {
-                // square and sum it to get the l2-norm
-                // at the end
-                norm += threadNorm[i]*threadNorm[i];
-            }
-            norm = sqrt(norm);
-
-            if(!(iterCount % ITER_HEADER_INTERVAL))
-                printf("%10s %20s\n", "Iter_Count", "Norm");
-
-            if(!(iterCount % ITER_INTERVAL) )
-                printf("%10d %20.8e\n", iterCount, norm);
+            // square and sum it to get the l2-norm
+            // at the end
+            norm += threadNorm[i]*threadNorm[i];
         }
+        norm = sqrt(norm);
+
+        if(!(iterCount % ITER_HEADER_INTERVAL))
+            printf("%10s %20s\n", "Iter_Count", "Norm");
+
+        if(!(iterCount % ITER_INTERVAL) )
+            printf("%10d %20.8e\n", iterCount, norm);
     } // end of iteration loop
     #pragma omp single
     {

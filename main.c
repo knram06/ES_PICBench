@@ -217,7 +217,7 @@ int main(int argc, char **argv)
     Particle* domainParticles = malloc(particlePreallocCount * sizeof(Particle));
     int totalParticlesCount = 0;
 
-    clock_t start = clock(), diff;
+    //clock_t start = clock(), diff;
     // for required number of timesteps
     int i;
     int lostParticleCount = 0;
@@ -367,7 +367,7 @@ int main(int argc, char **argv)
     const char *stageNames[8] = {"Release Particles", "SwapGaps", "ReSort", "ResetRHS", "UpdateChargeFrns", "Solve","calcElecField", "moveParticlesInField"};
     allocTimingInfo(&tInfo, stageNames, 8);
 
-    start = clock(); double timingTemp;
+    double start = omp_get_wtime(); double timingTemp;
     #pragma omp parallel private(i)
     {
         int t;                                  // per thread loop counter
@@ -555,9 +555,9 @@ int main(int argc, char **argv)
     free(localLostParticlesCount);
     free(threadNorm);
     //fclose(iterData);
-    diff = clock() - start;
-    double poissonStepsTime = diff /CLOCKS_PER_SEC;
-    printf("Poisson steps time: %10.8lf\n", poissonStepsTime);
+    double diff = omp_get_wtime() - start;
+    //double poissonStepsTime = diff /CLOCKS_PER_SEC;
+    printf("Poisson steps time: %10.8lf\n", diff);
 
     printTimingInfo(tInfo);
     writeOutputData("poisson.vtk", grid, ElectricField, &gridInfo);
