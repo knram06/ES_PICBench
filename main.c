@@ -159,11 +159,12 @@ int main(int argc, char **argv)
     // initialize solver parameters
     initSolverParameters();
 
-    clock_t start, diff;
-    start = clock();
+    struct timespec start, end;
+    clock_gettime(CLOCK_MONOTONIC, &start);
     SolverLinSolve();
-    diff = clock() - start;
-    double solveTime = diff/CLOCKS_PER_SEC;
+    clock_gettime(CLOCK_MONOTONIC, &end);
+
+    double solveTime = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec)*1e-09;
     printf("Solver time taken: %lf\n", solveTime);
 
     // since rhs is the same size, just reuse that array
@@ -246,7 +247,7 @@ int main(int argc, char **argv)
     int* lostParticles = malloc( (Nrel + LOST_PARTICLES_MARGIN) * sizeof(int) );
     int lostParticleBound = -1;
 
-    start = clock();
+    clock_gettime(CLOCK_MONOTONIC, &start);
     // for required number of timesteps
     int lostParticleCount = 0;
     for(i = 1; i <= TIMESTEPS; i++)
@@ -293,8 +294,8 @@ int main(int argc, char **argv)
     //getRHS(rhs);
     //writeVectorToFile("laplace_v.txt", rhs, gridInfo.totalNodes);
 
-    diff = clock() - start;
-    double timeStepsTime = diff /CLOCKS_PER_SEC;
+    clock_gettime(CLOCK_MONOTONIC, &end);
+    double timeStepsTime = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec)*1e-09;
     SolverWriteVTK("laplace.vts");
     //writeOutputData("laplace.vtk", grid, ElectricField, &gridInfo);
     return 0;
@@ -307,7 +308,7 @@ int main(int argc, char **argv)
     int *rhsIndices = malloc(sizeof(int) * gridInfo.totalNodes);
 
     FILE *iterData = fopen("iter_data.txt", "w");
-    start = clock();
+    clock_gettime(CLOCK_MONOTONIC, &start);
     for(i = 1; i <= POISSON_TIMESTEPS; i++)
     {
         clock_t tstart = clock();
@@ -363,9 +364,9 @@ int main(int argc, char **argv)
         runningNfrac += Nfrac;
 
         // avoid timing the IO portion
-        diff = clock() - tstart;
-        double timeTaken = (double)diff/CLOCKS_PER_SEC;
-        fprintf(iterData, "%10d %10lf\n", iterNum, timeTaken);
+        //diff = clock() - tstart;
+        //double timeTaken = (double)diff/CLOCKS_PER_SEC;
+        //fprintf(iterData, "%10d %10lf\n", iterNum, timeTaken);
 
         char outputPath[50];
         if(POST_WRITE_FILES && !(i % POST_INTERVAL) )
@@ -378,13 +379,13 @@ int main(int argc, char **argv)
         }
     } // end of Poisson timestep loop
     fclose(iterData);
-    diff = clock() - start;
+    clock_gettime(CLOCK_MONOTONIC, &end);
 
     writeOutputData("poisson.vtk", grid, ElectricField, &gridInfo);
     //getRHS(rhs);
     //writeVectorToFile("poisson_v.txt", rhs, gridInfo.totalNodes);
 
-    double poissonStepsTime = diff /CLOCKS_PER_SEC;
+    double poissonStepsTime = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec)*1e-09;
     printf("\nTiming Info\n%10s %10.8e\n%10s %10.8e\n%10s %10.8e\n", "Solve", solveTime, "TimeSteps", timeStepsTime, "Poisson TimeSteps", poissonStepsTime);
 
 
