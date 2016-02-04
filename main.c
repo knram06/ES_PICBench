@@ -51,7 +51,7 @@
 #define POST_INTERVAL (200)
 #define POST_WRITE_PATH ("output/")
 
-#define POISSON_TIMESTEPS ((int)30)
+#define POISSON_TIMESTEPS ((int)300)
 //#define TEST_FUNCTION (x*x - 2*y*y + z*z)
 #define TEST_FUNCTION 0.
 
@@ -564,7 +564,7 @@ int main(int argc, char **argv)
     printf("Poisson steps time: %10.8lf\n", diff);
 
     printTimingInfo(tInfo);
-    writeOutputData("poisson.vtk", grid, ElectricField, &gridInfo);
+    //writeOutputData("poisson.vtk", grid, ElectricField, &gridInfo);
     //writeVectorToFile("poisson_v.txt", rhs, gridInfo.totalNodes);
 
     //printf("\nTiming Info\n%10s %10.8e\n%10s %10.8e\n%10s %10.8e\n", "Solve", solveTime, "TimeSteps", timeStepsTime, "Poisson TimeSteps", poissonStepsTime);
