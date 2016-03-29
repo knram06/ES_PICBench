@@ -367,6 +367,9 @@ int main(int argc, char **argv)
     const char *stageNames[8] = {"Release Particles", "SwapGaps", "ReSort", "ResetRHS", "UpdateChargeFrns", "Solve","calcElecField", "moveParticlesInField"};
     allocTimingInfo(&tInfo, stageNames, 8);
 
+    // reset the Solver Timing Info
+    SolverResetTimingInfo();
+
     double start = omp_get_wtime(); double timingTemp;
     #pragma omp parallel private(i)
     {
@@ -563,6 +566,7 @@ int main(int argc, char **argv)
     //double poissonStepsTime = diff /CLOCKS_PER_SEC;
     printf("Poisson steps time: %10.8lf\n", diff);
 
+    SolverPrintTimingInfo();
     printTimingInfo(tInfo);
     //writeOutputData("poisson.vtk", grid, ElectricField, &gridInfo);
     //writeVectorToFile("poisson_v.txt", rhs, gridInfo.totalNodes);
