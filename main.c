@@ -44,7 +44,7 @@
 #define PARTICLE_SORT_INTERVAL (20)
 
 #define MAX_ITER (200)
-#define TIMESTEPS ((int)200)
+#define TIMESTEPS ((int)2000)
 #define ITER_INTERVAL (200)
 #define ITER_HEADER_INTERVAL (1500)
 #define POST_WRITE_FILES (false)
@@ -214,7 +214,6 @@ int main(int argc, char **argv)
 
     double timingTemp;
     TimingInfo *tInfo = NULL;
-    /*
     const char* stageNames[4] = {"ReleaseParticles", "SwapGaps", "MoveParticles", "ThreadUpdates"};
     allocTimingInfo(&tInfo, stageNames, 4);
 
@@ -340,12 +339,12 @@ int main(int argc, char **argv)
 
     double diff = omp_get_wtime() - start;
     printf("Laplace steps time: %10.8lf\n", diff);
-    */
 
 
     /*********************************************/
     /***********POISSON SOLVER********************/
     /*********************************************/
+    /*
     const char *stageNames[8] = {"Release Particles", "SwapGaps", "ReSort", "ResetRHS", "UpdateChargeFrns", "Solve","calcElecField", "moveParticlesInField"};
     allocTimingInfo(&tInfo, stageNames, 8);
 
@@ -535,6 +534,7 @@ int main(int argc, char **argv)
 
     SolverPrintTimingInfo();
     printTimingInfo(tInfo);
+    */
     //writeOutputData("poisson.vtk", grid, ElectricField, &gridInfo);
     //writeVectorToFile("poisson_v.txt", rhs, gridInfo.totalNodes);
 
