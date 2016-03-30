@@ -150,22 +150,8 @@ int main(int argc, char **argv)
     EField* ElectricField = NULL;
     allocateEField(&ElectricField, &gridInfo);
 
-    //// preallocate NeumannBC nodes in terms of MAX possible
-    //// i.e. num of sides of cube * num nodes per side
-    //BoundaryNode *bNodes = malloc( 6 * (NUM_NODES)*(NUM_NODES) * sizeof(BoundaryNode) );
-
-    //// calculate the actual BoundaryNodes count and resize the array to that instead
-    //// to avoid wastage
-    //printf("Consolidating Neumann BC nodes into a different structure....");
-    //// setup boundary conditions
-    //int nodeCount = setupBoundaryConditions(grid, &gridInfo, bNodes);
-
-    //bNodes = realloc(bNodes, nodeCount * sizeof(BoundaryNode));
-    //printf("done\n");
-
     SolverSetupBoundaryConditions();
     // solve and at each step, impose Neumann BCs?
-    // FOR TESTING ONLY
     double tolerance = 1e-6;
 
     // FMG Initialization
@@ -217,7 +203,6 @@ int main(int argc, char **argv)
     Particle* domainParticles = malloc(particlePreallocCount * sizeof(Particle));
     int totalParticlesCount = 0;
 
-    //clock_t start = clock(), diff;
     // for required number of timesteps
     int i;
     int lostParticleCount = 0;
@@ -233,6 +218,7 @@ int main(int argc, char **argv)
     const char* stageNames[4] = {"ReleaseParticles", "SwapGaps", "MoveParticles", "ThreadUpdates"};
     allocTimingInfo(&tInfo, stageNames, 4);
 
+    double start = omp_get_wtime();
     #pragma omp parallel private(i) //num_threads(8)
     {
         int t;                                  // per thread loop counter
@@ -352,15 +338,14 @@ int main(int argc, char **argv)
     free(localLostParticlesCount);
     printTimingInfo(tInfo);
 
-    diff = clock() - start;
-    double timeStepsTime = diff /CLOCKS_PER_SEC;
-
+    double diff = omp_get_wtime() - start;
+    printf("Laplace steps time: %10.8lf\n", diff);
     */
+
 
     /*********************************************/
     /***********POISSON SOLVER********************/
     /*********************************************/
-    //FILE *iterData = fopen("iter_data.txt", "w");
     const char *stageNames[8] = {"Release Particles", "SwapGaps", "ReSort", "ResetRHS", "UpdateChargeFrns", "Solve","calcElecField", "moveParticlesInField"};
     allocTimingInfo(&tInfo, stageNames, 8);
 
