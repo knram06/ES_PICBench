@@ -214,7 +214,7 @@ int main(int argc, char **argv)
 
     double timingTemp;
     TimingInfo *tInfo = NULL;
-    const char* stageNames[4] = {"ReleaseParticles", "SwapGaps", "MoveParticles", "ThreadUpdates"};
+    const char* stageNames[5] = {"ReleaseParticles", "SwapGaps", "UpdateChargeFrns", "MoveParticles", "ThreadUpdates"};
     allocTimingInfo(&tInfo, stageNames, 4);
 
     double start = omp_get_wtime();
@@ -274,6 +274,21 @@ int main(int argc, char **argv)
         timingTemp = omp_get_wtime();
         }
 
+        resetRHSInteriorPoints(rhs, &gridInfo);       // resets only interior points
+
+        #pragma omp master
+        timingTemp = omp_get_wtime();
+
+        updateChargeFractions(domainParticles, totalParticlesCount, rhs, &gridInfo);
+
+        #pragma omp master
+        {
+        tInfo->timeTaken[2] += (omp_get_wtime() - timingTemp);
+        tInfo->numCalls[2]++;
+
+        timingTemp = omp_get_wtime();
+        }
+
         // then move them
         threadOffsetLostParticles[tid] = moveParticlesInField(
                                 domainParticles, totalParticlesCount,
@@ -281,8 +296,8 @@ int main(int argc, char **argv)
                                 ElectricField, &gridInfo);
         #pragma omp master
         {
-        tInfo->timeTaken[2] += (omp_get_wtime() - timingTemp);
-        tInfo->numCalls[2]++;
+        tInfo->timeTaken[3] += (omp_get_wtime() - timingTemp);
+        tInfo->numCalls[3]++;
         }
 
         // form a cumulative sum for the localLostParticlesCount
@@ -307,8 +322,8 @@ int main(int argc, char **argv)
             #pragma omp barrier // ensure all threads finish the update, done for the timing
             #pragma omp master
             {
-            tInfo->timeTaken[3] += (omp_get_wtime() - timingTemp);
-            tInfo->numCalls[3]++;
+            tInfo->timeTaken[4] += (omp_get_wtime() - timingTemp);
+            tInfo->numCalls[4]++;
             }
         }
 
