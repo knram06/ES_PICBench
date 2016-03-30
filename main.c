@@ -227,9 +227,9 @@ int main(int argc, char **argv)
     int *localLostParticlesCount = calloc(maxThreads+1, sizeof(int));
     int *threadOffsetLostParticles = &(localLostParticlesCount[1]);
 
-    /*
     double timingTemp;
     TimingInfo *tInfo = NULL;
+    /*
     const char* stageNames[4] = {"ReleaseParticles", "SwapGaps", "MoveParticles", "ThreadUpdates"};
     allocTimingInfo(&tInfo, stageNames, 4);
 
@@ -355,22 +355,19 @@ int main(int argc, char **argv)
     diff = clock() - start;
     double timeStepsTime = diff /CLOCKS_PER_SEC;
 
-    // TEMP - remove later
-    //resortParticles(domainParticles, totalParticlesCount);
     */
 
     /*********************************************/
     /***********POISSON SOLVER********************/
     /*********************************************/
     //FILE *iterData = fopen("iter_data.txt", "w");
-    TimingInfo *tInfo = NULL;
     const char *stageNames[8] = {"Release Particles", "SwapGaps", "ReSort", "ResetRHS", "UpdateChargeFrns", "Solve","calcElecField", "moveParticlesInField"};
     allocTimingInfo(&tInfo, stageNames, 8);
 
     // reset the Solver Timing Info
     SolverResetTimingInfo();
 
-    double start = omp_get_wtime(); double timingTemp;
+    double start = omp_get_wtime();
     #pragma omp parallel private(i)
     {
         int t;                                  // per thread loop counter
@@ -463,21 +460,6 @@ int main(int argc, char **argv)
 
         threadNorm[tid] = SolverGetResidual();
         #pragma omp barrier     // VERY IMPORTANT! to ensure threadNorm array is correctly filled by all threads before moving on to calculating the norm
-        /* ****** Moved as part of Solve routine ******
-        #pragma omp single
-        {
-            int i;
-            norm = 0;
-            for(i = 0; i < maxThreads; i++)
-            {
-                // square and sum it to get the l2-norm
-                // at the end
-                norm += threadNorm[i]*threadNorm[i];
-            }
-            norm = sqrt(norm);
-        }
-        */
-
         #pragma omp master
         timingTemp = omp_get_wtime();
 
