@@ -43,8 +43,12 @@
 //#define PARTICLE_SIZE ((int)5e4)
 #define PARTICLE_SORT_INTERVAL (20)
 
+// stage counts
+#define LAPLACE_NUM_STAGES (5)
+#define POISSON_NUM_STAGES (8)
+
 #define MAX_ITER (200)
-#define TIMESTEPS ((int)2000)
+#define TIMESTEPS ((int)32000)
 #define ITER_INTERVAL (200)
 #define ITER_HEADER_INTERVAL (1500)
 #define POST_WRITE_FILES (false)
@@ -214,8 +218,8 @@ int main(int argc, char **argv)
 
     double timingTemp;
     TimingInfo *tInfo = NULL;
-    const char* stageNames[5] = {"ReleaseParticles", "SwapGaps", "UpdateChargeFrns", "MoveParticles", "ThreadUpdates"};
-    allocTimingInfo(&tInfo, stageNames, 4);
+    const char* stageNames[LAPLACE_NUM_STAGES] = {"ReleaseParticles", "SwapGaps", "UpdateChargeFrns", "MoveParticles", "ThreadUpdates"};
+    allocTimingInfo(&tInfo, stageNames, LAPLACE_NUM_STAGES);
 
     double start = omp_get_wtime();
     #pragma omp parallel private(i) //num_threads(8)
@@ -360,8 +364,8 @@ int main(int argc, char **argv)
     /***********POISSON SOLVER********************/
     /*********************************************/
     /*
-    const char *stageNames[8] = {"Release Particles", "SwapGaps", "ReSort", "ResetRHS", "UpdateChargeFrns", "Solve","calcElecField", "moveParticlesInField"};
-    allocTimingInfo(&tInfo, stageNames, 8);
+    const char *stageNames[POISSON_NUM_STAGES] = {"Release Particles", "SwapGaps", "ReSort", "ResetRHS", "UpdateChargeFrns", "Solve","calcElecField", "moveParticlesInField"};
+    allocTimingInfo(&tInfo, stageNames, POISSON_NUM_STAGES);
 
     // reset the Solver Timing Info
     SolverResetTimingInfo();
