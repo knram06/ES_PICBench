@@ -218,9 +218,10 @@ int main(int argc, char **argv)
 
     double timingTemp;
     TimingInfo *tInfo = NULL;
+
+    /*
     const char* stageNames[LAPLACE_NUM_STAGES] = {"ReleaseParticles", "SwapGaps", "UpdateChargeFrns", "MoveParticles", "ThreadUpdates"};
     allocTimingInfo(&tInfo, stageNames, LAPLACE_NUM_STAGES);
-
     double start = omp_get_wtime();
     #pragma omp parallel private(i) //num_threads(8)
     {
@@ -358,12 +359,11 @@ int main(int argc, char **argv)
 
     double diff = omp_get_wtime() - start;
     printf("Laplace steps time: %10.8lf\n", diff);
-
+    */
 
     /*********************************************/
     /***********POISSON SOLVER********************/
     /*********************************************/
-    /*
     const char *stageNames[POISSON_NUM_STAGES] = {"Release Particles", "SwapGaps", "ReSort", "ResetRHS", "UpdateChargeFrns", "Solve","calcElecField", "moveParticlesInField"};
     allocTimingInfo(&tInfo, stageNames, POISSON_NUM_STAGES);
 
@@ -553,9 +553,6 @@ int main(int argc, char **argv)
 
     SolverPrintTimingInfo();
     printTimingInfo(tInfo);
-    */
-    //writeOutputData("poisson.vtk", grid, ElectricField, &gridInfo);
-    //writeVectorToFile("poisson_v.txt", rhs, gridInfo.totalNodes);
 
     //printf("\nTiming Info\n%10s %10.8e\n%10s %10.8e\n%10s %10.8e\n", "Solve", solveTime, "TimeSteps", timeStepsTime, "Poisson TimeSteps", poissonStepsTime);
 
