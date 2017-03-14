@@ -56,6 +56,10 @@ void resetRHSInteriorPoints(double *rhs, GridInfo *gInfo)
     } // end of outermost i loop
 }
 
+/*
+ * Called by each thread, i.e. the parallel section has already
+ * started here.
+ */
 void Solve(double toler, int maxIter, double *threadNorm)
 {
     int iterCount = 0;
@@ -63,10 +67,7 @@ void Solve(double toler, int maxIter, double *threadNorm)
     int tid = omp_get_thread_num();
 
     int i; double norm = 0;
-    //threadNorm[tid] = SolverGetResidual();
-    //#pragma omp barrier
-    //#pragma omp single
-    //{
+
     // let all threads do this so that their 'norm' is the same
     for(i = 0; i < maxThreads; i++)
     {
@@ -75,7 +76,6 @@ void Solve(double toler, int maxIter, double *threadNorm)
         norm += threadNorm[i]*threadNorm[i];
     }
     norm = sqrt(norm);
-    //}
     double cmpNorm = toler*norm;
 
     #pragma omp single

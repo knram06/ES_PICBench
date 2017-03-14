@@ -523,6 +523,10 @@ void smoothenAtIndex(double* __restrict__ v, const double* __restrict__ d,
 
 }
 
+/*
+ * Enforce Dirichlet conditions on relevant points, i.e. on
+ * Capillary and Extractor positions.
+ */
 void enforceDirichlet(double* __restrict__ v, const double* __restrict__ d, const int N,
                       const double center[2])
 {
@@ -664,7 +668,12 @@ void GaussSeidelSmoother(double* __restrict__ v, const double* __restrict__ d, c
 
 } // end of GaussSeidelSmoother
 
-// smoother function
+/* Pre-smoother: Parallel Red-Black GS
+ * Order of ops taken to be similar to if the matrix was constructed
+ * Enforce Dirichlet BCs
+ * Red and black smoothing
+ * Enforce Neumann second order BCs.
+ */
 void preSmoother(double* __restrict__ v, const double* __restrict__ d, const int N, const double h, const int smootherIter)
 {
     int s;
@@ -717,7 +726,6 @@ void preSmoother(double* __restrict__ v, const double* __restrict__ d, const int
                 int pos = nni + nj;
 
                 // IMPORTANT: jOffset differs from RED here
-                //int jOffset = (j % 2);
                 int kOffset = (1 + (i+j+1)%2);
                 // adjust k offset accordingly
                 for(k = kOffset; k < N-1; k+=2)
@@ -736,6 +744,11 @@ void preSmoother(double* __restrict__ v, const double* __restrict__ d, const int
 
 } // end of preSmoother
 
+/*
+ * Post-smoother: Parallel Red-Black GS.
+ * Shouldn't order of Operations be in Reverse?
+ * To preserver symmetry, i.e. if we want to apply CG?
+ */
 void postSmoother(double* __restrict__ v, const double* __restrict__ d, const int N, const double h, const int smootherIter)
 {
     int s;
@@ -758,14 +771,12 @@ void postSmoother(double* __restrict__ v, const double* __restrict__ d, const in
         for(i = 1; i < N-1; i++)
         {
             const int nni = NN*i;
-            //int iOffset = (i+1) % 2;
             for(j = 1; j < N-1; j++)
             {
                 const int nj = N*j;
                 int pos = nni + nj;
 
                 // IMPORTANT: jOffset differs from RED here
-                //int jOffset = (j % 2);
                 int kOffset = (1 + (i+j+1)%2);
                 // adjust k offset accordingly
                 for(k = kOffset; k < N-1; k+=2)
@@ -808,6 +819,7 @@ void postSmoother(double* __restrict__ v, const double* __restrict__ d, const in
 
 } // end of postSmoother
 
+// Calculates L2 Norm given vector and its length
 double GetL2NormOfVector(const double* d, const int n)
 {
     int i;
@@ -1270,7 +1282,24 @@ void setupBoundaryConditions(double *v, int levelN, double spacing)
     /***********************************/
 } // end of setupBoundaryConditions
 
-// return current l2-norm squared of residual
+/*
+ * The Multigrid V-Cycle.
+ * Called by each thread. Subfunctions split work amongst threads
+ * using OMP pragmas.
+ * u - solution, f - RHS, res - residual vector
+ * h - spacing,  q - integer denoting the level,
+ * numLevels - total number of levels
+ * smootherIter - PRE and POST smoothing iterations
+ * N - finest level node count
+ * LU - matrix A at coarsest level stored in LU form.
+ ** METHOD
+  * Pre-Smoother iterations. - Red-Black GS
+  * Restriction
+  * If on finest level, do LU solve
+  * Else - Recursive call
+  * Prolongate errors
+  * Post-Smoother iterations - Red-Black GS
+ */
 double vcycle(double **u, double **f, double **res, double h, int q, const int numLevels, const int smootherIter, int N, double *LU)
 {
     double *v = u[q];
@@ -1317,9 +1346,6 @@ double vcycle(double **u, double **f, double **res, double h, int q, const int n
     tInfo[q]->timeTaken[0] += (omp_get_wtime() - timingTemp);
     tInfo[q]->numCalls[0]++;
     }
-
-    // allocate the residual vector
-    //double *r = calloc(N*N*N, sizeof(double));
 
     #pragma omp master
     timingTemp = omp_get_wtime();
@@ -1444,9 +1470,13 @@ void SolverFMGInitialize()
 void SolverSetupBoundaryConditions()
 { return setupBoundaryConditions(d[numLevels-1], finestOneSideNum, spacing); }
 
+/* Called by each thread.
+ * Subfunctions are encountered by each thread
+ * and the for loops are split amongst them with OMP pragmas.
+ */
 double SolverLinSolve()
 {
-    // TODO: OMP this
+    // TODO: OMP this - Not necessary?!
     double res = vcycle(u, d, r, spacing, numLevels-1, numLevels, gsIterNum, finestOneSideNum, A);
     return res;
 }
