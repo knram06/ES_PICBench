@@ -22,10 +22,16 @@ int numLevels;
 int gsIterNum;
 
 // MG-level data
-double **u, **d, **r;
+double **u,  // solution at each level
+       **d,  // RHS vector "   "
+       **r;  // residual   "   "
+
 double *A; // coarsest level matrix
 double spacing;  // spacing
 
+// allocates memory for MG-level data for that quantity
+// numLevels - number of levels
+// N - coarse grid node count
 void allocGridLevels(double ***u, const int numLevels, const int N)
 {
     *u = malloc(sizeof(double*) * numLevels);
@@ -103,6 +109,8 @@ double BCFunc(double x, double y, double z)
 bool isPowerOfTwo(int x)
 { return (x & (x-1)) == 0;}
 
+// allocates various grid level quantities
+// and timing objects
 void SolverInitialize(int argc, char **argv)
 {
     if(argc != 4)
@@ -126,6 +134,7 @@ void SolverInitialize(int argc, char **argv)
     finestOneSideNum = ((coarseGridNum-1) * multFactor)+1;
 
     u = NULL; d = NULL; r = NULL;
+    // allocate the various grids for each of the quantities
     allocGridLevels(&u, numLevels, coarseGridNum);
     allocGridLevels(&d, numLevels, coarseGridNum);
     allocGridLevels(&r, numLevels, coarseGridNum);
@@ -142,7 +151,9 @@ void SolverInitialize(int argc, char **argv)
     spacing = GRID_LENGTH/(finestOneSideNum-1);
 }
 
-// assume A has been preallocated
+// To avoid repeatedly reconstructing the matrix A
+// at the coarsest level, just constructs it once and stores.
+// Assume A has been preallocated
 void constructCoarseMatrixA(double *A, int N, const double h)
 {
     int i, j, k;
@@ -269,6 +280,10 @@ void constructCoarseMatrixA(double *A, int N, const double h)
     } // end of i loop
 }
 
+/* Function could be named more descriptively
+ * Sets given pointers to appropriate solver side data
+ * Constructs coarse matrix A and converts to LU in-place.
+ */
 int SolverGetDetails(double **grid, double **rhs, double *h)
 {
     // set the user pointer to finest level
@@ -289,6 +304,7 @@ int SolverGetDetails(double **grid, double **rhs, double *h)
     return finestOneSideNum;
 }
 
+// freeing the grid-level data
 void deAllocGridLevels(double ***u, const int numLevels)
 {
     int i;
@@ -1156,6 +1172,9 @@ void prolongateAndCorrectError(const double* __restrict__ ec, const int Nc, doub
     } // end of i loop
 }
 
+/* Setup boundary conditions based on Extractor and Capillary
+ * Voltages and Dimensions
+ */
 void setupBoundaryConditions(double *v, int levelN, double spacing)
 {
     int i, j, k;
@@ -1221,6 +1240,8 @@ void setupBoundaryConditions(double *v, int levelN, double spacing)
         {
             double tz = k*spacing-center[1];
             double rr = ty*ty + tz*tz;
+
+            // set the Capillary voltages if within the radius
             if(rr <= CAPILLARY_RADIUS*CAPILLARY_RADIUS)
                 v[nni + nj + k] = CAPILLARY_VOLTAGE;
         }
@@ -1237,6 +1258,7 @@ void setupBoundaryConditions(double *v, int levelN, double spacing)
             double tz = k*spacing-center[1];
             double rr = ty*ty + tz*tz;
 
+            // set the Extractor voltages if within the Extractor
             if((rr >= (EXTRACTOR_INNER_RADIUS*EXTRACTOR_INNER_RADIUS))
                     &&
                (rr <= (EXTRACTOR_OUTER_RADIUS*EXTRACTOR_OUTER_RADIUS)) )

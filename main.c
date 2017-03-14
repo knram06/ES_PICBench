@@ -123,6 +123,7 @@ int main(int argc, char **argv)
         return EXIT_FAILURE;
     }
 
+    // initialize and allocate Solver side data
     SolverInitialize(argc, argv);
 
     // count the number of lines in the input file
@@ -133,6 +134,7 @@ int main(int argc, char **argv)
     // allocate the grid
     double *grid = NULL, *rhs = NULL;
     double h;
+    // get the finest level node count
     int finestGridNum = SolverGetDetails(&grid, &rhs, &h);
 
     // fill in GridInfo data
@@ -150,10 +152,11 @@ int main(int argc, char **argv)
     parseMDFileToParticles(MD_data, fp);
     fclose(fp);
 
-    // TODO: Uncomment and fix this
+    // Allocate EField
     EField* ElectricField = NULL;
     allocateEField(&ElectricField, &gridInfo);
 
+    // Solver sets the BCs on the RHS vector
     SolverSetupBoundaryConditions();
     // solve and at each step, impose Neumann BCs?
     double tolerance = 1e-6;
