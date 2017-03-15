@@ -108,11 +108,14 @@ void Solve(double toler, int maxIter, double *threadNorm)
         }
         norm = sqrt(norm);
 
+        #pragma omp single
+        {
         if(!(iterCount % ITER_HEADER_INTERVAL))
             printf("%10s %20s\n", "Iter_Count", "Norm");
 
         if(!(iterCount % ITER_INTERVAL) )
             printf("%10d %20.8e\n", iterCount, norm);
+        }
     } // end of iteration loop
     #pragma omp single
     {
